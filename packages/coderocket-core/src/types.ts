@@ -3,8 +3,16 @@ export type AuditEnvironment = 'production' | 'preview'
 export type AuditTrigger = 'manual' | 'scheduled' | 'ci'
 export type AuditStatus = 'queued' | 'running' | 'succeeded' | 'failed'
 export type FindingStatus = 'new' | 'persistent' | 'resolved'
-export type GateStatus = 'passed' | 'failed' | 'needs_baseline'
+export type GateStatus = 'passed' | 'failed' | 'needs_baseline' | 'inconclusive'
 export type FindingPriority = 'critical' | 'high' | 'medium' | 'low'
+export type FindingCategory =
+  | 'availability'
+  | 'search'
+  | 'accessibility'
+  | 'performance'
+  | 'security'
+  | 'quality'
+export type FindingSource = 'frontend_checklist' | 'http'
 
 export interface PlanEntitlements {
   projects: number
@@ -21,6 +29,9 @@ export interface AuditFindingInput {
   title: string
   priority: FindingPriority
   message: string
+  category?: FindingCategory
+  source?: FindingSource
+  occurrenceKey?: string
 }
 
 export interface AuditFinding extends AuditFindingInput {
@@ -47,6 +58,8 @@ export interface AuditSubmission {
     url: string
     reachable: boolean
     findings: AuditFindingInput[]
+    httpStatus?: number
+    durationMs?: number
     error?: string
   }>
 }

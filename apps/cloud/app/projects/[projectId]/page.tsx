@@ -1,10 +1,16 @@
 import {
+  Accessibility,
   AlertTriangle,
   CheckCircle2,
   Clock3,
   ExternalLink,
+  Gauge,
+  Globe2,
   Play,
-  RefreshCw
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Sparkles
 } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
@@ -14,25 +20,11 @@ import { ShareReportButton } from '@/components/share-report-button'
 import { getProjectDetail, type ProjectFinding } from '@/lib/project-data'
 import { queueProjectAudit } from './actions'
 
-const notices: Record<string, string> = {
-  queued: 'Your check is in the queue. Results will appear here when it finishes.',
-  'already-running': 'A check is already running for this site.',
-  'limit-reached': 'You have used the checks included in your plan for this month.',
-  'queue-failed': 'The check could not be started. Please try again.'
-}
-
-export default async function ProjectPage({
-  params,
-  searchParams
-}: {
-  params: Promise<{ projectId: string }>
-  searchParams: Promise<{ notice?: string }>
-}) {
-  const [{ projectId }, search] = await Promise.all([params, searchParams])
+export default async function ProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
+  const { projectId } = await params
   const project = await getProjectDetail(projectId)
   if (!project) notFound()
   const latest = project.latestAudit
-  const notice = search.notice ? notices[search.notice] : undefined
 
   return (
     <ProductShell
@@ -51,12 +43,6 @@ export default async function ProjectPage({
       eyebrow="Monitored site"
       title={project.name}
     >
-      {notice ? (
-        <p aria-live="polite" className="mb-6 border border-signal bg-surface p-4 text-sm">
-          {notice}
-        </p>
-      ) : null}
-
       <section className="border border-border bg-surface p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
           <div>
@@ -84,6 +70,12 @@ export default async function ProjectPage({
         </div>
       </section>
 
+      <HealthOverview
+        checkedPages={latest?.checkedPageCount ?? 0}
+        findings={project.findings}
+        requestedPages={latest?.requestedPageCount ?? project.pages.length}
+      />
+
       <section
         aria-label="Latest check summary"
         className="mt-5 grid gap-px bg-border sm:grid-cols-4"
@@ -102,8 +94,12 @@ export default async function ProjectPage({
           value={String(latest?.resolvedCount ?? 0)}
         />
         <div className="bg-surface p-5">
-          <p className="text-muted text-sm">Pages watched</p>
-          <p className="mt-4 font-heading font-semibold text-3xl">{project.pages.length}</p>
+          <p className="text-muted text-sm">Pages checked</p>
+          <p className="mt-4 font-heading font-semibold text-3xl">
+            {latest
+              ? `${latest.checkedPageCount}/${latest.requestedPageCount}`
+              : `0/${project.pages.length}`}
+          </p>
           <p className="mt-1 text-muted text-xs">Next check {project.nextCheck}</p>
         </div>
       </section>
@@ -226,10 +222,13 @@ function FindingRow({ finding }: { finding: ProjectFinding }) {
         <h3 className="font-semibold">{finding.title}</h3>
         <p className="mt-1 text-muted text-sm leading-6">{finding.message}</p>
         <p className="mt-2 font-mono text-muted text-xs">Page: {finding.path}</p>
+        <p className="mt-1 text-muted text-xs">Area: {categoryLabel(finding.category)}</p>
       </div>
       <Link
         className="font-mono text-accent text-xs hover:text-signal"
-        href={`/docs/rules/${finding.rule}`}
+        href={
+          finding.source === 'http' ? '/docs/audits#http-checks' : `/docs/rules/${finding.rule}`
+        }
       >
         How to fix →
       </Link>
@@ -272,6 +271,8 @@ function getHeadline(gate: string | undefined, checking: boolean): string {
   if (checking) return 'A fresh check is underway'
   if (gate === 'failed') return 'Important changes need your attention'
   if (gate === 'passed') return 'No new important problems found'
+  if (gate === 'inconclusive') return 'Some pages could not be checked'
+  if (gate === 'needs_baseline') return 'Your website reference is ready'
   return 'Your first reference check is being prepared'
 }
 
@@ -281,6 +282,83 @@ function getExplanation(gate: string | undefined, blocking: number, checking: bo
   if (gate === 'failed')
     return `${blocking} new high-priority ${blocking === 1 ? 'problem was' : 'problems were'} found since the previous successful check.`
   if (gate === 'passed')
-    return 'The site may still have older issues, but nothing newly introduced is serious enough to block a release.'
+    return 'The site may still have older issues, but the latest complete check found no new important problem.'
+  if (gate === 'inconclusive')
+    return 'CodeRocket did not receive readable HTML for every requested page. Previous findings remain open and this result is not marked healthy.'
+  if (gate === 'needs_baseline')
+    return 'This first complete result is now the reference point used to identify what changes next time.'
   return 'This first result becomes the reference point. It does not block a release because there is nothing to compare yet.'
+}
+
+function HealthOverview({
+  checkedPages,
+  findings,
+  requestedPages
+}: {
+  checkedPages: number
+  findings: ProjectFinding[]
+  requestedPages: number
+}) {
+  const areas = [
+    {
+      key: 'availability',
+      label: 'Online',
+      icon: Globe2,
+      count: requestedPages - checkedPages,
+      value: `${checkedPages}/${requestedPages} pages`
+    },
+    { key: 'search', label: 'Search', icon: Search },
+    { key: 'accessibility', label: 'Accessibility', icon: Accessibility },
+    { key: 'performance', label: 'Performance', icon: Gauge },
+    { key: 'security', label: 'Security', icon: ShieldCheck },
+    { key: 'quality', label: 'Frontend', icon: Sparkles }
+  ] as const
+
+  return (
+    <section aria-labelledby="health-areas-title" className="mt-5">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-heading font-semibold text-xl" id="health-areas-title">
+            Website health areas
+          </h2>
+          <p className="mt-1 text-muted text-xs">
+            A readable view first; the exact rule and evidence remain available below.
+          </p>
+        </div>
+      </div>
+      <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-6">
+        {areas.map(area => {
+          const open =
+            'count' in area
+              ? area.count
+              : findings.filter(
+                  finding => finding.category === area.key && finding.status !== 'resolved'
+                ).length
+          const Icon = area.icon
+          return (
+            <article className="bg-surface p-4" key={area.key}>
+              <Icon
+                aria-hidden
+                className={open > 0 ? 'h-4 w-4 text-danger' : 'h-4 w-4 text-success'}
+              />
+              <h3 className="mt-3 font-semibold text-sm">{area.label}</h3>
+              <p className={`mt-1 text-xs ${open > 0 ? 'text-danger' : 'text-muted'}`}>
+                {'value' in area
+                  ? area.value
+                  : open > 0
+                    ? `${open} ${open === 1 ? 'open item' : 'open items'}`
+                    : 'No issue found'}
+              </p>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function categoryLabel(category: ProjectFinding['category']): string {
+  if (category === 'search') return 'Search visibility'
+  if (category === 'quality') return 'Frontend quality'
+  return `${category.charAt(0).toUpperCase()}${category.slice(1)}`
 }

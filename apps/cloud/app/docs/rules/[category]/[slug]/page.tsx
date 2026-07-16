@@ -90,7 +90,7 @@ export default async function RuleDocumentationPage({
       <aside className="my-8 grid gap-4 border border-border bg-surface p-5 sm:grid-cols-[auto_1fr]">
         <Info aria-hidden className="h-5 w-5 text-signal" />
         <div>
-          <h2 className="font-heading font-semibold">How this reference maps to audits</h2>
+          <h2 className="font-heading font-semibold">How this reference maps to checks</h2>
           <p className="mt-2 text-muted text-sm leading-6">
             This page documents the maintained rule corpus. CodeRocket reports this rule
             automatically only when the source analyzer has enough static evidence. Runtime and

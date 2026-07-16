@@ -29,4 +29,33 @@ describe('safe HTML fetch', () => {
       /not HTML/
     )
   })
+
+  it('records response evidence used by website health checks', async () => {
+    const fakeFetch = async () =>
+      new Response('<!doctype html><title>Healthy page</title>', {
+        status: 200,
+        headers: {
+          'content-type': 'text/html',
+          'strict-transport-security': 'max-age=31536000'
+        }
+      })
+    const response = await fetchPublicHtml('https://93.184.216.34', {
+      fetchImplementation: fakeFetch
+    })
+    assert.equal(response.status, 200)
+    assert.equal(response.headers['strict-transport-security'], 'max-age=31536000')
+    assert.ok(response.durationMs >= 0)
+  })
+
+  it('reports Cloudflare challenges as an explicit operational result', async () => {
+    const fakeFetch = async () =>
+      new Response('<title>Just a moment...</title>', {
+        status: 403,
+        headers: { 'content-type': 'text/html', 'cf-mitigated': 'challenge' }
+      })
+    await assert.rejects(
+      () => fetchPublicHtml('https://93.184.216.34', { fetchImplementation: fakeFetch }),
+      /Cloudflare challenge/
+    )
+  })
 })

@@ -32,6 +32,7 @@ export async function run(args = process.argv.slice(2)): Promise<0 | 1 | 2> {
       throw new Error('CodeRocket returned an invalid response')
     const gate = result.qualityGate
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    if (gate === 'inconclusive') return 2
     return gate === 'failed' ? 1 : 0
   } catch (error) {
     process.stderr.write(

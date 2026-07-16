@@ -5,7 +5,12 @@ const findingSchema = z.object({
   ruleSlug: z.string().min(1).max(160),
   title: z.string().min(1).max(300),
   priority: z.enum(['critical', 'high', 'medium', 'low']),
-  message: z.string().min(1).max(10_000)
+  message: z.string().min(1).max(10_000),
+  category: z
+    .enum(['availability', 'search', 'accessibility', 'performance', 'security', 'quality'])
+    .optional(),
+  source: z.enum(['frontend_checklist', 'http']).optional(),
+  occurrenceKey: z.string().min(1).max(300).optional()
 })
 
 export const auditSubmissionSchema = z.object({
@@ -22,11 +27,13 @@ export const auditSubmissionSchema = z.object({
         url: z.url({ protocol: /^https$/ }),
         reachable: z.boolean(),
         findings: z.array(findingSchema).max(5000),
+        httpStatus: z.number().int().min(100).max(599).optional(),
+        durationMs: z.number().int().min(0).max(120_000).optional(),
         error: z.string().max(2000).optional()
       })
     )
     .min(1)
-    .max(25)
+    .max(50)
 })
 
 export type ValidAuditSubmission = z.infer<typeof auditSubmissionSchema>

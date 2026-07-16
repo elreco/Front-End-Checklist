@@ -10,6 +10,8 @@ export interface DashboardProject {
   gate: GateStatus
   blockingCount: number
   newCount: number
+  requestedPageCount: number
+  checkedPageCount: number
   lastRun: string
   nextCheck: string
   isChecking: boolean
@@ -35,6 +37,7 @@ export interface DashboardData {
   pageCount: number
   checksThisMonth: number
   attentionCount: number
+  incompleteCount: number
   nextCheck: string
   projects: DashboardProject[]
   activity: DashboardActivity[]
@@ -53,6 +56,7 @@ const demoData: DashboardData = {
   pageCount: 5,
   checksThisMonth: 6,
   attentionCount: 2,
+  incompleteCount: 0,
   nextCheck: 'tomorrow',
   projects: [
     {
@@ -63,6 +67,8 @@ const demoData: DashboardData = {
       gate: 'failed',
       blockingCount: 2,
       newCount: 2,
+      requestedPageCount: 5,
+      checkedPageCount: 5,
       lastRun: '12 minutes ago',
       nextCheck: 'tomorrow',
       isChecking: false
@@ -108,7 +114,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       supabase
         .from('cr_audits')
         .select(
-          'id,project_id,environment,trigger,status,gate_status,new_count,blocking_count,created_at,completed_at,cr_projects(name)'
+          'id,project_id,environment,trigger,status,gate_status,new_count,blocking_count,requested_page_count,checked_page_count,created_at,completed_at,cr_projects(name)'
         )
         .eq('owner_id', auth.user.id)
         .order('created_at', { ascending: false })
@@ -153,6 +159,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       gate: resolveGate(latest?.gate_status),
       blockingCount: latest?.blocking_count ?? 0,
       newCount: latest?.new_count ?? 0,
+      requestedPageCount: latest?.requested_page_count ?? project.page_paths.length,
+      checkedPageCount: latest?.checked_page_count ?? 0,
       lastRun: formatRelativeTime(latest?.completed_at ?? latest?.created_at),
       nextCheck: project.schedule_enabled
         ? formatRelativeTime(project.next_audit_at)
@@ -177,6 +185,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       (total, project) => total + (project.gate === 'failed' ? project.blockingCount : 0),
       0
     ),
+    incompleteCount: summaries.filter(project => project.gate === 'inconclusive').length,
     nextCheck: earliestNextCheck ? formatRelativeTime(earliestNextCheck) : 'Not scheduled',
     projects: summaries,
     activity: audits.slice(0, 5).map(audit => ({
@@ -208,6 +217,7 @@ function emptyDashboard(): DashboardData {
     pageCount: 0,
     checksThisMonth: 0,
     attentionCount: 0,
+    incompleteCount: 0,
     nextCheck: 'Add a site first',
     projects: [],
     activity: [],
@@ -220,5 +230,7 @@ function resolvePlan(value: unknown): PlanId {
 }
 
 function resolveGate(value: unknown): GateStatus {
-  return value === 'passed' || value === 'failed' ? value : 'needs_baseline'
+  return value === 'passed' || value === 'failed' || value === 'inconclusive'
+    ? value
+    : 'needs_baseline'
 }

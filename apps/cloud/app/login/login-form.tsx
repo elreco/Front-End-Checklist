@@ -7,6 +7,7 @@ import {
   CodeRocketOAuthButton,
   type OAuthProvider
 } from '@repo/design-system/ui/coderocket-oauth-button'
+import { toast } from '@repo/design-system/ui/coderocket-toast'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
@@ -16,13 +17,11 @@ type PendingAction = OAuthProvider | 'password' | 'magic'
 
 export function LoginForm() {
   const search = useSearchParams()
-  const [message, setMessage] = useState<string>()
   const [pendingAction, setPendingAction] = useState<PendingAction>()
   const isPending = pendingAction !== undefined
 
   async function signInWithProvider(provider: OAuthProvider) {
     setPendingAction(provider)
-    setMessage(undefined)
     const supabase = createSupabaseBrowserClient()
     const next = search.get('next') ?? '/dashboard'
     const { error } = await supabase.auth.signInWithOAuth({
@@ -32,7 +31,7 @@ export function LoginForm() {
       }
     })
     if (error) {
-      setMessage(error.message)
+      toast.error(`Could not continue with ${provider}`, { description: error.message })
       setPendingAction(undefined)
     }
   }
@@ -42,20 +41,23 @@ export function LoginForm() {
     const password = String(formData.get('password') ?? '')
     const mode = String(formData.get('mode') ?? 'password') as 'password' | 'magic'
     setPendingAction(mode)
-    setMessage(undefined)
     const supabase = createSupabaseBrowserClient()
     if (mode === 'magic') {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard` }
       })
-      setMessage(error?.message ?? 'Check your inbox for the secure sign-in link.')
+      if (error) toast.error('Magic link could not be sent', { description: error.message })
+      else
+        toast.success('Check your inbox', {
+          description: 'We sent a secure CodeRocket sign-in link to your email address.'
+        })
       setPendingAction(undefined)
       return
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      setMessage(error.message)
+      toast.error('Sign-in failed', { description: error.message })
       setPendingAction(undefined)
       return
     }
@@ -137,11 +139,6 @@ export function LoginForm() {
         </CodeRocketButton>
       </form>
 
-      {message ? (
-        <p aria-live="polite" className="mt-5 border border-border bg-surface-raised p-4 text-sm">
-          {message}
-        </p>
-      ) : null}
       <p className="mt-7 text-center text-muted text-xs leading-5">
         By continuing, you agree to the CodeRocket{' '}
         <Link className="text-foreground hover:text-signal" href="/legal/terms">

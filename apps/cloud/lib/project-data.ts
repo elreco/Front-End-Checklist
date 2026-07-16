@@ -1,4 +1,11 @@
-import type { AuditStatus, FindingPriority, FindingStatus, GateStatus } from '@coderocket/core'
+import type {
+  AuditStatus,
+  FindingCategory,
+  FindingPriority,
+  FindingSource,
+  FindingStatus,
+  GateStatus
+} from '@coderocket/core'
 import { formatAuditDate, formatRelativeTime } from './format'
 import { createSupabaseServerClient } from './supabase/server'
 
@@ -10,6 +17,8 @@ export interface ProjectAudit {
   persistentCount: number
   resolvedCount: number
   blockingCount: number
+  requestedPageCount: number
+  checkedPageCount: number
   when: string
   date: string
   trigger: 'manual' | 'scheduled' | 'ci'
@@ -24,6 +33,8 @@ export interface ProjectFinding {
   path: string
   rule: string
   message: string
+  category: FindingCategory
+  source: FindingSource
 }
 
 export interface ProjectDetail {
@@ -47,6 +58,8 @@ const demoAudit: ProjectAudit = {
   persistentCount: 1,
   resolvedCount: 1,
   blockingCount: 2,
+  requestedPageCount: 5,
+  checkedPageCount: 5,
   when: '12 minutes ago',
   date: 'Jul 16, 2026, 10:42 AM',
   trigger: 'ci',
@@ -71,7 +84,9 @@ const demoProject: ProjectDetail = {
       title: 'Checkout button has no accessible name',
       path: '/checkout',
       rule: 'button-name',
-      message: 'People using a screen reader cannot tell what this button does.'
+      message: 'People using a screen reader cannot tell what this button does.',
+      category: 'accessibility',
+      source: 'frontend_checklist'
     },
     {
       id: 'demo-finding-2',
@@ -80,7 +95,9 @@ const demoProject: ProjectDetail = {
       title: 'Email field is missing a visible label',
       path: '/checkout',
       rule: 'form-labels',
-      message: 'The field relies on placeholder text, which disappears when someone starts typing.'
+      message: 'The field relies on placeholder text, which disappears when someone starts typing.',
+      category: 'accessibility',
+      source: 'frontend_checklist'
     }
   ]
 }
@@ -105,7 +122,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     supabase
       .from('cr_audits')
       .select(
-        'id,status,gate_status,new_count,persistent_count,resolved_count,blocking_count,created_at,completed_at,trigger,environment'
+        'id,status,gate_status,new_count,persistent_count,resolved_count,blocking_count,requested_page_count,checked_page_count,created_at,completed_at,trigger,environment'
       )
       .eq('project_id', projectId)
       .eq('owner_id', auth.user.id)
@@ -127,6 +144,8 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     persistentCount: audit.persistent_count,
     resolvedCount: audit.resolved_count,
     blockingCount: audit.blocking_count,
+    requestedPageCount: audit.requested_page_count ?? 0,
+    checkedPageCount: audit.checked_page_count ?? 0,
     when: formatRelativeTime(audit.completed_at ?? audit.created_at),
     date: formatAuditDate(audit.completed_at ?? audit.created_at),
     trigger: audit.trigger,
@@ -137,7 +156,9 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
   if (latestAudit) {
     const { data: occurrences } = await supabase
       .from('cr_occurrences')
-      .select('id,status,message,cr_findings(priority,title,normalized_path,rule_slug)')
+      .select(
+        'id,status,message,cr_findings(priority,title,normalized_path,rule_slug,category,source)'
+      )
       .eq('audit_id', latestAudit.id)
       .eq('owner_id', auth.user.id)
     findings = (occurrences ?? []).flatMap(occurrence =>
@@ -148,7 +169,9 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
         title: finding.title,
         path: finding.normalized_path,
         rule: finding.rule_slug,
-        message: occurrence.message
+        message: occurrence.message,
+        category: finding.category,
+        source: finding.source
       }))
     )
   }
@@ -168,5 +191,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
 }
 
 function resolveGate(value: unknown): GateStatus {
-  return value === 'passed' || value === 'failed' ? value : 'needs_baseline'
+  return value === 'passed' || value === 'failed' || value === 'inconclusive'
+    ? value
+    : 'needs_baseline'
 }

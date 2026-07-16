@@ -10,6 +10,7 @@ export interface AppShellContext {
   limits: PlanEntitlements
   projectCount: number
   hasBillingAccount: boolean
+  audience: 'site_owner' | 'freelancer' | 'agency'
 }
 
 const demoContext: AppShellContext = {
@@ -19,7 +20,8 @@ const demoContext: AppShellContext = {
   plan: 'free',
   limits: getPlanEntitlements('free'),
   projectCount: 1,
-  hasBillingAccount: false
+  hasBillingAccount: false,
+  audience: 'freelancer'
 }
 
 /** Load the authenticated identity and plan shown throughout the product shell. */
@@ -46,7 +48,11 @@ export async function getAppShellContext(): Promise<AppShellContext> {
     }
 
   const [{ data: profile }, { data: subscription }, { count: projectCount }] = await Promise.all([
-    supabase.from('cr_profiles').select('display_name').eq('id', auth.user.id).maybeSingle(),
+    supabase
+      .from('cr_profiles')
+      .select('display_name,audience')
+      .eq('id', auth.user.id)
+      .maybeSingle(),
     supabase
       .from('cr_subscriptions')
       .select('plan_id,stripe_customer_id')
@@ -77,6 +83,10 @@ export async function getAppShellContext(): Promise<AppShellContext> {
     plan,
     limits: getPlanEntitlements(plan),
     projectCount: projectCount ?? 0,
-    hasBillingAccount: Boolean(subscription?.stripe_customer_id)
+    hasBillingAccount: Boolean(subscription?.stripe_customer_id),
+    audience:
+      profile?.audience === 'freelancer' || profile?.audience === 'agency'
+        ? profile.audience
+        : 'site_owner'
   }
 }

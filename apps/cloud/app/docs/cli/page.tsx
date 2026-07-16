@@ -52,12 +52,12 @@ export default function CliDocumentationPage() {
 
       <section className="grid gap-4 border-border border-y py-10 md:grid-cols-3">
         {[
-          ['0', 'Passed', 'No new blocking regression, or the ruleset requires a fresh baseline.'],
+          ['0', 'Healthy', 'No new important problem, or the ruleset requires a fresh baseline.'],
           ['1', 'Blocked', 'At least one new critical or high-priority finding was introduced.'],
           [
             '2',
             'Operational error',
-            'Authentication, network, validation, or audit execution failed.'
+            'Authentication, network, validation, execution, or an incomplete page check prevented a reliable result.'
           ]
         ].map(([code, label, description]) => (
           <article className="border border-border bg-surface p-5" key={code}>

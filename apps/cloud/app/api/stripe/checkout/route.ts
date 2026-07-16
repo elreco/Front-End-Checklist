@@ -4,15 +4,11 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
   if (process.env.CODEROCKET_COMMERCIAL_LAUNCH !== 'true') {
-    return Response.json(
-      { error: 'Paid plans are not available until the upstream licence is explicitly confirmed.' },
-      { status: 503 }
-    )
+    redirect('/pricing?checkout=unavailable')
   }
   const formData = await request.formData()
   const plan = formData.get('plan')
-  if (plan !== 'solo' && plan !== 'agency')
-    return Response.json({ error: 'Unknown plan' }, { status: 400 })
+  if (plan !== 'solo' && plan !== 'agency') redirect('/pricing?checkout=invalid')
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase.auth.getUser()
   if (!data.user) redirect(`/login?next=/pricing`)
@@ -37,7 +33,6 @@ export async function POST(request: Request) {
     metadata: { ownerId: data.user.id, planId: plan },
     subscription_data: { metadata: { ownerId: data.user.id, planId: plan } }
   })
-  if (!session.url)
-    return Response.json({ error: 'Stripe did not return a Checkout URL' }, { status: 502 })
+  if (!session.url) redirect('/pricing?checkout=failed')
   redirect(session.url)
 }

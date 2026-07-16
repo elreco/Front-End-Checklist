@@ -1,32 +1,32 @@
-import { BellRing, FileCheck2, GitPullRequest, ShieldCheck } from '@repo/design-system/icons'
+import { BellRing, FileCheck2, ShieldCheck, UserRound } from '@repo/design-system/icons'
 
 const useCases = [
   {
     number: '01',
-    icon: BellRing,
-    title: 'Catch production drift',
+    icon: UserRound,
+    title: 'Watch your own website',
     description:
-      'A CMS update accidentally adds noindex to a landing page. The next scheduled audit records a new SEO finding and emails you because it is high priority.',
-    result: 'Before: page quietly disappears from search',
-    outcome: 'After: actionable alert with page and rule'
+      'You run a portfolio, newsletter, association, or small shop. Add the pages that matter and receive a short alert only when CodeRocket finds a new important problem.',
+    result: 'Before: check several tools when something feels wrong',
+    outcome: 'After: one readable list of what needs attention'
   },
   {
     number: '02',
-    icon: GitPullRequest,
-    title: 'Protect pull requests',
+    icon: BellRing,
+    title: 'Watch every client site',
     description:
-      'A preview adds an icon-only checkout button without an accessible name. The CLI sends the audit to CodeRocket and the GitHub check fails before merge.',
-    result: 'Before: visual review looks fine',
-    outcome: 'After: CI blocks the new high-priority issue'
+      'You are a freelancer or agency. Keep a daily eye on client sites after delivery, spot a CMS or hosting change, and open the exact page and explanation before the client calls.',
+    result: 'Before: reactive maintenance and scattered screenshots',
+    outcome: 'After: a monitored portfolio and dated evidence'
   },
   {
     number: '03',
     icon: FileCheck2,
-    title: 'Prove delivery to clients',
+    title: 'Share progress without jargon',
     description:
-      'After fixes, create a private report showing what was resolved and what remains. Give the client an expiring link, then revoke it when the project closes.',
-    result: 'Before: screenshots and spreadsheet notes',
-    outcome: 'After: one dated, shareable audit report'
+      'Create a private report that shows what is healthy, what changed, what was fixed, and what could not be checked. The link can expire or be revoked at any time.',
+    result: 'Before: a technical export nobody reads',
+    outcome: 'After: a client-ready website health report'
   }
 ]
 
@@ -55,8 +55,8 @@ export function UseCases() {
             <em>that cost trust.</em>
           </h2>
           <p className="max-w-xl text-lg text-muted leading-8 lg:justify-self-end">
-            Use CodeRocket between development, production, and client delivery—where a vague
-            checklist is not enough and a reproducible decision matters.
+            CodeRocket is useful without GitHub, and grows with you when you need previews or CI.
+            The same product serves a single site owner, a freelancer, and an agency portfolio.
           </p>
         </div>
         <div className="divide-y divide-border">
@@ -78,7 +78,15 @@ export function UseCases() {
           ))}
         </div>
         <div className="mt-8 border border-border p-6 sm:p-8">
-          <p className="text-muted text-xs uppercase tracking-[.14em]">385 quality-gated rules</p>
+          <p className="text-muted text-xs uppercase tracking-[.14em]">
+            One maintained source of truth
+          </p>
+          <p className="mt-3 max-w-3xl text-muted text-sm leading-6">
+            The complete Front-End Checklist remains the technical reference. CodeRocket runs the
+            checks that can be verified reliably from public HTML and HTTP responses, exposes
+            developer checks through GitHub and the CLI, and links manual guidance when human
+            judgment is still required.
+          </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {categories.map(category => (
               <span className="border border-border bg-surface px-3 py-2 text-sm" key={category}>
@@ -102,25 +110,32 @@ export function DecisionRules() {
             Predictable by design.
           </h2>
           <p className="mt-6 max-w-lg text-muted leading-7">
-            The gate follows explicit rules, so a freelancer, an agency, and CI all reach the same
-            conclusion.
+            Every result says what CodeRocket could verify. A business owner gets a clear status; a
+            developer can open the exact rule and technical evidence.
           </p>
         </div>
         <dl className="divide-y divide-border border-border border-t">
           {[
             [
-              'A new critical or high finding appears',
-              'The gate fails and the CLI exits with code 1.'
+              'Every requested page is readable and no new important problem appears',
+              'The website is healthy for this check.'
             ],
-            ['An existing issue is still present', 'It stays persistent and does not block again.'],
-            ['A finding disappears from a reachable page', 'It is recorded as resolved.'],
+            [
+              'A new important problem appears',
+              'The website needs attention and an alert can be sent.'
+            ],
+            [
+              'An existing problem is still present',
+              'It stays visible without becoming a new alert.'
+            ],
+            ['A problem disappears from a checked page', 'It is recorded as resolved.'],
             [
               'A page cannot be reached',
-              'Previous findings stay open; no false resolutions are created.'
+              'The check is inconclusive. Previous problems stay open and the CLI returns an operational error.'
             ],
             [
               'The upstream ruleset changes',
-              'The run requests a new baseline and does not block CI.'
+              'The run requests a fresh baseline so an upstream update does not create fake alerts.'
             ]
           ].map(([term, detail]) => (
             <div className="grid gap-3 py-6 sm:grid-cols-2" key={term}>

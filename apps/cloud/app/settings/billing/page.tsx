@@ -23,7 +23,7 @@ export default async function BillingPage() {
                 Current plan
               </p>
               <h2 className="mt-2 font-heading font-semibold text-3xl capitalize">
-                {context.plan}
+                {context.plan === 'solo' ? 'Personal' : context.plan}
               </h2>
               <p className="mt-2 text-muted">
                 Your limits and included features are applied automatically.
@@ -85,8 +85,9 @@ export default async function BillingPage() {
             Match monitoring to your workload
           </h2>
           <p className="mt-3 text-muted text-sm leading-6">
-            Solo is designed for an independent professional managing a handful of sites. Agency
-            adds 25 sites, a full year of history, and client reports without secondary branding.
+            Personal is designed for an owner or freelancer monitoring up to three websites every
+            day. Agency scales to 50 client sites, a full year of history, and reports without
+            secondary branding.
           </p>
           <div className="mt-5 border border-border bg-surface p-4">
             <p className="font-semibold text-sm">Billing stays predictable</p>

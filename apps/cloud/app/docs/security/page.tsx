@@ -84,7 +84,7 @@ export default function SecurityDocumentationPage() {
         </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
           A worker periodically removes audits older than the owner plan allows: 30 days for Free,
-          90 days for Solo, and 365 days for Agency. Database migrations create a private,
+          90 days for Personal, and 365 days for Agency. Database migrations create a private,
           checksummed backup before schema changes are applied.
         </p>
       </section>

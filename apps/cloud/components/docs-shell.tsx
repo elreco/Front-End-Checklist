@@ -1,22 +1,8 @@
-import {
-  BookOpen,
-  Braces,
-  ListChecks,
-  ShieldCheck,
-  Terminal,
-  Workflow
-} from '@repo/design-system/icons'
+import { Braces } from '@repo/design-system/icons'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { DOCUMENTATION_RULES, DOCUMENTATION_RULESET_VERSION } from '@/lib/docs'
-
-const docsNavigation = [
-  { href: '/docs', label: 'Overview', icon: BookOpen },
-  { href: '/docs/audits', label: 'How audits work', icon: Workflow },
-  { href: '/docs/cli', label: 'CLI & GitHub', icon: Terminal },
-  { href: '/docs/rules', label: 'Rules reference', icon: ListChecks },
-  { href: '/docs/security', label: 'Security model', icon: ShieldCheck }
-]
+import { DocsNavigation } from './docs-navigation'
 
 /** Shared public shell for the official CodeRocket documentation. */
 export function DocsShell({ children }: { children: ReactNode }) {
@@ -30,18 +16,7 @@ export function DocsShell({ children }: { children: ReactNode }) {
             </p>
             <p className="mt-2 text-muted text-sm">Product and rules reference</p>
           </div>
-          <nav aria-label="Documentation navigation" className="grid p-2 sm:grid-cols-2 lg:block">
-            {docsNavigation.map(({ href, label, icon: Icon }) => (
-              <Link
-                className="flex items-center gap-3 px-3 py-2.5 text-muted text-sm hover:bg-surface-raised hover:text-foreground"
-                href={href}
-                key={href}
-              >
-                <Icon aria-hidden className="h-4 w-4 shrink-0" />
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <DocsNavigation />
           <div className="border-border border-t p-4 text-xs">
             <p className="flex items-center gap-2 font-mono text-foreground">
               <Braces aria-hidden className="h-3.5 w-3.5 text-signal" />

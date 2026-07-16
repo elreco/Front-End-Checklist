@@ -2,17 +2,24 @@
 
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
+import { toast } from '@repo/design-system/ui/coderocket-toast'
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export function RecoverForm() {
-  const [message, setMessage] = useState<string>()
+  const [pending, setPending] = useState(false)
   async function submit(formData: FormData) {
+    setPending(true)
     const email = String(formData.get('email') ?? '')
     const { error } = await createSupabaseBrowserClient().auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/settings`
     })
-    setMessage(error?.message ?? 'Check your inbox for the recovery link.')
+    if (error) toast.error('Recovery link could not be sent', { description: error.message })
+    else
+      toast.success('Check your inbox', {
+        description: 'We sent a secure password recovery link to your email address.'
+      })
+    setPending(false)
   }
   return (
     <form action={submit} className="mt-7 space-y-4">
@@ -20,14 +27,9 @@ export function RecoverForm() {
         Email
         <CodeRocketInput id="recovery-email" name="email" required type="email" />
       </label>
-      <CodeRocketButton fullWidth type="submit">
-        Send recovery link
+      <CodeRocketButton disabled={pending} fullWidth type="submit">
+        {pending ? 'Sending…' : 'Send recovery link'}
       </CodeRocketButton>
-      {message ? (
-        <p aria-live="polite" className="rounded-none bg-surface-raised p-3 text-sm">
-          {message}
-        </p>
-      ) : null}
     </form>
   )
 }

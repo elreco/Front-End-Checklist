@@ -9,6 +9,9 @@ export interface SafeHtmlResponse {
   url: string
   html: string
   fetchedAt: string
+  status: number
+  durationMs: number
+  headers: Record<string, string>
 }
 
 function isBlockedIpv4(address: string): boolean {
@@ -97,6 +100,7 @@ export async function fetchPublicHtml(
 ): Promise<SafeHtmlResponse> {
   const request = options.fetchImplementation ?? fetch
   let url = await assertPublicHttpsUrl(rawUrl)
+  const startedAt = performance.now()
   for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
     const response = await request(url, {
       redirect: 'manual',
@@ -106,6 +110,9 @@ export async function fetchPublicHtml(
       },
       signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS)
     })
+    if (response.headers.get('cf-mitigated')?.toLowerCase() === 'challenge') {
+      throw new Error('The site returned a Cloudflare challenge instead of the page')
+    }
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       if (redirect === MAX_REDIRECTS) throw new Error('Too many redirects')
       const location = response.headers.get('location')
@@ -121,7 +128,10 @@ export async function fetchPublicHtml(
     return {
       url: url.toString(),
       html: await readBoundedHtml(response),
-      fetchedAt: new Date().toISOString()
+      fetchedAt: new Date().toISOString(),
+      status: response.status,
+      durationMs: Math.round(performance.now() - startedAt),
+      headers: Object.fromEntries(response.headers.entries())
     }
   }
   throw new Error('Too many redirects')

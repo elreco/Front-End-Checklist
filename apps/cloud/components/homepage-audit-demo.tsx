@@ -1,42 +1,42 @@
-import { AlertTriangle, Check, GitPullRequest, Radar } from '@repo/design-system/icons'
+import { AlertTriangle, Check, Globe2, Radar } from '@repo/design-system/icons'
 
 const steps = [
   {
-    label: 'Production baseline',
-    detail: '12 pages · ruleset 2026.07 · last successful run'
+    label: 'Reach the page',
+    detail: 'HTTPS, redirects, response status, and Cloudflare challenge'
   },
   {
-    label: 'Preview audit',
-    detail: 'PR #184 · commit 8e41ac · /checkout changed'
+    label: 'Read the public HTML',
+    detail: 'One safe fetch · 2 MB limit · no browser or tracking script'
   },
   {
-    label: 'Regression diff',
-    detail: '2 new · 11 persistent · 7 resolved'
+    label: 'Run health checks',
+    detail: 'Search · accessibility · performance · security · quality'
   },
   {
-    label: 'GitHub quality gate',
-    detail: 'Failed · 2 new high-priority findings'
+    label: 'Explain what changed',
+    detail: '2 new · 11 already known · 7 resolved · 5/5 pages checked'
   }
 ]
 
 const findings = [
   {
     tone: 'text-danger',
-    status: 'NEW · HIGH',
+    status: 'NEW · IMPORTANT',
     title: 'Checkout button has no accessible name',
-    rule: '/checkout · button-name'
+    rule: 'Accessibility · /checkout'
   },
   {
     tone: 'text-danger',
-    status: 'NEW · HIGH',
-    title: 'Email field is missing a visible label',
-    rule: '/checkout · form-labels'
+    status: 'NEW · IMPORTANT',
+    title: 'Secure transport header is missing',
+    rule: 'Security · /checkout'
   },
   {
     tone: 'text-muted',
-    status: 'PERSISTENT · MEDIUM',
+    status: 'ALREADY KNOWN',
     title: 'Product image dimensions are not explicit',
-    rule: '/products · image-dimensions'
+    rule: 'Performance · /products'
   }
 ]
 
@@ -48,13 +48,13 @@ export function AuditDemo() {
           <div>
             <p className="text-signal text-xs uppercase tracking-[.18em]">Concrete example</p>
             <h2 className="mt-5 max-w-2xl font-editorial text-5xl leading-[.98] sm:text-7xl">
-              A checkout preview introduces two regressions.
+              A real check, from address to action list.
             </h2>
           </div>
           <p className="max-w-xl text-lg text-muted leading-8 lg:justify-self-end">
-            CodeRocket fetches the preview HTML once, runs the same ruleset as production, and
-            compares stable fingerprints by page path and rule. Existing debt remains visible but
-            does not become a “new” failure.
+            CodeRocket checks only public HTTPS pages. It validates every redirect, records how many
+            pages were actually readable, and never labels an incomplete check as healthy. Existing
+            problems remain visible without creating the same alert every day.
           </p>
         </div>
         <div className="mt-14 grid border border-border lg:grid-cols-[.72fr_1.28fr]">
@@ -75,7 +75,7 @@ export function AuditDemo() {
             <div className="cr-scan-line pointer-events-none absolute inset-x-0 top-0 z-20 h-px bg-signal shadow-[0_0_18px_2px_#22d3ee]" />
             <div className="flex items-center justify-between border-border border-b px-5 py-4 text-xs uppercase tracking-[.12em]">
               <span className="flex items-center gap-2 text-muted">
-                <GitPullRequest aria-hidden className="h-4 w-4" /> PR #184 · checkout redesign
+                <Globe2 aria-hidden className="h-4 w-4" /> ACME STORE · DAILY CHECK
               </span>
               <span className="flex items-center gap-2 text-signal">
                 <span className="cr-pulse h-1.5 w-1.5 bg-signal" /> auditing
@@ -84,7 +84,7 @@ export function AuditDemo() {
             <div className="relative p-5 sm:p-7">
               <div className="mb-5 flex items-center gap-3 border border-border bg-surface px-4 py-3 text-muted text-sm">
                 <Radar aria-hidden className="h-4 w-4 text-signal" />
-                https://preview-184.acme.dev/checkout
+                https://shop.acme.test/checkout
               </div>
               <div className="space-y-3">
                 {findings.map((finding, index) => (
@@ -112,11 +112,13 @@ export function AuditDemo() {
               </div>
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-danger border-l-2 bg-danger/10 p-4">
                 <div>
-                  <p className="font-semibold text-danger">Quality gate failed</p>
-                  <p className="mt-1 text-muted text-xs">2 new blocking regressions</p>
+                  <p className="font-semibold text-danger">Website needs attention</p>
+                  <p className="mt-1 text-muted text-xs">
+                    2 new important problems · 5/5 pages checked
+                  </p>
                 </div>
                 <span className="border border-danger px-3 py-1 text-danger text-xs">
-                  CI EXIT 1
+                  OPEN REPORT
                 </span>
               </div>
             </div>

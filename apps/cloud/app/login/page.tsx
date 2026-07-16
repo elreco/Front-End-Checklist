@@ -19,15 +19,15 @@ export default function LoginPage() {
           <CodeRocketMark className="absolute -right-24 -bottom-20 h-96 w-96 text-border" />
           <div className="relative">
             <p className="font-mono text-signal text-xs uppercase tracking-[.18em]">
-              Your frontend control room
+              Your website control room
             </p>
             <h2 className="mt-7 max-w-xl font-editorial text-6xl leading-[.95] tracking-[-.035em]">
-              Return to every release
+              Return to every website
               <br />
               <em>with context intact.</em>
             </h2>
             <p className="mt-7 max-w-lg text-lg text-muted leading-8">
-              Use the same CodeRocket identity you already had. Your new quality workspace starts
+              Use the same CodeRocket identity you already had. Your new health workspace starts
               clean; old generations, credits, and subscriptions are not imported.
             </p>
             <ul className="mt-10 space-y-5">
@@ -43,7 +43,7 @@ export default function LoginPage() {
           </div>
           <div className="relative mt-14 border border-border bg-background p-5">
             <div className="flex items-center justify-between text-xs uppercase tracking-[.12em]">
-              <span className="text-muted">Example quality gate</span>
+              <span className="text-muted">Example website health</span>
               <span className="flex items-center gap-2 text-success">
                 <Check aria-hidden className="h-3.5 w-3.5" /> passed
               </span>

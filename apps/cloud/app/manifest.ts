@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'CodeRocket',
     short_name: 'CodeRocket',
-    description: 'Frontend quality, cleared for launch.',
+    description: 'Know when your website needs attention.',
     start_url: '/',
     display: 'standalone',
     background_color: '#09090B',

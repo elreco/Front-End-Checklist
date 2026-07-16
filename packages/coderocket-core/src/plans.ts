@@ -10,16 +10,16 @@ export const PLAN_ENTITLEMENTS: Record<PlanId, PlanEntitlements> = {
     secondaryBranding: true
   },
   solo: {
-    projects: 5,
-    pagesPerProject: 10,
+    projects: 3,
+    pagesPerProject: 25,
     schedule: 'daily',
     onDemandRunsPerMonth: 100,
     retentionDays: 90,
     secondaryBranding: true
   },
   agency: {
-    projects: 25,
-    pagesPerProject: 25,
+    projects: 50,
+    pagesPerProject: 50,
     schedule: 'daily',
     onDemandRunsPerMonth: 500,
     retentionDays: 365,

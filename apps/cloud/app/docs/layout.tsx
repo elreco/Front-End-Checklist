@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     template: '%s — CodeRocket Docs'
   },
   description:
-    'Official CodeRocket documentation for audits, quality gates, CI integration, security, and frontend rules.'
+    'Official CodeRocket documentation for website health checks, coverage, GitHub integration, security, and frontend rules.'
 }
 
 export default function DocumentationLayout({ children }: { children: ReactNode }) {

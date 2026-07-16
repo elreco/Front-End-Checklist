@@ -24,21 +24,43 @@ export function CodeRocketMark(props: CodeRocketMarkProps) {
 }
 
 export interface CodeRocketLogoProps extends CodeRocketMarkProps {
+  tagline?: string
+  taglineClassName?: string
   wordmarkClassName?: string
 }
 
+export const CODEROCKET_TAGLINE = 'Website health.'
+
 /** CodeRocket wordmark lockup. */
-export function CodeRocketLogo({ wordmarkClassName, ...props }: CodeRocketLogoProps) {
+export function CodeRocketLogo({
+  tagline,
+  taglineClassName,
+  wordmarkClassName,
+  ...props
+}: CodeRocketLogoProps) {
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex items-center gap-3 align-middle">
       <CodeRocketMark {...props} />
-      <span
-        className={cn(
-          'font-editorial font-normal leading-none tracking-[-0.035em]',
-          wordmarkClassName
-        )}
-      >
-        CodeRocket
+      <span className="flex min-w-0 flex-col items-start justify-center text-left">
+        <span
+          className={cn(
+            'font-editorial font-medium leading-none tracking-[-0.045em]',
+            wordmarkClassName
+          )}
+        >
+          CodeRocket
+        </span>
+        {tagline ? (
+          <span
+            aria-hidden
+            className={cn(
+              'mt-0.5 whitespace-nowrap font-mono text-[8px] text-muted not-italic leading-none tracking-[0.01em]',
+              taglineClassName
+            )}
+          >
+            {tagline}
+          </span>
+        ) : null}
       </span>
     </span>
   )

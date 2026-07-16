@@ -9,20 +9,29 @@ function normalizePath(path: string): string {
 }
 
 /** Build an identity that remains stable when explanatory copy changes. */
-export function fingerprintFinding(pagePath: string, ruleSlug: string): string {
-  const identity = `${normalizePath(pagePath)}\u0000${ruleSlug.trim().toLowerCase()}`
+export function fingerprintFinding(
+  pagePath: string,
+  ruleSlug: string,
+  occurrenceKey = 'primary'
+): string {
+  const identity = `${normalizePath(pagePath)}\u0000${ruleSlug.trim().toLowerCase()}\u0000${occurrenceKey.trim().toLowerCase()}`
   return createHash('sha256').update(identity).digest('hex')
 }
 
 function withFingerprint(finding: AuditFindingInput, status: FindingStatus): AuditFinding {
   return {
     ...finding,
-    fingerprint: fingerprintFinding(finding.pagePath, finding.ruleSlug),
+    occurrenceKey: finding.occurrenceKey ?? 'primary',
+    fingerprint: fingerprintFinding(
+      finding.pagePath,
+      finding.ruleSlug,
+      finding.occurrenceKey ?? 'primary'
+    ),
     status
   }
 }
 
-/** Compare a run with its baseline and calculate the CI quality gate. */
+/** Compare a run with its baseline and calculate an honest health result. */
 export function compareFindings(options: {
   current: AuditFindingInput[]
   baseline: AuditFindingInput[]
@@ -32,13 +41,13 @@ export function compareFindings(options: {
 }): AuditComparison {
   const baseline = new Map(
     options.baseline.map(finding => [
-      fingerprintFinding(finding.pagePath, finding.ruleSlug),
+      fingerprintFinding(finding.pagePath, finding.ruleSlug, finding.occurrenceKey),
       finding
     ])
   )
   const current = new Map(
     options.current.map(finding => [
-      fingerprintFinding(finding.pagePath, finding.ruleSlug),
+      fingerprintFinding(finding.pagePath, finding.ruleSlug, finding.occurrenceKey),
       finding
     ])
   )
@@ -65,7 +74,14 @@ export function compareFindings(options: {
     options.baselineRulesetVersion === options.currentRulesetVersion
 
   return {
-    gate: sameRuleset ? (blockingRegressions > 0 ? 'failed' : 'passed') : 'needs_baseline',
+    gate:
+      unreachable.size > 0
+        ? 'inconclusive'
+        : sameRuleset
+          ? blockingRegressions > 0
+            ? 'failed'
+            : 'passed'
+          : 'needs_baseline',
     findings,
     counts,
     blockingRegressions

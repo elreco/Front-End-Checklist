@@ -7,35 +7,35 @@ const plans = [
     id: 'free',
     name: 'Free',
     price: '€0',
-    description: 'A reliable baseline for one site.',
+    description: 'Know when your main website needs attention.',
     features: [
-      '1 project · 5 pages',
-      'Weekly production audit',
-      '10 manual or CI runs / month',
-      '30-day history'
+      '1 website · 5 important pages',
+      'Weekly automatic health check',
+      '10 on-demand or GitHub checks / month',
+      '30-day history and private reports'
     ]
   },
   {
     id: 'solo',
-    name: 'Solo',
-    price: '€19',
-    description: 'For freelancers shipping every week.',
+    name: 'Personal',
+    price: '€12',
+    description: 'For independent owners and freelancers.',
     features: [
-      '5 projects · 10 pages each',
-      'Daily production audits',
-      '100 manual or CI runs / month',
-      '90-day history'
+      '3 websites · 25 pages each',
+      'Daily automatic health checks',
+      '100 on-demand or GitHub checks / month',
+      '90-day history and email alerts'
     ]
   },
   {
     id: 'agency',
     name: 'Agency',
-    price: '€59',
-    description: 'For teams delivering client work.',
+    price: '€99',
+    description: 'For agencies maintaining client portfolios.',
     features: [
-      '25 projects · 25 pages each',
-      'Daily production audits',
-      '500 manual or CI runs / month',
+      '50 websites · 50 pages each',
+      'Daily automatic health checks',
+      '500 on-demand or GitHub checks / month',
       '365-day history',
       'Reports without secondary branding'
     ]

@@ -88,13 +88,26 @@ describe('@repo/design-system', () => {
     expect(screen.getByRole('link', { name: 'View pricing' }).getAttribute('href')).toBe('/pricing')
   })
 
-  it('renders the CodeRocket wordmark with the editorial brand typography', () => {
-    render(<CodeRocketLogo className="h-8 w-8" wordmarkClassName="text-sm" />)
+  it('renders the centered CodeRocket lockup with editorial typography and a tagline', () => {
+    render(
+      <CodeRocketLogo
+        className="h-8 w-8"
+        tagline="Frontend, cleared."
+        wordmarkClassName="text-sm"
+      />
+    )
 
     const wordmark = screen.getByText('CodeRocket')
     expect(wordmark.className).toContain('font-editorial')
-    expect(wordmark.className).toContain('font-normal')
+    expect(wordmark.className).toContain('font-medium')
     expect(wordmark.className).toContain('text-sm')
+    expect(wordmark.parentElement?.className).toContain('items-start')
+    expect(wordmark.parentElement?.parentElement?.className).toContain('items-center')
+    const tagline = screen.getByText('Frontend, cleared.')
+    expect(tagline.className).toContain('font-mono')
+    expect(tagline.className).toContain('mt-0.5')
+    expect(tagline.className).toContain('text-[8px]')
+    expect(tagline.className).toContain('not-italic')
   })
 
   it('renders official OAuth provider actions', () => {

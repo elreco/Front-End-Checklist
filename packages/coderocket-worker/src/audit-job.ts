@@ -37,14 +37,24 @@ export async function processAuditJob(
     .eq('project_id', project.id)
     .eq('environment', 'production')
     .eq('status', 'succeeded')
+    .neq('gate_status', 'inconclusive')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+  const { data: recentAudits } = await db
+    .from('cr_audits')
+    .select('gate_status')
+    .eq('project_id', project.id)
+    .eq('environment', 'production')
+    .order('created_at', { ascending: false })
+    .limit(3)
   let baseline: AuditFindingInput[] = []
   if (baselineAudit) {
     const { data: occurrences } = await db
       .from('cr_occurrences')
-      .select('message,cr_findings(normalized_path,rule_slug,title,priority)')
+      .select(
+        'message,cr_findings(normalized_path,rule_slug,title,priority,category,source,occurrence_key)'
+      )
       .eq('audit_id', baselineAudit.id)
       .neq('status', 'resolved')
     baseline = (occurrences ?? []).flatMap(occurrence =>
@@ -53,7 +63,10 @@ export async function processAuditJob(
         ruleSlug: finding.rule_slug,
         title: finding.title,
         priority: finding.priority,
-        message: occurrence.message
+        message: occurrence.message,
+        category: finding.category,
+        source: finding.source,
+        occurrenceKey: finding.occurrence_key
       }))
     )
   }
@@ -86,6 +99,8 @@ export async function processAuditJob(
       persistent_count: comparison.counts.persistent,
       resolved_count: comparison.counts.resolved,
       blocking_count: comparison.blockingRegressions,
+      requested_page_count: pages.length,
+      checked_page_count: pages.filter(page => page.reachable).length,
       started_at: now,
       completed_at: now
     })
@@ -99,6 +114,8 @@ export async function processAuditJob(
       url: page.url,
       normalized_path: new URL(page.url).pathname,
       reachable: page.reachable,
+      http_status: page.httpStatus,
+      duration_ms: page.durationMs,
       error: page.error
     }))
   )
@@ -114,6 +131,9 @@ export async function processAuditJob(
       rule_slug: finding.ruleSlug,
       title: finding.title,
       priority: finding.priority,
+      category: finding.category ?? 'quality',
+      source: finding.source ?? 'frontend_checklist',
+      occurrence_key: finding.occurrenceKey ?? 'primary',
       last_seen_audit_id: audit.id,
       resolved_at: finding.status === 'resolved' ? now : null,
       updated_at: now
@@ -153,8 +173,26 @@ export async function processAuditJob(
       payload: {
         auditId: audit.id,
         project: project.name,
-        headline: 'New blocking frontend regressions',
-        detail: `${comparison.blockingRegressions} new critical or high-priority findings require attention.`
+        headline: 'Your website needs attention',
+        detail: `${comparison.blockingRegressions} new important ${comparison.blockingRegressions === 1 ? 'problem needs' : 'problems need'} attention.`
+      }
+    })
+  const thirdConsecutiveIncompleteCheck =
+    comparison.gate === 'inconclusive' &&
+    recentAudits?.[0]?.gate_status === 'inconclusive' &&
+    recentAudits?.[1]?.gate_status === 'inconclusive' &&
+    recentAudits?.[2]?.gate_status !== 'inconclusive'
+  if (thirdConsecutiveIncompleteCheck && comparison.blockingRegressions === 0)
+    await db.from('cr_jobs').insert({
+      owner_id: project.owner_id,
+      project_id: project.id,
+      kind: 'email',
+      payload: {
+        auditId: audit.id,
+        project: project.name,
+        headline: 'CodeRocket could not check your website',
+        detail:
+          'Three consecutive checks were incomplete. A page may be offline or blocking CodeRocket requests.'
       }
     })
   return { auditId: audit.id, blocking: comparison.blockingRegressions }

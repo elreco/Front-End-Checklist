@@ -1,5 +1,5 @@
 import type { GateStatus, PlanId } from '@coderocket/core'
-import { CodeRocketLogo } from '@repo/design-system/coderocket-logo'
+import { CODEROCKET_TAGLINE, CodeRocketLogo } from '@repo/design-system/coderocket-logo'
 import { ArrowUpRight, BarChart3, LogOut, Plus } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
@@ -28,8 +28,9 @@ export async function ProductShell({
         <aside className="hidden border-border border-r bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:p-4">
           <Link className="px-2 py-2" href="/dashboard">
             <CodeRocketLogo
-              className="h-8 w-8 shrink-0 text-foreground"
-              wordmarkClassName="text-lg"
+              className="h-10 w-10 shrink-0 text-foreground"
+              tagline={CODEROCKET_TAGLINE}
+              wordmarkClassName="text-xl"
             />
           </Link>
           <p className="mt-7 px-3 font-mono text-[10px] text-muted uppercase tracking-[.18em]">
@@ -56,13 +57,15 @@ export async function ProductShell({
               </div>
             </div>
             <form action={signOut} className="mt-3 border-border border-t pt-2">
-              <button
-                className="flex w-full cursor-pointer items-center gap-2 px-1 py-1 text-left text-muted text-xs hover:text-foreground"
+              <CodeRocketButton
+                className="w-full justify-start px-1"
+                size="sm"
                 type="submit"
+                variant="ghost"
               >
                 <LogOut aria-hidden className="h-3.5 w-3.5" />
                 Sign out
-              </button>
+              </CodeRocketButton>
             </form>
           </div>
         </aside>
@@ -140,7 +143,9 @@ function PlanPrompt({
   return (
     <div className="mt-auto border border-border bg-background p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-mono text-[10px] uppercase tracking-[.14em]">{plan} plan</p>
+        <p className="font-mono text-[10px] uppercase tracking-[.14em]">
+          {plan === 'solo' ? 'personal' : plan} plan
+        </p>
         <span className="text-muted text-xs">
           {projectCount}/{projectLimit} sites
         </span>
@@ -183,16 +188,20 @@ export function GateBadge({ status }: { status: GateStatus }) {
       ? 'border-success bg-success/10 text-success'
       : status === 'failed'
         ? 'border-danger bg-danger/10 text-danger'
-        : 'border-accent bg-accent/10 text-accent'
+        : status === 'inconclusive'
+          ? 'border-warning bg-warning/10 text-warning'
+          : 'border-accent bg-accent/10 text-accent'
   return (
     <span
       className={`inline-flex border px-2.5 py-1 font-mono font-semibold text-[10px] uppercase tracking-[.08em] ${className}`}
     >
-      {status === 'needs_baseline'
-        ? 'First check needed'
-        : status === 'passed'
-          ? 'All clear'
-          : 'Needs attention'}
+      {status === 'inconclusive'
+        ? 'Could not check'
+        : status === 'needs_baseline'
+          ? 'First check needed'
+          : status === 'passed'
+            ? 'All clear'
+            : 'Needs attention'}
     </span>
   )
 }

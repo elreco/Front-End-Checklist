@@ -2,9 +2,10 @@
 
 ## Promise
 
-**Frontend quality, cleared for launch.**
+**Know when your website needs attention.**
 
-CodeRocket is direct, technical, and calm. It communicates evidence rather than synthetic scores.
+CodeRocket is direct, calm, and understandable before it is technical. It communicates evidence
+rather than synthetic scores and always says when a page could not be checked.
 
 ## Mark
 

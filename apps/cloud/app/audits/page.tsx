@@ -9,10 +9,10 @@ export const metadata = { title: 'Check history' }
 export default async function AuditsPage() {
   const runs = await getAuditHistory()
   return (
-    <ProductShell eyebrow="Every comparison" title="Check history">
+    <ProductShell eyebrow="Every website check" title="Check history">
       <section className="mb-6 grid gap-px bg-border sm:grid-cols-3">
         <HistoryFact label="What is recorded" value="Every completed check" />
-        <HistoryFact label="What blocks a release" value="Only new, important problems" />
+        <HistoryFact label="What triggers an alert" value="Only new, important problems" />
         <HistoryFact label="What stays private" value="All results, until you share" />
       </section>
 

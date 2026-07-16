@@ -1,10 +1,14 @@
-import { CodeRocketLogo } from '@repo/design-system/coderocket-logo'
+import { CODEROCKET_TAGLINE, CodeRocketLogo } from '@repo/design-system/coderocket-logo'
+import { CodeRocketToaster } from '@repo/design-system/ui/coderocket-toast'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono, Playfair_Display } from 'next/font/google'
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { type ReactNode, Suspense } from 'react'
 import { MarketingAccountActions } from '@/components/marketing-account-actions'
 import { MarketingChrome } from '@/components/marketing-chrome'
+import { MarketingNavigationLinks } from '@/components/marketing-navigation-links'
+import { NavigationFeedback } from '@/components/navigation-feedback'
+import { RouteToasts } from '@/components/route-toasts'
 import './globals.css'
 
 const geist = Geist({
@@ -27,18 +31,18 @@ const playfairDisplay = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL('https://coderocket.app'),
   title: {
-    default: 'CodeRocket — Frontend quality, cleared for launch.',
+    default: 'CodeRocket — Website health monitoring',
     template: '%s — CodeRocket'
   },
-  description: 'Continuous frontend quality gates for freelancers and agencies.',
+  description:
+    'Know when your website needs attention. Monitor availability, search, accessibility, performance, security, and frontend quality.',
   manifest: '/manifest.webmanifest',
   alternates: { canonical: '/' },
   openGraph: {
     title: 'CodeRocket',
-    description: 'Frontend quality, cleared for launch.',
+    description: 'Know when your website needs attention.',
     url: 'https://coderocket.app',
     siteName: 'CodeRocket',
-    images: [{ url: '/social-card.png', width: 1200, height: 630 }],
     type: 'website'
   }
 }
@@ -52,46 +56,50 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       lang="en"
     >
       <body>
+        <a
+          className="fixed top-3 left-3 z-[100] -translate-y-24 bg-accent px-4 py-2 font-mono text-accent-foreground text-sm focus:translate-y-0"
+          href="#main-content"
+        >
+          Skip to main content
+        </a>
+        <Suspense fallback={null}>
+          <NavigationFeedback />
+          <RouteToasts />
+        </Suspense>
+        <CodeRocketToaster />
         <MarketingChrome>
           <header className="sticky top-0 z-50 border-border border-b bg-background">
             <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
               <Link aria-label="CodeRocket home" href="/">
                 <CodeRocketLogo
-                  className="h-8 w-8 shrink-0 -translate-y-px text-foreground"
-                  wordmarkClassName="text-sm"
+                  className="h-10 w-10 shrink-0 text-foreground"
+                  tagline={CODEROCKET_TAGLINE}
+                  wordmarkClassName="text-xl"
                 />
               </Link>
               <nav
                 aria-label="Primary navigation"
                 className="flex items-center gap-4 font-mono text-xs sm:gap-7"
               >
-                <Link
-                  className="hidden text-muted hover:text-foreground sm:inline"
-                  href="/#product"
-                >
-                  How it works
-                </Link>
-                <Link className="text-muted hover:text-foreground" href="/pricing">
-                  Pricing
-                </Link>
-                <Link className="hidden text-muted hover:text-foreground sm:inline" href="/docs">
-                  Docs
-                </Link>
+                <MarketingNavigationLinks />
                 <MarketingAccountActions />
               </nav>
             </div>
           </header>
         </MarketingChrome>
-        {children}
+        <div id="main-content" tabIndex={-1}>
+          {children}
+        </div>
         <MarketingChrome>
           <footer className="border-border border-t px-5 py-14 text-muted text-sm">
             <div className="mx-auto grid max-w-7xl gap-10 sm:grid-cols-[1fr_auto]">
               <div>
                 <CodeRocketLogo
-                  className="h-7 w-7 shrink-0 text-foreground"
-                  wordmarkClassName="text-foreground"
+                  className="h-9 w-9 shrink-0 text-foreground"
+                  tagline={CODEROCKET_TAGLINE}
+                  taglineClassName="text-muted"
+                  wordmarkClassName="text-base text-foreground"
                 />
-                <p className="mt-4 max-w-sm">Frontend quality, cleared for launch.</p>
               </div>
               <div className="grid grid-cols-2 gap-x-12 gap-y-3 font-mono text-xs">
                 <Link href="/pricing">pricing</Link>

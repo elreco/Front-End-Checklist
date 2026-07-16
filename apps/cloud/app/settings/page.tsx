@@ -5,26 +5,10 @@ import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
 import { updateProfile } from './actions'
 
-const notices: Record<string, string> = {
-  saved: 'Your profile was updated.',
-  'save-failed': 'Your profile could not be updated. Please try again.',
-  'invalid-name': 'Enter a display name between 1 and 80 characters.'
-}
-
-export default async function SettingsPage({
-  searchParams
-}: {
-  searchParams: Promise<{ notice?: string }>
-}) {
-  const [context, search] = await Promise.all([getAppShellContext(), searchParams])
-  const notice = search.notice ? notices[search.notice] : undefined
+export default async function SettingsPage() {
+  const context = await getAppShellContext()
   return (
     <ProductShell eyebrow="Your account" title="Settings">
-      {notice ? (
-        <p aria-live="polite" className="mb-6 border border-signal bg-surface p-4 text-sm">
-          {notice}
-        </p>
-      ) : null}
       <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="border border-border bg-surface">
           <div className="border-border border-b p-5 sm:p-6">

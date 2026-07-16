@@ -11,10 +11,14 @@ const existing = {
 }
 
 describe('CodeRocket audit comparison', () => {
-  it('uses only normalized path and rule slug as identity', () => {
+  it('uses normalized path, rule slug, and a stable occurrence key as identity', () => {
     assert.equal(
       fingerprintFinding('/pricing', 'document-title'),
       fingerprintFinding('/PRICING/', 'document-title')
+    )
+    assert.notEqual(
+      fingerprintFinding('/pricing', 'document-title', 'first'),
+      fingerprintFinding('/pricing', 'document-title', 'second')
     )
   })
 
@@ -60,5 +64,6 @@ describe('CodeRocket audit comparison', () => {
       unreachablePagePaths: ['/pricing']
     })
     assert.equal(result.counts.resolved, 0)
+    assert.equal(result.gate, 'inconclusive')
   })
 })

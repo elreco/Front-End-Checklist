@@ -37,4 +37,16 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql, /delete\s+from/)
     assert.doesNotMatch(sql, /alter\s+table[^;]+drop\s+column/)
   })
+
+  it('adds website health coverage without replacing legacy data', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607160003_website_health.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /add value if not exists 'inconclusive'/)
+    assert.match(sql, /add column if not exists requested_page_count/)
+    assert.match(sql, /add column if not exists checked_page_count/)
+    assert.match(sql, /add column if not exists audience/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
 })

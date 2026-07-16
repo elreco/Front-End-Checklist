@@ -61,5 +61,7 @@ export async function getAuditHistory(): Promise<AuditHistoryItem[]> {
 }
 
 function resolveGate(value: unknown): GateStatus {
-  return value === 'passed' || value === 'failed' ? value : 'needs_baseline'
+  return value === 'passed' || value === 'failed' || value === 'inconclusive'
+    ? value
+    : 'needs_baseline'
 }

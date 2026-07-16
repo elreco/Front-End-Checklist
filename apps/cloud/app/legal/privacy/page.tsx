@@ -4,8 +4,8 @@ export default function PrivacyPage() {
       <h1 className="font-bold font-heading text-4xl">Privacy policy</h1>
       <p className="mt-5 text-muted leading-8">
         Draft for owner and legal review before public launch. CodeRocket processes account
-        identity, project URLs, audit findings, billing status, and operational logs to provide
-        continuous frontend quality monitoring.
+        identity, website URLs, check findings, billing status, and operational logs to provide
+        continuous website health monitoring.
       </p>
     </main>
   )

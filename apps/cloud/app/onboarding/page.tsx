@@ -77,6 +77,42 @@ export default async function OnboardingPage() {
             </div>
           ) : (
             <form action={createProject} className="space-y-7 p-5 sm:p-7">
+              <fieldset className="space-y-4">
+                <legend className="font-heading font-semibold text-lg">
+                  How will you use CodeRocket?
+                </legend>
+                <p className="text-muted text-sm leading-6">
+                  This only changes the guidance you see. The checks remain identical and you can
+                  change direction later.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    [
+                      'site_owner',
+                      'My own website',
+                      'Portfolio, shop, newsletter, or organization'
+                    ],
+                    ['freelancer', 'Client websites', 'Freelance delivery and ongoing maintenance'],
+                    ['agency', 'Agency portfolio', 'Several client websites and shared reports']
+                  ].map(([value, title, description], index) => (
+                    <label
+                      className="cursor-pointer border border-border bg-background p-4 transition-colors hover:border-accent has-checked:border-accent has-checked:bg-accent/10"
+                      key={value}
+                    >
+                      <input
+                        className="mr-2 accent-accent"
+                        defaultChecked={index === 0}
+                        name="audience"
+                        type="radio"
+                        value={value}
+                      />
+                      <span className="font-semibold text-sm">{title}</span>
+                      <span className="mt-2 block text-muted text-xs leading-5">{description}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               <fieldset className="space-y-5">
                 <legend className="font-heading font-semibold text-lg">Site details</legend>
                 <label className="block font-semibold text-sm" htmlFor="project-name">

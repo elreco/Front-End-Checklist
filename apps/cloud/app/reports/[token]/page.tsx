@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { createServiceClient } from '@coderocket/db'
-import { CodeRocketLogo } from '@repo/design-system/coderocket-logo'
-import { CheckCircle2, ShieldCheck, XCircle } from '@repo/design-system/icons'
+import { CODEROCKET_TAGLINE, CodeRocketLogo } from '@repo/design-system/coderocket-logo'
+import { AlertTriangle, CheckCircle2, HelpCircle, ShieldCheck } from '@repo/design-system/icons'
 import { notFound } from 'next/navigation'
 
 export default async function SharedReportPage({ params }: { params: Promise<{ token: string }> }) {
@@ -19,18 +19,27 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
   const { data: audit } = await db
     .from('cr_audits')
     .select(
-      'id,gate_status,ruleset_version,new_count,persistent_count,resolved_count,completed_at,cr_projects(name,production_url)'
+      'id,gate_status,ruleset_version,new_count,persistent_count,resolved_count,requested_page_count,checked_page_count,completed_at,cr_projects(name,production_url)'
     )
     .eq('id', link.audit_id)
     .single()
   if (!audit) notFound()
+  const { data: occurrences } = await db
+    .from('cr_occurrences')
+    .select('id,status,message,cr_findings(title,priority,normalized_path,category)')
+    .eq('audit_id', audit.id)
+    .limit(50)
   const project = audit.cr_projects?.[0]
-  const passed = audit.gate_status === 'passed' || audit.gate_status === 'needs_baseline'
-  const GateIcon = passed ? CheckCircle2 : XCircle
+  const status = reportStatus(audit.gate_status)
+  const GateIcon = status.icon
   return (
     <main className="mx-auto max-w-5xl px-5 py-12">
       <div className="flex items-center justify-between border-border border-b pb-6">
-        <CodeRocketLogo className="h-8 w-8" wordmarkClassName="text-lg" />
+        <CodeRocketLogo
+          className="h-10 w-10"
+          tagline={CODEROCKET_TAGLINE}
+          wordmarkClassName="text-xl"
+        />
         <span className="inline-flex items-center gap-2 text-muted text-sm">
           <ShieldCheck aria-hidden className="h-4 w-4" />
           Private report
@@ -40,35 +49,28 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
         <p className="font-mono text-accent text-xs uppercase tracking-[.18em]">
           Client delivery report
         </p>
-        <h1 className="mt-3 font-editorial text-6xl">{project?.name ?? 'Frontend audit'}</h1>
+        <h1 className="mt-3 font-editorial text-6xl">{project?.name ?? 'Website health report'}</h1>
         <p className="mt-3 text-muted">
           {project?.production_url} ·{' '}
           {audit.completed_at
             ? new Intl.DateTimeFormat('en', { dateStyle: 'long' }).format(
                 new Date(audit.completed_at)
               )
-            : 'Completed audit'}{' '}
+            : 'Completed check'}{' '}
           · {audit.ruleset_version}
         </p>
-        <div
-          className={`mt-8 flex items-center gap-3 border p-5 ${passed ? 'border-success bg-success/10 text-success' : 'border-danger bg-danger/10 text-danger'}`}
-        >
+        <div className={`mt-8 flex items-center gap-3 border p-5 ${status.className}`}>
           <GateIcon aria-hidden className="h-7 w-7" />
           <div>
-            <p className="font-bold font-heading text-xl">
-              Quality gate {passed ? 'passed' : 'failed'}
-            </p>
-            <p className="mt-1 text-sm">
-              {passed
-                ? 'No new critical or high-priority regressions.'
-                : 'New blocking regressions require attention.'}
-            </p>
+            <p className="font-bold font-heading text-xl">{status.title}</p>
+            <p className="mt-1 text-sm">{status.description}</p>
           </div>
         </div>
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-4">
           {[
+            ['Pages checked', `${audit.checked_page_count}/${audit.requested_page_count}`],
             ['New', audit.new_count],
-            ['Persistent', audit.persistent_count],
+            ['Still present', audit.persistent_count],
             ['Resolved', audit.resolved_count]
           ].map(([label, value]) => (
             <div className="border border-border bg-surface p-5" key={label}>
@@ -77,7 +79,70 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
             </div>
           ))}
         </div>
+        <section className="mt-8 border border-border bg-surface">
+          <div className="border-border border-b p-5">
+            <h2 className="font-heading font-semibold text-xl">What this check found</h2>
+            <p className="mt-1 text-muted text-sm">
+              Plain-language evidence from the checked pages. The report owner controls this private
+              link and can revoke it at any time.
+            </p>
+          </div>
+          {(occurrences ?? []).length === 0 ? (
+            <p className="p-5 text-muted text-sm">No individual findings were recorded.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {(occurrences ?? []).flatMap(occurrence =>
+                occurrence.cr_findings.map(finding => (
+                  <article className="grid gap-3 p-5 sm:grid-cols-[120px_1fr]" key={occurrence.id}>
+                    <p className="font-mono text-[10px] text-muted uppercase">
+                      {occurrence.status === 'persistent' ? 'Still present' : occurrence.status} ·{' '}
+                      {finding.category}
+                    </p>
+                    <div>
+                      <h3 className="font-semibold">{finding.title}</h3>
+                      <p className="mt-1 text-muted text-sm leading-6">{occurrence.message}</p>
+                      <p className="mt-2 font-mono text-muted text-xs">
+                        Page {finding.normalized_path} · {finding.priority}
+                      </p>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   )
+}
+
+function reportStatus(value: string | null) {
+  if (value === 'passed')
+    return {
+      title: 'Website healthy for this check',
+      description: 'Every requested page was checked and no new important problem was found.',
+      className: 'border-success bg-success/10 text-success',
+      icon: CheckCircle2
+    }
+  if (value === 'inconclusive')
+    return {
+      title: 'Check incomplete',
+      description:
+        'At least one requested page could not be read. This report is not marked healthy.',
+      className: 'border-warning bg-warning/10 text-warning',
+      icon: HelpCircle
+    }
+  if (value === 'needs_baseline')
+    return {
+      title: 'Reference check created',
+      description: 'This complete result is the reference used to identify future changes.',
+      className: 'border-accent bg-accent/10 text-accent',
+      icon: CheckCircle2
+    }
+  return {
+    title: 'Website needs attention',
+    description: 'New important problems require attention.',
+    className: 'border-danger bg-danger/10 text-danger',
+    icon: AlertTriangle
+  }
 }

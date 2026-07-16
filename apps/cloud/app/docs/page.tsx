@@ -16,9 +16,9 @@ import {
 const sections = [
   {
     href: '/docs/audits',
-    title: 'How audits work',
+    title: 'How checks work',
     description:
-      'Understand HTML fetching, baselines, stable fingerprints, regression states, and gate decisions.',
+      'Understand safe page fetching, health areas, coverage, baselines, and change detection.',
     icon: Radar
   },
   {
@@ -49,9 +49,9 @@ export default function DocumentationPage() {
   return (
     <>
       <DocsHeader
-        description="The canonical reference for how CodeRocket analyzes sites, compares releases, and turns the maintained frontend rule corpus into a reproducible quality gate."
-        eyebrow="CodeRocket technical reference"
-        title="Know exactly what the gate knows."
+        description="The canonical reference for what CodeRocket can check automatically, what needs developer or manual evidence, and how every website health result is produced."
+        eyebrow="Official CodeRocket reference"
+        title="Know exactly what CodeRocket checked."
       />
 
       <section className="grid gap-4 py-10 sm:grid-cols-2">

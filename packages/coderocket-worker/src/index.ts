@@ -35,10 +35,10 @@ async function processEmail(job: WorkerJob) {
   const auditId = String(job.payload.auditId ?? '')
   await sendAlertEmail({
     to: user.user.email,
-    project: String(job.payload.project ?? 'CodeRocket project'),
-    headline: String(job.payload.headline ?? 'Audit requires attention'),
-    detail: String(job.payload.detail ?? 'Open CodeRocket to review this audit.'),
-    runUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://coderocket.app'}/audits/${auditId}`
+    project: String(job.payload.project ?? 'CodeRocket website'),
+    headline: String(job.payload.headline ?? 'Website needs attention'),
+    detail: String(job.payload.detail ?? 'Open CodeRocket to review this website check.'),
+    runUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://coderocket.app'}/projects/${job.project_id ?? auditId}`
   })
 }
 
@@ -107,10 +107,10 @@ async function tick() {
           project_id: job.project_id,
           kind: 'email',
           payload: {
-            project: project?.name ?? 'CodeRocket project',
-            headline: 'Audit failed repeatedly',
+            project: project?.name ?? 'CodeRocket website',
+            headline: 'Website check failed repeatedly',
             detail:
-              'CodeRocket could not complete this audit after three attempts. Open the project to inspect the last operational error.'
+              'CodeRocket could not complete this website check after three attempts. Open the site to inspect the last operational error.'
           }
         })
       }

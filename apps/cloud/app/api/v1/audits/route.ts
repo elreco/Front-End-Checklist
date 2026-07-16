@@ -109,6 +109,7 @@ export async function POST(request: Request) {
     .eq('project_id', tokenRow.project_id)
     .eq('environment', 'production')
     .eq('status', 'succeeded')
+    .neq('gate_status', 'inconclusive')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -116,7 +117,9 @@ export async function POST(request: Request) {
   if (baselineAudit) {
     const { data: occurrences } = await db
       .from('cr_occurrences')
-      .select('status,message,cr_findings(normalized_path,rule_slug,title,priority)')
+      .select(
+        'status,message,cr_findings(normalized_path,rule_slug,title,priority,category,source,occurrence_key)'
+      )
       .eq('audit_id', baselineAudit.id)
       .neq('status', 'resolved')
     baseline = (occurrences ?? []).flatMap(occurrence =>
@@ -125,7 +128,10 @@ export async function POST(request: Request) {
         ruleSlug: finding.rule_slug,
         title: finding.title,
         priority: finding.priority,
-        message: occurrence.message
+        message: occurrence.message,
+        category: finding.category,
+        source: finding.source,
+        occurrenceKey: finding.occurrence_key
       }))
     )
   }
@@ -157,6 +163,8 @@ export async function POST(request: Request) {
       persistent_count: comparison.counts.persistent,
       resolved_count: comparison.counts.resolved,
       blocking_count: comparison.blockingRegressions,
+      requested_page_count: parsed.data.pages.length,
+      checked_page_count: parsed.data.pages.filter(page => page.reachable).length,
       started_at: new Date().toISOString(),
       completed_at: new Date().toISOString()
     })
@@ -170,6 +178,8 @@ export async function POST(request: Request) {
       url: page.url,
       normalized_path: new URL(page.url).pathname,
       reachable: page.reachable,
+      http_status: page.httpStatus,
+      duration_ms: page.durationMs,
       error: page.error
     }))
   )
@@ -185,6 +195,9 @@ export async function POST(request: Request) {
       rule_slug: finding.ruleSlug,
       title: finding.title,
       priority: finding.priority,
+      category: finding.category ?? 'quality',
+      source: finding.source ?? 'frontend_checklist',
+      occurrence_key: finding.occurrenceKey ?? 'primary',
       last_seen_audit_id: audit.id,
       resolved_at: finding.status === 'resolved' ? new Date().toISOString() : null
     }
@@ -225,7 +238,11 @@ export async function POST(request: Request) {
     auditId: audit.id,
     diff: comparison.counts,
     blockingRegressions: comparison.blockingRegressions,
-    qualityGate: comparison.gate
+    qualityGate: comparison.gate,
+    coverage: {
+      requested: parsed.data.pages.length,
+      checked: parsed.data.pages.filter(page => page.reachable).length
+    }
   }
   await db.from('cr_idempotency_keys').insert({
     owner_id: tokenRow.owner_id,

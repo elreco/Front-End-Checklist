@@ -2,7 +2,7 @@ import { PricingCards } from '@/components/pricing-cards'
 
 export const metadata = {
   title: 'Pricing',
-  description: 'Simple CodeRocket plans for freelancers and agencies.'
+  description: 'Simple website health monitoring for site owners, freelancers, and agencies.'
 }
 
 export default function PricingPage() {
@@ -14,11 +14,11 @@ export default function PricingPage() {
             — &nbsp; Pricing &nbsp; —
           </p>
           <h1 className="mt-6 font-editorial text-6xl tracking-[-.03em] sm:text-7xl">
-            Ship with a clear quality gate.
+            Start with one website. Grow to fifty.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted">
-            No trial, no seats, and no surprise usage billing. Upgrade when your client roster
-            grows.
+            No trial, no seats, and no surprise usage billing. Every plan shows exactly how many
+            pages were checked and keeps reports private until you share them.
           </p>
         </div>
         <PricingCards />

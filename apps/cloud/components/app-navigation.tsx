@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 const navigation = [
   { href: '/dashboard', label: 'Overview', icon: Gauge },
   { href: '/audits', label: 'Check history', icon: History },
-  { href: '/docs', label: 'Help & rules', icon: BookOpen },
+  { href: '/docs', label: 'Website guide', icon: BookOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/settings/billing', label: 'Plan & billing', icon: CreditCard }
 ]

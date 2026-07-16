@@ -17,9 +17,11 @@ import { OnboardingChecklist } from './onboarding-checklist'
 
 /** The action-oriented workspace overview. */
 export function DashboardOverview({
+  audience,
   data,
   displayName
 }: {
+  audience: 'site_owner' | 'freelancer' | 'agency'
   data: DashboardData
   displayName: string
 }) {
@@ -29,21 +31,29 @@ export function DashboardOverview({
       <section className="flex flex-col justify-between gap-5 border border-border bg-surface p-5 sm:flex-row sm:items-center sm:p-6">
         <div>
           <p className="font-mono text-[10px] text-muted uppercase tracking-[.16em]">
-            {data.attentionCount > 0 ? 'Action recommended' : 'Workspace status'}
+            {data.attentionCount > 0
+              ? 'Action recommended'
+              : data.incompleteCount > 0
+                ? 'Check incomplete'
+                : 'Workspace status'}
           </p>
           <h2 className="mt-2 font-heading font-semibold text-2xl sm:text-3xl">
             {data.projectCount === 0
               ? `Welcome, ${firstName}. Let’s add your first site.`
               : data.attentionCount > 0
                 ? `${data.attentionCount} important ${data.attentionCount === 1 ? 'change needs' : 'changes need'} a look.`
-                : `Everything looks clear, ${firstName}.`}
+                : data.incompleteCount > 0
+                  ? `${data.incompleteCount} ${data.incompleteCount === 1 ? 'site could' : 'sites could'} not be fully checked.`
+                  : `Everything looks clear, ${firstName}.`}
           </h2>
           <p className="mt-2 max-w-3xl text-muted leading-7">
             {data.projectCount === 0
               ? 'CodeRocket checks your live pages, remembers the current state, and tells you only when something important changes.'
               : data.attentionCount > 0
                 ? 'These are new high-priority problems—not the long list of issues your site may already have had.'
-                : 'No new high-priority problems were found in the latest completed checks.'}
+                : data.incompleteCount > 0
+                  ? 'CodeRocket did not receive readable HTML for every requested page. Open the site to see which page was blocked or unavailable.'
+                  : 'No new high-priority problems were found in the latest completed checks.'}
           </p>
         </div>
         <CodeRocketButton asChild className="shrink-0" size="lg">
@@ -122,7 +132,7 @@ export function DashboardOverview({
 
       <div className="grid gap-7 xl:grid-cols-[1.35fr_.65fr]">
         <RecentActivity activity={data.activity} />
-        <PlanCard data={data} />
+        <PlanCard audience={audience} data={data} />
       </div>
     </div>
   )
@@ -176,7 +186,11 @@ function ProjectCard({ project }: { project: DashboardProject }) {
         <GateBadge status={project.gate} />
       </div>
       <div className="mt-6 grid grid-cols-3 gap-px bg-border">
-        <ProjectFact label="Pages" value={String(project.pageCount)} />
+        <ProjectFact
+          label="Pages checked"
+          value={`${project.checkedPageCount} / ${project.requestedPageCount}`}
+          tone={project.checkedPageCount < project.requestedPageCount ? 'danger' : undefined}
+        />
         <ProjectFact
           label="New important"
           value={String(project.blockingCount)}
@@ -233,7 +247,7 @@ function RecentActivity({ activity }: { activity: DashboardActivity[] }) {
 }
 
 function ActivityItem({ item }: { item: DashboardActivity }) {
-  const clear = item.gate !== 'failed'
+  const clear = item.gate === 'passed' || item.gate === 'needs_baseline'
   return (
     <li className="flex items-start gap-3 p-5">
       <span
@@ -252,9 +266,11 @@ function ActivityItem({ item }: { item: DashboardActivity }) {
         <p className="mt-1 text-muted text-sm">
           {item.status === 'failed'
             ? 'The check could not finish.'
-            : item.blockingCount > 0
-              ? `${item.blockingCount} new important ${item.blockingCount === 1 ? 'problem' : 'problems'} found.`
-              : 'No new important problems found.'}
+            : item.gate === 'inconclusive'
+              ? 'Some pages could not be checked. No healthy result was recorded.'
+              : item.blockingCount > 0
+                ? `${item.blockingCount} new important ${item.blockingCount === 1 ? 'problem' : 'problems'} found.`
+                : 'No new important problems found.'}
         </p>
       </div>
       <span className="shrink-0 text-muted text-xs">{item.happenedAt}</span>
@@ -262,7 +278,13 @@ function ActivityItem({ item }: { item: DashboardActivity }) {
   )
 }
 
-function PlanCard({ data }: { data: DashboardData }) {
+function PlanCard({
+  audience,
+  data
+}: {
+  audience: 'site_owner' | 'freelancer' | 'agency'
+  data: DashboardData
+}) {
   const paid = data.plan !== 'free'
   return (
     <aside className="border border-border bg-surface p-5 sm:p-6">
@@ -274,10 +296,12 @@ function PlanCard({ data }: { data: DashboardData }) {
       </h2>
       <p className="mt-3 text-muted text-sm leading-6">
         {data.plan === 'agency'
-          ? 'You have 25 sites, a full year of history, and client reports without secondary branding.'
+          ? 'You have 50 sites, a full year of history, and client reports without secondary branding.'
           : data.plan === 'solo'
-            ? 'Agency adds 25 sites, a year of history, and fully unbranded client reports.'
-            : 'Solo checks up to five sites every day and keeps 90 days of history for €19/month.'}
+            ? 'Agency adds 50 client sites, a year of history, and fully unbranded reports.'
+            : audience === 'site_owner'
+              ? 'Personal checks up to three websites every day and keeps 90 days of history for €12/month.'
+              : 'Personal gives freelancers three daily-monitored websites; Agency scales to a 50-site client portfolio.'}
       </p>
       {data.plan !== 'agency' ? (
         <CodeRocketButton asChild className="mt-5" fullWidth variant="outline">
