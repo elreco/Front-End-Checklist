@@ -1,4 +1,11 @@
-import { SiClaude, SiGithub, SiX, SiYoutube } from '@icons-pack/react-simple-icons'
+import {
+  SiClaude,
+  SiFacebook,
+  SiGithub,
+  SiGoogle,
+  SiX,
+  SiYoutube
+} from '@icons-pack/react-simple-icons'
 import type { ComponentPropsWithoutRef } from 'react'
 
 type BrandIconProps = Omit<ComponentPropsWithoutRef<typeof SiX>, 'title'>
@@ -15,6 +22,16 @@ export function ClaudeBrandIcon(props: BrandIconProps) {
  */
 export function GitHubBrandIcon(props: BrandIconProps) {
   return <SiGithub aria-hidden="true" {...props} />
+}
+
+/** Official Google brand icon from Simple Icons. */
+export function GoogleBrandIcon(props: BrandIconProps) {
+  return <SiGoogle aria-hidden="true" {...props} />
+}
+
+/** Official Facebook brand icon from Simple Icons. */
+export function FacebookBrandIcon(props: BrandIconProps) {
+  return <SiFacebook aria-hidden="true" {...props} />
 }
 
 /**

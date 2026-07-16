@@ -1,0 +1,26 @@
+{
+  "name": "@coderocket/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "coderocket": "./src/index.ts"
+  },
+  "scripts": {
+    "audit:local": "tsx src/index.ts",
+    "lint": "biome check .",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:ci": "node --import tsx --test test/*.test.ts",
+    "test:coverage": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@coderocket/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/config-typescript": "workspace:^",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

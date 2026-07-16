@@ -1,0 +1,139 @@
+@import "tailwindcss";
+@source "../../../packages/design-system/src/coderocket-logo.tsx";
+@source "../../../packages/design-system/src/ui/coderocket-button.tsx";
+@source "../../../packages/design-system/src/ui/coderocket-oauth-button.tsx";
+
+@theme inline {
+  --color-background: var(--cr-background);
+  --color-surface: var(--cr-surface);
+  --color-surface-raised: var(--cr-surface-raised);
+  --color-foreground: var(--cr-foreground);
+  --color-muted: var(--cr-muted);
+  --color-border: var(--cr-border);
+  --color-accent: var(--cr-accent);
+  --color-signal: var(--cr-signal);
+  --color-success: var(--cr-success);
+  --color-danger: var(--cr-danger);
+  --font-sans: var(--font-geist);
+  --font-heading: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
+  --font-editorial: var(--font-playfair-display);
+}
+
+:root {
+  --cr-background: #09090b;
+  --cr-surface: #0d0d10;
+  --cr-surface-raised: #141419;
+  --cr-foreground: #fafafa;
+  --cr-muted: #96969f;
+  --cr-border: #29292f;
+  --cr-accent: #7c5cfc;
+  --cr-signal: #22d3ee;
+  --cr-success: #53d7a2;
+  --cr-danger: #ff7a69;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: var(--cr-background);
+  color: var(--cr-foreground);
+  font-family: var(--font-geist), system-ui, sans-serif;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--cr-signal);
+  outline-offset: 3px;
+}
+.font-editorial {
+  font-family: var(--font-playfair-display), Georgia, serif;
+}
+@keyframes cr-scan {
+  0%,
+  12% {
+    top: 0;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+  }
+  88%,
+  100% {
+    top: calc(100% - 1px);
+    opacity: 0;
+  }
+}
+@keyframes cr-reveal {
+  0%,
+  20% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  32%,
+  82% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.55;
+  }
+}
+@keyframes cr-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.cr-scan-line {
+  animation: cr-scan 5.5s ease-in-out infinite;
+  will-change: top, opacity;
+}
+.cr-reveal {
+  animation: cr-reveal 5.5s ease-out infinite;
+}
+.cr-reveal-delay-1 {
+  animation-delay: 0.22s;
+}
+.cr-reveal-delay-2 {
+  animation-delay: 0.44s;
+}
+.cr-pulse {
+  animation: cr-pulse 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .cr-scan-line,
+  .cr-reveal,
+  .cr-pulse {
+    animation: none;
+  }
+}
+::selection {
+  background: var(--cr-accent);
+  color: white;
+}

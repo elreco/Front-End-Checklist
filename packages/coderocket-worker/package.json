@@ -1,0 +1,26 @@
+{
+  "name": "@coderocket/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "lint": "biome check .",
+    "start": "tsx src/index.ts",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:ci": "node --import tsx --test test/*.test.ts",
+    "test:coverage": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@coderocket/core": "workspace:*",
+    "@coderocket/db": "workspace:*",
+    "resend": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config-typescript": "workspace:^",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

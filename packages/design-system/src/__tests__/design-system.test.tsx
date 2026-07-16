@@ -1,3 +1,4 @@
+import { CodeRocketLogo } from '@repo/design-system/coderocket-logo'
 import { CodeSurface, InlineCode } from '@repo/design-system/custom/content/code-surface'
 import { ConfirmDialog } from '@repo/design-system/custom/feedback/confirm-dialog'
 import { CopyButton } from '@repo/design-system/custom/feedback/copy-button'
@@ -12,6 +13,8 @@ import {
   CardHeader,
   CardTitle
 } from '@repo/design-system/ui/card'
+import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
+import { CodeRocketOAuthButton } from '@repo/design-system/ui/coderocket-oauth-button'
 import { Input } from '@repo/design-system/ui/input'
 import { Progress } from '@repo/design-system/ui/progress'
 import {
@@ -68,6 +71,46 @@ describe('@repo/design-system', () => {
 
     expect(screen.getByRole('button', { name: 'Press' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Docs' }).getAttribute('href')).toBe('/docs')
+  })
+
+  it('renders consistent CodeRocket actions', () => {
+    render(
+      <>
+        <CodeRocketButton>Run audit</CodeRocketButton>
+        <CodeRocketButton asChild variant="outline">
+          <a href="/pricing">View pricing</a>
+        </CodeRocketButton>
+      </>
+    )
+
+    const action = screen.getByRole('button', { name: 'Run audit' })
+    expect(action.className).toContain('cursor-pointer')
+    expect(screen.getByRole('link', { name: 'View pricing' }).getAttribute('href')).toBe('/pricing')
+  })
+
+  it('renders the CodeRocket wordmark with the editorial brand typography', () => {
+    render(<CodeRocketLogo className="h-8 w-8" wordmarkClassName="text-sm" />)
+
+    const wordmark = screen.getByText('CodeRocket')
+    expect(wordmark.className).toContain('font-editorial')
+    expect(wordmark.className).toContain('font-normal')
+    expect(wordmark.className).toContain('text-sm')
+  })
+
+  it('renders official OAuth provider actions', () => {
+    const onClick = jest.fn()
+    const { container } = render(
+      <>
+        <CodeRocketOAuthButton onClick={onClick} provider="github" />
+        <CodeRocketOAuthButton onClick={onClick} provider="google" />
+        <CodeRocketOAuthButton onClick={onClick} provider="facebook" />
+      </>
+    )
+
+    expect(screen.getByRole('button', { name: 'GitHub' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Google' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Facebook' })).toBeTruthy()
+    expect(container.querySelectorAll('svg')).toHaveLength(3)
   })
 
   it('renders card primitives and accessible title structure', () => {

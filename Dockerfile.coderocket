@@ -1,0 +1,22 @@
+FROM node:24.15.0-bookworm-slim AS build
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @coderocket/cloud build
+RUN cp -R apps/cloud/public apps/cloud/.next/standalone/apps/cloud/ \
+  && mkdir -p apps/cloud/.next/standalone/apps/cloud/.next \
+  && cp -R apps/cloud/.next/static apps/cloud/.next/standalone/apps/cloud/.next/
+
+FROM node:24.15.0-bookworm-slim AS runtime
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client && rm -rf /var/lib/apt/lists/* && corepack enable
+WORKDIR /app
+COPY --from=build /app /app
+EXPOSE 3000
+CMD ["pnpm", "--filter", "@coderocket/cloud", "start"]

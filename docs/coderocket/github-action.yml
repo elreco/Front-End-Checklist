@@ -1,0 +1,16 @@
+name: CodeRocket
+on: pull_request
+
+jobs:
+  frontend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit preview
+        run: >-
+          npx @coderocket/cli@latest audit "${{ vars.PREVIEW_URL }}"
+          --token "${{ secrets.CODEROCKET_TOKEN }}"
+          --environment preview
+          --sha "${{ github.sha }}"
+          --branch "${{ github.head_ref }}"
+          --pr "${{ github.event.number }}"

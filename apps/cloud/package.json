@@ -1,0 +1,42 @@
+{
+  "name": "@coderocket/cloud",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port 3100",
+    "lint": "biome check .",
+    "start": "node .next/standalone/apps/cloud/server.js",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:ci": "node --import tsx --test test/*.test.ts",
+    "test:coverage": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@frontendchecklist/rules": "workspace:*",
+    "@coderocket/core": "workspace:*",
+    "@coderocket/db": "workspace:*",
+    "@repo/design-system": "workspace:*",
+    "@supabase/ssr": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "catalog:",
+    "stripe": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config-typescript": "workspace:^",
+    "@tailwindcss/postcss": "^4.3.0",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^4.3.0",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

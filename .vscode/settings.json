@@ -29,5 +29,9 @@
     "**/coverage": true,
     "**/playwright-report": true,
     "**/test-results": true
-  }
+  },
+  "i18n-ally.localesPaths": [
+    "packages/i18n",
+    "packages/content/rules/en/i18n"
+  ]
 }

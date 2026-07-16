@@ -4,6 +4,7 @@
   "private": true,
   "exports": {
     "./brand-icons": "./src/brand-icons.tsx",
+    "./coderocket-logo": "./src/coderocket-logo.tsx",
     "./custom/*": "./src/custom/*.tsx",
     "./icons": "./src/icons.ts",
     "./motion/*": "./src/motion/*.tsx",

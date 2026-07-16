@@ -1,0 +1,45 @@
+name: Deploy CodeRocket
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [coderocket/main]
+    paths:
+      - 'apps/cloud/**'
+      - 'packages/coderocket-*/**'
+      - 'packages/design-system/src/coderocket-logo.tsx'
+      - 'Dockerfile.coderocket'
+      - 'fly.coderocket.toml'
+
+concurrency:
+  group: coderocket-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: coderocket-production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Remember current image
+        id: previous
+        run: echo "image=$(flyctl releases --app coderocket-cloud --image --json | jq -r '.[0].ImageRef // .[0].image_ref // empty')" >> "$GITHUB_OUTPUT"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy image and run guarded migration
+        run: flyctl deploy --config fly.coderocket.toml --remote-only --image-label "sha-${GITHUB_SHA::12}" --smoke-checks
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Smoke test canonical endpoint
+        id: smoke
+        continue-on-error: true
+        run: curl --fail --retry 8 --retry-delay 5 --retry-all-errors https://coderocket.app/api/health
+      - name: Roll back to the previous image
+        if: steps.smoke.outcome == 'failure' && steps.previous.outputs.image != ''
+        run: flyctl deploy --config fly.coderocket.toml --image "${{ steps.previous.outputs.image }}" --strategy immediate --skip-release-command
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Fail after rollback
+        if: steps.smoke.outcome == 'failure'
+        run: exit 1

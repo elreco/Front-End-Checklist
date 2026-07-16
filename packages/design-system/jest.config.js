@@ -4,6 +4,7 @@ module.exports = createPackageJestConfig({
   testEnvironment: 'jsdom',
   testMatch: ['**/__tests__/**/*.test.tsx'],
   moduleNameMapper: {
+    '^@repo/design-system/coderocket-logo$': '<rootDir>/src/coderocket-logo.tsx',
     '^@repo/design-system/custom/(.*)$': '<rootDir>/src/custom/$1.tsx',
     '^@repo/design-system/ui/(.*)$': '<rootDir>/src/ui/$1.tsx',
     '^@repo/design-system/motion/(.*)$': '<rootDir>/src/motion/$1.tsx',

@@ -1,0 +1,43 @@
+name: CodeRocket CI
+
+on:
+  pull_request:
+    branches: [coderocket/main]
+    paths:
+      - 'apps/cloud/**'
+      - 'packages/coderocket-*/**'
+      - 'packages/content/rules/**'
+      - 'packages/design-system/src/coderocket-logo.tsx'
+      - 'packages/mcp/**'
+      - 'packages/rules/**'
+      - 'Dockerfile.coderocket'
+      - 'fly.coderocket.toml'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  push:
+    branches: [coderocket/main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Lint CodeRocket
+        run: pnpm biome check apps/cloud packages/coderocket-core packages/coderocket-db packages/coderocket-cli packages/coderocket-worker packages/design-system/src/coderocket-logo.tsx
+      - name: Typecheck CodeRocket
+        run: pnpm turbo typecheck --filter='@coderocket/*'
+      - name: Test CodeRocket
+        run: pnpm turbo test:ci --filter='@coderocket/*'
+      - name: Build cloud app
+        run: pnpm --filter @coderocket/cloud build
+      - name: Build deployment image
+        run: docker build -f Dockerfile.coderocket -t coderocket:${{ github.sha }} .

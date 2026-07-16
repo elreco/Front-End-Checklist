@@ -37,7 +37,16 @@
         "KV_URL",
         "REDIS_URL",
         "UPSTASH_REDIS_REST_TOKEN",
-        "UPSTASH_REDIS_REST_URL"
+        "UPSTASH_REDIS_REST_URL",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "STRIPE_SOLO_PRICE_ID",
+        "STRIPE_AGENCY_PRICE_ID",
+        "CODEROCKET_COMMERCIAL_LAUNCH",
+        "CODEROCKET_DEMO_MODE"
       ],
       "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"]
     },
