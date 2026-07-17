@@ -2,21 +2,34 @@ import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
 const protectedPrefixes = ['/dashboard', '/projects', '/audits', '/settings', '/onboarding']
+const legacyGonePrefixes = [
+  '/ai-website-builder',
+  '/components',
+  '/credits',
+  '/generate',
+  '/generations',
+  '/magic-link',
+  '/open-source',
+  '/users'
+]
 
 export async function proxy(request: NextRequest) {
   if (request.headers.get('host')?.toLowerCase() === 'www.coderocket.app') {
     const canonical = request.nextUrl.clone()
     canonical.host = 'coderocket.app'
     canonical.protocol = 'https'
+    canonical.port = ''
     return NextResponse.redirect(canonical, 308)
   }
   if (
-    ['/ai-website-builder', '/generate', '/generations', '/credits'].includes(
-      request.nextUrl.pathname
+    legacyGonePrefixes.some(
+      prefix =>
+        request.nextUrl.pathname === prefix || request.nextUrl.pathname.startsWith(`${prefix}/`)
     )
   ) {
-    return new NextResponse('This legacy CodeRocket route has been permanently removed.', {
-      status: 410
+    return new NextResponse('This legacy CodeRocket page has been permanently removed.', {
+      status: 410,
+      headers: { 'X-Robots-Tag': 'noindex, nofollow, noarchive' }
     })
   }
   let response = NextResponse.next({ request })

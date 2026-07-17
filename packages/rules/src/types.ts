@@ -91,13 +91,42 @@ export interface FrontendChecklistRulePrompts {
   codeReview?: string
 }
 
+export interface FrontendChecklistRuleSource {
+  id: string
+  title: string
+  url: string
+  type: string
+  role:
+    | 'standard'
+    | 'reference'
+    | 'implementation'
+    | 'compatibility'
+    | 'regulation'
+    | 'search'
+    | 'research'
+  authority: 'primary' | 'secondary'
+}
+
+export interface FrontendChecklistRelatedRule {
+  slug: string
+  reason: string
+}
+
 export interface FrontendChecklistRule {
   title: string
+  description?: string
   slug: string
   categories: FrontendChecklistCategory[]
   subcategory?: FrontendChecklistSubcategory
   priority: FrontendChecklistPriority
+  difficulty?: string
+  estimatedTime?: number
+  tldr?: string[]
+  whyItMatters?: string
+  aiContext?: string
   prompts?: FrontendChecklistRulePrompts
+  sources?: FrontendChecklistRuleSource[]
+  relatedRules?: FrontendChecklistRelatedRule[]
   content: string
   primaryCategory: FrontendChecklistCategory
   url: string

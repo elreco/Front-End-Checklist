@@ -80,7 +80,7 @@ export function LoginForm() {
 
       <div className="my-7 flex items-center gap-4 text-muted text-xs uppercase tracking-[.12em]">
         <span className="h-px flex-1 bg-border" />
-        or continue with email
+        or use your email
         <span className="h-px flex-1 bg-border" />
       </div>
 
@@ -123,7 +123,7 @@ export function LoginForm() {
           type="submit"
           value="password"
         >
-          {pendingAction === 'password' ? 'Signing in…' : 'Sign in securely'}
+          {pendingAction === 'password' ? 'Signing in…' : 'Sign in'}
         </CodeRocketButton>
         <CodeRocketButton
           disabled={isPending}
@@ -135,7 +135,7 @@ export function LoginForm() {
           variant="outline"
         >
           <Mail aria-hidden />
-          {pendingAction === 'magic' ? 'Sending link…' : 'Email me a magic link'}
+          {pendingAction === 'magic' ? 'Sending link…' : 'Send me a sign-in link'}
         </CodeRocketButton>
       </form>
 

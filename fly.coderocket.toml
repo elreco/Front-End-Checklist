@@ -7,7 +7,7 @@ kill_timeout = "30s"
   dockerfile = "Dockerfile.coderocket"
 
 [deploy]
-  release_command = "pnpm --filter @coderocket/db backup && pnpm --filter @coderocket/db migrate"
+  release_command = "pnpm --filter @coderocket/db migrate"
   strategy = "rolling"
 
 [env]

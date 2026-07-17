@@ -3,6 +3,10 @@ import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
 import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
+import { getPlanLabel } from '@/lib/product-language'
+import { createPrivateMetadata } from '@/lib/seo'
+
+export const metadata = createPrivateMetadata('Plan & billing')
 
 export default async function BillingPage() {
   const context = await getAppShellContext()
@@ -11,7 +15,8 @@ export default async function BillingPage() {
     `${context.limits.pagesPerProject} pages per site`,
     `${context.limits.schedule} automatic checks`,
     `${context.limits.retentionDays} days of history`,
-    `${context.limits.onDemandRunsPerMonth} checks started by you or GitHub each month`
+    `${context.limits.onDemandRunsPerMonth} extra checks started by you or GitHub each month`,
+    `At least ${Math.floor(context.limits.aiCreditsPerMonth / 1000)} evidence-grounded AI fix plans each month`
   ]
   return (
     <ProductShell eyebrow="Your subscription" title="Plan & billing">
@@ -23,10 +28,10 @@ export default async function BillingPage() {
                 Current plan
               </p>
               <h2 className="mt-2 font-heading font-semibold text-3xl capitalize">
-                {context.plan === 'solo' ? 'Personal' : context.plan}
+                {getPlanLabel(context.plan)}
               </h2>
               <p className="mt-2 text-muted">
-                Your limits and included features are applied automatically.
+                Everything included in your plan is active automatically.
               </p>
             </div>
             <span className="inline-flex items-center gap-1.5 border border-success bg-success/10 px-3 py-1 font-mono text-success text-xs">
@@ -82,12 +87,12 @@ export default async function BillingPage() {
             Why upgrade?
           </p>
           <h2 className="mt-3 font-heading font-semibold text-xl">
-            Match monitoring to your workload
+            Pick the right pace for your websites
           </h2>
           <p className="mt-3 text-muted text-sm leading-6">
-            Personal is designed for an owner or freelancer monitoring up to three websites every
-            day. Agency scales to 50 client sites, a full year of history, and reports without
-            secondary branding.
+            Personal checks up to three websites every day and includes 100+ AI fix plans. Agency
+            covers up to 50 client websites, includes 600+ plans, keeps a full year of history, and
+            removes secondary branding from shared reports.
           </p>
           <div className="mt-5 border border-border bg-surface p-4">
             <p className="font-semibold text-sm">Billing stays predictable</p>

@@ -24,11 +24,18 @@ export function RecoverForm() {
   return (
     <form action={submit} className="mt-7 space-y-4">
       <label className="block font-semibold text-sm" htmlFor="recovery-email">
-        Email
-        <CodeRocketInput id="recovery-email" name="email" required type="email" />
+        Email address
+        <CodeRocketInput
+          autoComplete="email"
+          id="recovery-email"
+          name="email"
+          placeholder="you@example.com"
+          required
+          type="email"
+        />
       </label>
       <CodeRocketButton disabled={pending} fullWidth type="submit">
-        {pending ? 'Sending…' : 'Send recovery link'}
+        {pending ? 'Sending…' : 'Send reset link'}
       </CodeRocketButton>
     </form>
   )

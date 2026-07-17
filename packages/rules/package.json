@@ -26,5 +26,8 @@
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
   }
 }

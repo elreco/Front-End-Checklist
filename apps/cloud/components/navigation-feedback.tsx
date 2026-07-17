@@ -70,7 +70,7 @@ export function NavigationFeedback() {
     <div
       aria-atomic="true"
       aria-live="polite"
-      className={`pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5 overflow-hidden transition-opacity duration-150 ${loading ? 'opacity-100' : 'opacity-0'}`}
+      className={`pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5 overflow-hidden transition-opacity duration-150 motion-reduce:transition-none ${loading ? 'opacity-100' : 'opacity-0'}`}
       data-navigation-feedback
       role="status"
     >

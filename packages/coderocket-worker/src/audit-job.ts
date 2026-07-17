@@ -1,10 +1,16 @@
 import {
   type AuditFindingInput,
   auditPage,
+  auditSiteInfrastructure,
+  buildProjectPageUrl,
+  type CheckProgressStage,
   compareFindings,
-  getRulesetVersion
+  getRulesetVersion,
+  type PageAuditResult
 } from '@coderocket/core'
-import { createServiceClient } from '@coderocket/db'
+import { createServiceClient, persistAudit } from '@coderocket/db'
+
+const PAGE_CONCURRENCY = 4
 
 export interface WorkerJob {
   id: string
@@ -14,24 +20,121 @@ export interface WorkerJob {
   payload: Record<string, unknown>
 }
 
+/** Signal that an owner stopped a job while the worker was processing it. */
+export class JobCancelledError extends Error {
+  constructor() {
+    super('Audit job was cancelled by its owner')
+    this.name = 'JobCancelledError'
+  }
+}
+
+async function updateProgress(
+  job: WorkerJob,
+  progress: {
+    current: number
+    message: string
+    stage: CheckProgressStage
+    total: number
+  }
+) {
+  const { data, error } = await createServiceClient()
+    .from('cr_jobs')
+    .update({
+      progress_stage: progress.stage,
+      progress_current: progress.current,
+      progress_total: progress.total,
+      progress_message: progress.message,
+      progress_updated_at: new Date().toISOString()
+    })
+    .eq('id', job.id)
+    .eq('owner_id', job.owner_id)
+    .eq('status', 'leased')
+    .is('cancelled_at', null)
+    .select('id')
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) throw new JobCancelledError()
+}
+
+async function auditProjectPages(job: WorkerJob, urls: string[]): Promise<PageAuditResult[]> {
+  const pages: PageAuditResult[] = []
+  for (let offset = 0; offset < urls.length; offset += PAGE_CONCURRENCY) {
+    const batch = urls.slice(offset, offset + PAGE_CONCURRENCY)
+    const pageNames = batch.map(url => new URL(url).pathname).join(', ')
+    await updateProgress(job, {
+      stage: 'checking_pages',
+      current: pages.length,
+      total: urls.length,
+      message: `Checking ${pageNames}`
+    })
+    pages.push(...(await Promise.all(batch.map(url => auditPage(url)))))
+    await updateProgress(job, {
+      stage: 'checking_pages',
+      current: pages.length,
+      total: urls.length,
+      message: `${pages.length} of ${urls.length} pages checked`
+    })
+  }
+  return pages
+}
+
 /** Run a scheduled production audit and persist its regression diff. */
 export async function processAuditJob(
   job: WorkerJob
 ): Promise<{ auditId: string; blocking: number }> {
   if (!job.project_id) throw new Error('Audit job has no project')
+  const startedAt = new Date().toISOString()
   const db = createServiceClient()
+  const { data: completedAudit, error: completedAuditError } = await db
+    .from('cr_audits')
+    .select('id,blocking_count')
+    .eq('job_id', job.id)
+    .maybeSingle()
+  if (completedAuditError) throw new Error(completedAuditError.message)
+  if (completedAudit) {
+    await updateProgress(job, {
+      stage: 'completed',
+      current: 0,
+      total: 0,
+      message: 'Check complete. Updating your dashboard…'
+    })
+    return { auditId: completedAudit.id, blocking: completedAudit.blocking_count }
+  }
+
   const { data: project, error } = await db
     .from('cr_projects')
     .select('id,owner_id,name,production_url,page_paths')
     .eq('id', job.project_id)
+    .eq('owner_id', job.owner_id)
     .is('archived_at', null)
     .single()
   if (error || !project) throw new Error('Project is unavailable')
-  const pages = []
-  for (const path of project.page_paths)
-    pages.push(await auditPage(new URL(path, project.production_url).toString()))
+  const pageUrls = project.page_paths.map((path: string) =>
+    buildProjectPageUrl(project.production_url, path)
+  )
+  await updateProgress(job, {
+    stage: 'starting',
+    current: 0,
+    total: pageUrls.length,
+    message: 'Preparing a safe connection to your website'
+  })
+  const pages = await auditProjectPages(job, pageUrls)
+  await updateProgress(job, {
+    stage: 'checking_pages',
+    current: pages.length,
+    total: pages.length,
+    message: 'Checking how search engines can read the website'
+  })
+  const infrastructureFindings = await auditSiteInfrastructure(project.production_url)
+  if (pages[0]) pages[0].findings.push(...infrastructureFindings)
+  await updateProgress(job, {
+    stage: 'comparing',
+    current: pages.length,
+    total: pages.length,
+    message: 'Looking for changes since the previous complete check'
+  })
   const version = getRulesetVersion()
-  const { data: baselineAudit } = await db
+  const { data: baselineAudit, error: baselineAuditError } = await db
     .from('cr_audits')
     .select('id,ruleset_version')
     .eq('project_id', project.id)
@@ -41,34 +144,46 @@ export async function processAuditJob(
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  const { data: recentAudits } = await db
+  if (baselineAuditError) throw new Error(baselineAuditError.message)
+  const { data: recentAudits, error: recentAuditsError } = await db
     .from('cr_audits')
     .select('gate_status')
     .eq('project_id', project.id)
     .eq('environment', 'production')
     .order('created_at', { ascending: false })
     .limit(3)
+  if (recentAuditsError) throw new Error(recentAuditsError.message)
   let baseline: AuditFindingInput[] = []
   if (baselineAudit) {
-    const { data: occurrences } = await db
+    const { data: occurrences, error: occurrencesError } = await db
       .from('cr_occurrences')
       .select(
         'message,cr_findings(normalized_path,rule_slug,title,priority,category,source,occurrence_key)'
       )
       .eq('audit_id', baselineAudit.id)
       .neq('status', 'resolved')
-    baseline = (occurrences ?? []).flatMap(occurrence =>
-      occurrence.cr_findings.map(finding => ({
-        pagePath: finding.normalized_path,
-        ruleSlug: finding.rule_slug,
-        title: finding.title,
-        priority: finding.priority,
-        message: occurrence.message,
-        category: finding.category,
-        source: finding.source,
-        occurrenceKey: finding.occurrence_key
-      }))
-    )
+    if (occurrencesError) throw new Error(occurrencesError.message)
+    baseline = (occurrences ?? []).flatMap(occurrence => {
+      const relatedFindings = Array.isArray(occurrence.cr_findings)
+        ? occurrence.cr_findings
+        : [occurrence.cr_findings]
+      return relatedFindings.flatMap(finding =>
+        finding
+          ? [
+              {
+                pagePath: finding.normalized_path,
+                ruleSlug: finding.rule_slug,
+                title: finding.title,
+                priority: finding.priority,
+                message: occurrence.message,
+                category: finding.category,
+                source: finding.source,
+                occurrenceKey: finding.occurrence_key
+              }
+            ]
+          : []
+      )
+    })
   }
   const comparison = compareFindings({
     current: pages.flatMap(page => page.findings),
@@ -83,95 +198,32 @@ export async function processAuditJob(
     job.payload.trigger === 'manual' || job.payload.trigger === 'ci'
       ? job.payload.trigger
       : 'scheduled'
-  const now = new Date().toISOString()
-  const { data: audit, error: auditError } = await db
-    .from('cr_audits')
-    .insert({
-      owner_id: project.owner_id,
-      project_id: project.id,
-      environment: 'production',
-      trigger,
-      status: 'succeeded',
-      gate_status: comparison.gate,
-      ruleset_version: version,
-      baseline_audit_id: baselineAudit?.id,
-      new_count: comparison.counts.new,
-      persistent_count: comparison.counts.persistent,
-      resolved_count: comparison.counts.resolved,
-      blocking_count: comparison.blockingRegressions,
-      requested_page_count: pages.length,
-      checked_page_count: pages.filter(page => page.reachable).length,
-      started_at: now,
-      completed_at: now
-    })
-    .select('id')
-    .single()
-  if (auditError) throw new Error(auditError.message)
-  await db.from('cr_audit_pages').insert(
-    pages.map(page => ({
-      owner_id: project.owner_id,
-      audit_id: audit.id,
-      url: page.url,
-      normalized_path: new URL(page.url).pathname,
-      reachable: page.reachable,
-      http_status: page.httpStatus,
-      duration_ms: page.durationMs,
-      error: page.error
-    }))
-  )
-  for (const finding of comparison.findings) {
-    const { data: existing } = await db
-      .from('cr_findings')
-      .select('id')
-      .eq('project_id', project.id)
-      .eq('fingerprint', finding.fingerprint)
-      .maybeSingle()
-    const findingValues = {
-      normalized_path: finding.pagePath,
-      rule_slug: finding.ruleSlug,
-      title: finding.title,
-      priority: finding.priority,
-      category: finding.category ?? 'quality',
-      source: finding.source ?? 'frontend_checklist',
-      occurrence_key: finding.occurrenceKey ?? 'primary',
-      last_seen_audit_id: audit.id,
-      resolved_at: finding.status === 'resolved' ? now : null,
-      updated_at: now
-    }
-    const { data: stored } = existing
-      ? await db
-          .from('cr_findings')
-          .update(findingValues)
-          .eq('id', existing.id)
-          .select('id')
-          .single()
-      : await db
-          .from('cr_findings')
-          .insert({
-            owner_id: project.owner_id,
-            project_id: project.id,
-            fingerprint: finding.fingerprint,
-            first_seen_audit_id: audit.id,
-            ...findingValues
-          })
-          .select('id')
-          .single()
-    if (stored)
-      await db.from('cr_occurrences').insert({
-        owner_id: project.owner_id,
-        audit_id: audit.id,
-        finding_id: stored.id,
-        status: finding.status,
-        message: finding.message
-      })
-  }
-  if (comparison.blockingRegressions > 0)
+  await updateProgress(job, {
+    stage: 'saving',
+    current: pages.length,
+    total: pages.length,
+    message: 'Updating your dashboard with the new result'
+  })
+  const auditId = await persistAudit({
+    db,
+    ownerId: project.owner_id,
+    projectId: project.id,
+    jobId: job.id,
+    environment: 'production',
+    trigger,
+    rulesetVersion: version,
+    baselineAuditId: baselineAudit?.id,
+    comparison,
+    pages,
+    startedAt
+  })
+  if (comparison.gate === 'failed' && comparison.blockingRegressions > 0)
     await db.from('cr_jobs').insert({
       owner_id: project.owner_id,
       project_id: project.id,
       kind: 'email',
       payload: {
-        auditId: audit.id,
+        auditId,
         project: project.name,
         headline: 'Your website needs attention',
         detail: `${comparison.blockingRegressions} new important ${comparison.blockingRegressions === 1 ? 'problem needs' : 'problems need'} attention.`
@@ -188,12 +240,18 @@ export async function processAuditJob(
       project_id: project.id,
       kind: 'email',
       payload: {
-        auditId: audit.id,
+        auditId,
         project: project.name,
         headline: 'CodeRocket could not check your website',
         detail:
           'Three consecutive checks were incomplete. A page may be offline or blocking CodeRocket requests.'
       }
     })
-  return { auditId: audit.id, blocking: comparison.blockingRegressions }
+  await updateProgress(job, {
+    stage: 'completed',
+    current: pages.length,
+    total: pages.length,
+    message: 'Check complete. Updating your dashboard…'
+  })
+  return { auditId, blocking: comparison.blockingRegressions }
 }

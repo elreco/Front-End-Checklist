@@ -10,7 +10,6 @@
   },
   "scripts": {
     "lint": "biome check .",
-    "backup": "tsx src/backup.ts",
     "migrate": "tsx src/migrate.ts",
     "test": "node --import tsx --test test/*.test.ts",
     "test:ci": "node --import tsx --test test/*.test.ts",

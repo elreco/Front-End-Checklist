@@ -1,26 +1,39 @@
 {
   "name": "@coderocket/cli",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "description": "Run CodeRocket website quality gates from CI and GitHub Actions",
   "type": "module",
   "bin": {
-    "coderocket": "./src/index.ts"
+    "coderocket": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "rules",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "audit:local": "tsx src/index.ts",
+    "build": "node scripts/build.mjs",
     "lint": "biome check .",
+    "prepack": "pnpm build",
     "test": "node --import tsx --test test/*.test.ts",
     "test:ci": "node --import tsx --test test/*.test.ts",
     "test:coverage": "node --import tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@coderocket/core": "workspace:*"
-  },
   "devDependencies": {
+    "@coderocket/core": "workspace:*",
     "@repo/config-typescript": "workspace:^",
     "@types/node": "catalog:",
+    "esbuild": "^0.25.12",
     "tsx": "catalog:",
     "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

@@ -6,6 +6,19 @@ const databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) throw new Error('DATABASE_URL is required for migrations')
 const sql = postgres(databaseUrl, { max: 1, ssl: 'require' })
 
+function assertCodeRocketOnlyMigration(filename: string, migration: string): void {
+  const referencedPublicObjects = [...migration.matchAll(/\bpublic\.([a-z_][a-z0-9_]*)/gi)].map(
+    match => match[1]
+  )
+  const legacyObjects = [...new Set(referencedPublicObjects)].filter(
+    objectName => !objectName.startsWith('cr_')
+  )
+  if (legacyObjects.length > 0)
+    throw new Error(
+      `${filename} references non-CodeRocket public objects: ${legacyObjects.join(', ')}`
+    )
+}
+
 try {
   await sql`select pg_advisory_lock(hashtext('coderocket_migrations'))`
   await sql`create table if not exists public.cr_schema_migrations (
@@ -20,6 +33,7 @@ try {
       await sql`select filename from public.cr_schema_migrations where filename = ${filename}`
     if (applied) continue
     const migration = await readFile(path.join(directory, filename), 'utf8')
+    assertCodeRocketOnlyMigration(filename, migration)
     pending.push({ filename, migration })
   }
   await sql.begin(async transaction => {

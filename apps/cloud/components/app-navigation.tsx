@@ -1,14 +1,15 @@
 'use client'
 
 import { BookOpen, CreditCard, Gauge, History, Settings } from '@repo/design-system/icons'
+import { TooltipHint, TooltipProvider } from '@repo/design-system/ui/tooltip'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const navigation = [
   { href: '/dashboard', label: 'Overview', icon: Gauge },
   { href: '/audits', label: 'Check history', icon: History },
-  { href: '/docs', label: 'Website guide', icon: BookOpen },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/docs', label: 'Help & rules', icon: BookOpen },
+  { href: '/settings', label: 'Account settings', icon: Settings },
   { href: '/settings/billing', label: 'Plan & billing', icon: CreditCard }
 ]
 
@@ -24,7 +25,13 @@ function isCurrentPath(pathname: string, href: string): boolean {
 }
 
 /** Product navigation with a visible current-page state. */
-export function AppNavigation({ mobile = false }: { mobile?: boolean }) {
+export function AppNavigation({
+  collapsed = false,
+  mobile = false
+}: {
+  collapsed?: boolean
+  mobile?: boolean
+}) {
   const pathname = usePathname()
 
   if (mobile)
@@ -51,21 +58,38 @@ export function AppNavigation({ mobile = false }: { mobile?: boolean }) {
     )
 
   return (
-    <nav aria-label="Product navigation" className="space-y-1">
-      {navigation.map(({ href, label, icon: Icon }, index) => {
-        const current = isCurrentPath(pathname, href)
-        return (
-          <Link
-            aria-current={current ? 'page' : undefined}
-            className={`flex items-center gap-3 border px-3 py-2.5 text-sm transition-colors ${index === 3 ? 'mt-5' : ''} ${current ? 'border-border bg-surface-raised text-foreground' : 'border-transparent text-muted hover:border-border hover:bg-surface hover:text-foreground'}`}
-            href={href}
-            key={href}
-          >
-            <Icon aria-hidden className={current ? 'h-4 w-4 text-signal' : 'h-4 w-4'} />
-            {label}
-          </Link>
-        )
-      })}
-    </nav>
+    <TooltipProvider delayDuration={250}>
+      <nav
+        aria-label="Product navigation"
+        className="space-y-1 font-mono font-normal text-xs"
+        id="product-sidebar-navigation"
+      >
+        {navigation.map(({ href, label, icon: Icon }, index) => {
+          const current = isCurrentPath(pathname, href)
+          const link = (
+            <Link
+              aria-current={current ? 'page' : undefined}
+              className={`flex items-center border py-2.5 transition-colors ${
+                collapsed ? 'justify-center px-0' : 'gap-2.5 px-3'
+              } ${index === 3 ? 'mt-5' : ''} ${
+                current
+                  ? 'border-border bg-surface-raised text-foreground'
+                  : 'border-transparent text-muted hover:border-border hover:bg-surface hover:text-foreground'
+              }`}
+              href={href}
+            >
+              <Icon aria-hidden className={current ? 'h-4 w-4 text-signal' : 'h-4 w-4'} />
+              {collapsed ? <span className="sr-only">{label}</span> : label}
+            </Link>
+          )
+
+          return (
+            <TooltipHint content={label} enabled={collapsed} key={href} side="right">
+              {link}
+            </TooltipHint>
+          )
+        })}
+      </nav>
+    </TooltipProvider>
   )
 }

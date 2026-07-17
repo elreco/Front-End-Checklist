@@ -1,14 +1,15 @@
 import { CodeRocketMark } from '@repo/design-system/coderocket-logo'
 import { Check, GitPullRequest, Radar, ShieldCheck } from '@repo/design-system/icons'
 import { Suspense } from 'react'
+import { createPrivateMetadata } from '@/lib/seo'
 import { LoginForm } from './login-form'
 
-export const metadata = { title: 'Sign in' }
+export const metadata = createPrivateMetadata('Sign in')
 
 const accountBenefits = [
-  { icon: Radar, text: 'Your historical provider reconnects the same identity' },
-  { icon: GitPullRequest, text: 'New project data stays isolated to your account' },
-  { icon: ShieldCheck, text: 'Private reports and project tokens remain protected' }
+  { icon: Radar, text: 'Your existing CodeRocket login still works' },
+  { icon: GitPullRequest, text: 'Your new dashboard starts clean and focused on website health' },
+  { icon: ShieldCheck, text: 'Websites, checks, and shared reports stay private' }
 ]
 
 export default function LoginPage() {
@@ -22,13 +23,13 @@ export default function LoginPage() {
               Your website control room
             </p>
             <h2 className="mt-7 max-w-xl font-editorial text-6xl leading-[.95] tracking-[-.035em]">
-              Return to every website
+              Keep every website
               <br />
-              <em>with context intact.</em>
+              <em>under control.</em>
             </h2>
             <p className="mt-7 max-w-lg text-lg text-muted leading-8">
-              Use the same CodeRocket identity you already had. Your new health workspace starts
-              clean; old generations, credits, and subscriptions are not imported.
+              Sign in to see what changed, what still needs attention, and what has already been
+              fixed across the websites you monitor.
             </p>
             <ul className="mt-10 space-y-5">
               {accountBenefits.map(({ icon: Icon, text }) => (
@@ -43,18 +44,18 @@ export default function LoginPage() {
           </div>
           <div className="relative mt-14 border border-border bg-background p-5">
             <div className="flex items-center justify-between text-xs uppercase tracking-[.12em]">
-              <span className="text-muted">Example website health</span>
+              <span className="text-muted">Example website check</span>
               <span className="flex items-center gap-2 text-success">
                 <Check aria-hidden className="h-3.5 w-3.5" /> passed
               </span>
             </div>
             <p className="mt-5 font-heading font-semibold text-xl">Acme storefront</p>
             <p className="mt-1 text-muted text-sm">Production · 12 pages · 14 minutes ago</p>
-            <div className="mt-5 grid grid-cols-3 gap-px bg-border text-center">
+            <div className="mt-5 grid grid-cols-3 gap-px border border-border bg-border text-center">
               {[
                 ['0', 'new'],
-                ['11', 'persistent'],
-                ['7', 'resolved']
+                ['11', 'still open'],
+                ['7', 'fixed']
               ].map(([value, label]) => (
                 <div className="bg-surface p-3" key={label}>
                   <p className="font-mono text-lg">{value}</p>
@@ -69,11 +70,11 @@ export default function LoginPage() {
           <div className="w-full max-w-lg">
             <p className="font-mono text-accent text-xs uppercase tracking-[.2em]">Welcome back</p>
             <h1 className="mt-4 font-heading font-semibold text-4xl tracking-[-.03em] sm:text-5xl">
-              Sign in to CodeRocket
+              Welcome back
             </h1>
             <p className="mt-4 max-w-md text-muted leading-7">
-              Continue with your historical provider, password, or a secure magic link. No new
-              identity is created.
+              Use the same email or social account as before. You can also request a secure sign-in
+              link by email.
             </p>
             <Suspense
               fallback={

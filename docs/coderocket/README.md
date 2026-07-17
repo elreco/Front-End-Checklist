@@ -6,10 +6,13 @@ CodeRocket is the commercial product layer built on the Front-End Checklist corp
 
 - `apps/cloud`: Next.js marketing site and authenticated SaaS
 - `packages/coderocket-core`: plan limits, SSRF-safe HTML fetch, fingerprints, audit diffs, quality gates
-- `packages/coderocket-db`: `cr_*` Supabase schema, RLS, service client, backups, migrations
+- `packages/coderocket-db`: isolated `cr_*` Supabase schema, RLS, service client, additive migrations
 - `packages/coderocket-cli`: CI command and documented exit codes
 - `packages/coderocket-worker`: PostgreSQL-leased jobs, schedules, retention, and narrow alerts
+- `packages/coderocket-ai`: evidence-grounded explanations and fix plans from an exact rule snapshot
 - `packages/design-system/src/coderocket-logo.tsx`: canonical React mark and wordmark
+
+The website check remains deterministic: AI never decides whether a rule passes, never closes a finding, and has no tool that can edit a website or repository. It only turns saved evidence plus the matching Front-End Checklist rule into a structured explanation and plan. A fresh website check is always required to verify a fix.
 
 ## Official documentation
 
@@ -25,6 +28,8 @@ No historical CodeRocket project, credit, generation, or subscription table is r
 2. Fill the legacy CodeRocket Supabase URL and publishable key.
 3. Run `pnpm --filter @coderocket/cloud dev`.
 4. Run the worker separately with `pnpm --filter @coderocket/worker start` after applying migrations.
+
+Set `OPENAI_API_KEY` on the web and worker deployments to enable the optional AI fix assistant. `CODEROCKET_AI_MODEL` defaults to `gpt-5.6-terra` and can be overridden without changing the stored prompt or rule snapshot version.
 
 Without secrets, set `CODEROCKET_DEMO_MODE=true` to review the public marketing and dashboard surfaces.
 

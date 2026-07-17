@@ -2,20 +2,20 @@ import { AlertTriangle, Check, Globe2, Radar } from '@repo/design-system/icons'
 
 const steps = [
   {
-    label: 'Reach the page',
-    detail: 'HTTPS, redirects, response status, and Cloudflare challenge'
+    label: 'Choose how the page is reached',
+    detail: 'Use the cloud for public pages or your runner for restricted pages.'
   },
   {
-    label: 'Read the public HTML',
-    detail: 'One safe fetch · 2 MB limit · no browser or tracking script'
+    label: 'Check what visitors receive',
+    detail: 'It reads the returned page once. It does not click, buy, submit, or change anything.'
   },
   {
-    label: 'Run health checks',
-    detail: 'Search · accessibility · performance · security · quality'
+    label: 'Review the important basics',
+    detail: 'Pages online · search visibility · accessibility · speed · security · page quality'
   },
   {
-    label: 'Explain what changed',
-    detail: '2 new · 11 already known · 7 resolved · 5/5 pages checked'
+    label: 'Show only what changed',
+    detail: 'New problems, known problems, fixes, and any page that could not be checked.'
   }
 ]
 
@@ -29,13 +29,13 @@ const findings = [
   {
     tone: 'text-danger',
     status: 'NEW · IMPORTANT',
-    title: 'Secure transport header is missing',
+    title: 'A browser security protection is missing',
     rule: 'Security · /checkout'
   },
   {
     tone: 'text-muted',
     status: 'ALREADY KNOWN',
-    title: 'Product image dimensions are not explicit',
+    title: 'Product images can make the page jump while loading',
     rule: 'Performance · /products'
   }
 ]
@@ -48,13 +48,13 @@ export function AuditDemo() {
           <div>
             <p className="text-signal text-xs uppercase tracking-[.18em]">Concrete example</p>
             <h2 className="mt-5 max-w-2xl font-editorial text-5xl leading-[.98] sm:text-7xl">
-              A real check, from address to action list.
+              From a website address to a clear to-do list.
             </h2>
           </div>
           <p className="max-w-xl text-lg text-muted leading-8 lg:justify-self-end">
-            CodeRocket checks only public HTTPS pages. It validates every redirect, records how many
-            pages were actually readable, and never labels an incomplete check as healthy. Existing
-            problems remain visible without creating the same alert every day.
+            CodeRocket checks only the pages it is allowed to reach. If one cannot be read, it says
+            so clearly instead of showing a false “all clear”. Known problems remain visible without
+            creating the same alert every day.
           </p>
         </div>
         <div className="mt-14 grid border border-border lg:grid-cols-[.72fr_1.28fr]">
@@ -75,10 +75,10 @@ export function AuditDemo() {
             <div className="cr-scan-line pointer-events-none absolute inset-x-0 top-0 z-20 h-px bg-signal shadow-[0_0_18px_2px_#22d3ee]" />
             <div className="flex items-center justify-between border-border border-b px-5 py-4 text-xs uppercase tracking-[.12em]">
               <span className="flex items-center gap-2 text-muted">
-                <Globe2 aria-hidden className="h-4 w-4" /> ACME STORE · DAILY CHECK
+                <Globe2 aria-hidden className="h-4 w-4" /> ACME STORE · WEBSITE CHECK
               </span>
               <span className="flex items-center gap-2 text-signal">
-                <span className="cr-pulse h-1.5 w-1.5 bg-signal" /> auditing
+                <span className="cr-pulse h-1.5 w-1.5 bg-signal" /> checking pages
               </span>
             </div>
             <div className="relative p-5 sm:p-7">

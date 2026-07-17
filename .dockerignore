@@ -2,9 +2,10 @@
 .codex
 **/.next
 **/node_modules
+**/.turbo
 **/coverage
 **/playwright-report
 **/test-results
-.env
-.env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example

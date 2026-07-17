@@ -7,7 +7,8 @@ export const PLAN_ENTITLEMENTS: Record<PlanId, PlanEntitlements> = {
     schedule: 'weekly',
     onDemandRunsPerMonth: 10,
     retentionDays: 30,
-    secondaryBranding: true
+    secondaryBranding: true,
+    aiCreditsPerMonth: 3_000
   },
   solo: {
     projects: 3,
@@ -15,7 +16,8 @@ export const PLAN_ENTITLEMENTS: Record<PlanId, PlanEntitlements> = {
     schedule: 'daily',
     onDemandRunsPerMonth: 100,
     retentionDays: 90,
-    secondaryBranding: true
+    secondaryBranding: true,
+    aiCreditsPerMonth: 100_000
   },
   agency: {
     projects: 50,
@@ -23,7 +25,8 @@ export const PLAN_ENTITLEMENTS: Record<PlanId, PlanEntitlements> = {
     schedule: 'daily',
     onDemandRunsPerMonth: 500,
     retentionDays: 365,
-    secondaryBranding: false
+    secondaryBranding: false,
+    aiCreditsPerMonth: 600_000
   }
 }
 

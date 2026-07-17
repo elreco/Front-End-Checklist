@@ -11,7 +11,8 @@ const plans = [
     features: [
       '1 website · 5 important pages',
       'Weekly automatic health check',
-      '10 on-demand or GitHub checks / month',
+      '10 extra checks started by you or GitHub / month',
+      'At least 3 evidence-grounded AI fix plans / month',
       '30-day history and private reports'
     ]
   },
@@ -23,7 +24,8 @@ const plans = [
     features: [
       '3 websites · 25 pages each',
       'Daily automatic health checks',
-      '100 on-demand or GitHub checks / month',
+      '100 extra checks started by you or GitHub / month',
+      'At least 100 AI fix plans with owner, client, or developer wording',
       '90-day history and email alerts'
     ]
   },
@@ -35,7 +37,8 @@ const plans = [
     features: [
       '50 websites · 50 pages each',
       'Daily automatic health checks',
-      '500 on-demand or GitHub checks / month',
+      '500 extra checks started by you or GitHub / month',
+      'At least 600 AI fix plans across client sites',
       '365-day history',
       'Reports without secondary branding'
     ]

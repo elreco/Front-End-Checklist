@@ -1,11 +1,16 @@
 import { Database, KeyRound, LockKeyhole, Network, Webhook } from '@repo/design-system/icons'
 import type { Metadata } from 'next'
+import { DocsInlineCode } from '@/components/docs-inline-code'
 import { DocsHeader } from '@/components/docs-shell'
+import { createPublicMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPublicMetadata({
   title: 'Security model',
-  description: 'CodeRocket tenant isolation, safe fetching, token storage, and webhook security.'
-}
+  description:
+    'Understand CodeRocket safe website fetching, tenant isolation, protected tokens, private reports, retention, and webhook security.',
+  path: '/docs/security',
+  image: '/docs/opengraph-image'
+})
 
 const controls = [
   {
@@ -84,8 +89,9 @@ export default function SecurityDocumentationPage() {
         </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
           A worker periodically removes audits older than the owner plan allows: 30 days for Free,
-          90 days for Personal, and 365 days for Agency. Database migrations create a private,
-          checksummed backup before schema changes are applied.
+          90 days for Personal, and 365 days for Agency. CodeRocket migrations are restricted to the
+          isolated <DocsInlineCode>cr_*</DocsInlineCode> database namespace and never read or modify
+          tables from the previous product.
         </p>
       </section>
     </>

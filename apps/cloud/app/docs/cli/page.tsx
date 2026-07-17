@@ -1,11 +1,16 @@
-import { CheckCircle2, GitBranch, KeyRound, Terminal } from '@repo/design-system/icons'
+import { CheckCircle2, GitBranch, KeyRound, LockKeyhole, Terminal } from '@repo/design-system/icons'
 import type { Metadata } from 'next'
+import { DocsInlineCode } from '@/components/docs-inline-code'
 import { DocsCodeBlock, DocsHeader } from '@/components/docs-shell'
+import { createPublicMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
-  title: 'CLI & GitHub',
-  description: 'Use the CodeRocket CLI and GitHub Actions to protect frontend pull requests.'
-}
+export const metadata: Metadata = createPublicMetadata({
+  title: 'Runner & GitHub',
+  description:
+    'Run CodeRocket where a protected or private website is reachable, check preview deployments, and protect GitHub pull requests.',
+  path: '/docs/cli',
+  image: '/docs/opengraph-image'
+})
 
 const workflow = `name: CodeRocket
 on: pull_request
@@ -16,6 +21,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Audit deployed preview
+        env:
+          CODEROCKET_SITE_HEADERS_JSON: "\${{ secrets.CODEROCKET_SITE_HEADERS_JSON }}"
         run: >-
           npx @coderocket/cli@latest audit "\${{ vars.PREVIEW_URL }}"
           --token "\${{ secrets.CODEROCKET_TOKEN }}"
@@ -28,9 +35,9 @@ export default function CliDocumentationPage() {
   return (
     <>
       <DocsHeader
-        description="Run the same audit engine after a preview deployment and let the process exit code become a required pull-request check."
-        eyebrow="Continuous integration"
-        title="Protect the merge, not just the dashboard."
+        description="Run the same audit engine from an environment that can reach the page. CodeRocket receives the result, never the private access headers."
+        eyebrow="Private and preview checks"
+        title="Bring the check to the website."
       />
 
       <section className="py-10">
@@ -38,16 +45,48 @@ export default function CliDocumentationPage() {
         <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">Command contract</h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
           Generate a token from the CodeRocket project, store it as a CI secret, and audit the HTTPS
-          preview URL after your hosting platform finishes deploying it.
+          URL after your hosting platform finishes deploying it. Public websites need only the
+          project token.
         </p>
         <div className="mt-6">
-          <DocsCodeBlock>{`coderocket audit https://preview.example.com \\
+          <DocsCodeBlock language="bash">{`coderocket audit https://preview.example.com \\
+  --page /pricing \\
+  --page /account \\
   --token "$CODEROCKET_TOKEN" \\
   --environment preview \\
   --sha "$GITHUB_SHA" \\
   --branch "feature/checkout" \\
-  --pr "184"`}</DocsCodeBlock>
+          --pr "184"`}</DocsCodeBlock>
         </div>
+        <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
+          The first URL and each <DocsInlineCode>--page</DocsInlineCode> stay on the same HTTPS
+          website. Use <DocsInlineCode>--environment production</DocsInlineCode> for the first
+          trusted check of a private live site; later preview checks compare against that baseline.
+        </p>
+      </section>
+
+      <section className="border-border border-y py-10">
+        <LockKeyhole aria-hidden className="h-6 w-6 text-signal" />
+        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">
+          Access protected server-rendered pages
+        </h2>
+        <p className="mt-4 max-w-3xl text-muted leading-7">
+          Store the required cookie, authorization header, or Cloudflare Access headers in the
+          secret named <DocsInlineCode>CODEROCKET_SITE_HEADERS_JSON</DocsInlineCode>. The runner
+          uses them only for requests to the original website origin and never includes them in the
+          submitted result.
+        </p>
+        <div className="mt-6">
+          <DocsCodeBlock language="json">{`{
+  "cookie": "session=dedicated-test-session",
+  "cf-access-client-id": "client-id",
+  "cf-access-client-secret": "client-secret"
+}`}</DocsCodeBlock>
+        </div>
+        <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
+          Use a dedicated, least-privileged test account. The current runner checks returned HTML;
+          it does not yet automate a JavaScript sign-in flow or multi-step browser journey.
+        </p>
       </section>
 
       <section className="grid gap-4 border-border border-y py-10 md:grid-cols-3">
@@ -72,11 +111,12 @@ export default function CliDocumentationPage() {
         <GitBranch aria-hidden className="h-6 w-6 text-signal" />
         <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">GitHub Actions</h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
-          Keep the package on `@latest` so the workflow follows the maintained CodeRocket client.
-          Configure the workflow name as a required check in the repository branch protection.
+          Keep the package on <DocsInlineCode>@latest</DocsInlineCode> so the workflow follows the
+          maintained CodeRocket client. Configure the workflow name as a required check in the
+          repository branch protection.
         </p>
         <div className="mt-6">
-          <DocsCodeBlock>{workflow}</DocsCodeBlock>
+          <DocsCodeBlock language="yaml">{workflow}</DocsCodeBlock>
         </div>
       </section>
 

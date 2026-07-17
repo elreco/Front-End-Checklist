@@ -53,6 +53,10 @@ describe('CodeRocket audit comparison', () => {
       baselineRulesetVersion: 'v1'
     })
     assert.equal(result.gate, 'needs_baseline')
+    assert.equal(result.blockingRegressions, 0)
+    assert.equal(result.counts.new, 0)
+    assert.equal(result.counts.resolved, 0)
+    assert.equal(result.counts.persistent, 1)
   })
 
   it('does not resolve findings on an unreachable page', () => {
@@ -64,6 +68,20 @@ describe('CodeRocket audit comparison', () => {
       unreachablePagePaths: ['/pricing']
     })
     assert.equal(result.counts.resolved, 0)
+    assert.equal(result.counts.persistent, 1)
+    assert.equal(result.findings[0]?.message, 'First explanation')
     assert.equal(result.gate, 'inconclusive')
+  })
+
+  it('still blocks a proven regression when another page is unreachable', () => {
+    const result = compareFindings({
+      current: [{ ...existing, pagePath: '/checkout' }],
+      baseline: [],
+      currentRulesetVersion: 'v1',
+      baselineRulesetVersion: 'v1',
+      unreachablePagePaths: ['/pricing']
+    })
+    assert.equal(result.gate, 'failed')
+    assert.equal(result.blockingRegressions, 1)
   })
 })

@@ -33,6 +33,11 @@ const notices: Record<string, ToastMessage> = {
     kind: 'error',
     title: 'Check the site name'
   },
+  'invalid-pages': {
+    description: 'Use pages from this website only, such as /, /pricing, or /contact.',
+    kind: 'error',
+    title: 'Check the pages to watch'
+  },
   'invalid-url': {
     description: 'Use a public, secure https:// website address.',
     kind: 'error',
@@ -44,7 +49,7 @@ const notices: Record<string, ToastMessage> = {
     title: 'Monthly check limit reached'
   },
   'missing-pages': {
-    description: 'Add at least one page path, such as / or /pricing.',
+    description: 'Add at least one page, such as / or /pricing.',
     kind: 'error',
     title: 'Add a page to monitor'
   },
@@ -53,15 +58,34 @@ const notices: Record<string, ToastMessage> = {
     kind: 'error',
     title: 'Site limit reached'
   },
+  'private-site-created': {
+    description:
+      'Cloud monitoring is off. Connect the runner from this page to check pages that require access.',
+    kind: 'success',
+    title: 'Private site added'
+  },
+  'private-runner-required': {
+    description:
+      'This site requires private access, so CodeRocket will not send the public cloud checker. Set up its runner instead.',
+    kind: 'info',
+    title: 'Use the private runner'
+  },
+  'protected-site-created': {
+    description:
+      'CodeRocket is testing whether it can safely read the selected pages through the site protection.',
+    kind: 'success',
+    title: 'Protected site added'
+  },
   'queue-failed': {
     description: 'The site is safe. Please try starting the check again.',
     kind: 'error',
     title: 'The check could not start'
   },
   queued: {
-    description: 'Results will appear on this page when every monitored page has been read.',
+    description:
+      'You can leave this page. Results will appear when every selected page is checked.',
     kind: 'success',
-    title: 'Check added to the queue'
+    title: 'Website check started'
   },
   saved: {
     description: 'Your CodeRocket profile now uses the new display name.',
@@ -74,7 +98,8 @@ const notices: Record<string, ToastMessage> = {
     title: 'Profile could not be updated'
   },
   'site-created': {
-    description: 'The first check has been queued and will create your reference result.',
+    description:
+      'The first check has started and will become the starting point for future comparisons.',
     kind: 'success',
     title: 'Site added successfully'
   },
@@ -82,6 +107,26 @@ const notices: Record<string, ToastMessage> = {
     description: 'Remove a few paths or choose a plan with a higher per-site page limit.',
     kind: 'error',
     title: 'Too many pages for this plan'
+  },
+  'workflow-acknowledged': {
+    description: 'The finding stays visible and will continue to be checked.',
+    kind: 'success',
+    title: 'Marked as reviewed'
+  },
+  'workflow-failed': {
+    description: 'Nothing was changed. Please try again.',
+    kind: 'error',
+    title: 'Review state could not be updated'
+  },
+  'workflow-muted': {
+    description: 'This problem is hidden from the open list, but stays in your history.',
+    kind: 'success',
+    title: 'Problem ignored for now'
+  },
+  'workflow-open': {
+    description: 'This problem is back in the open list and will keep being tracked.',
+    kind: 'success',
+    title: 'Problem tracked again'
   }
 }
 
@@ -123,7 +168,8 @@ export function RouteToasts() {
     }
     if (checkout === 'unavailable') {
       showToast({
-        description: 'Paid plans will open after the upstream licence is explicitly confirmed.',
+        description:
+          'Free monitoring is available now. Paid plans are still being prepared for public launch.',
         kind: 'info',
         title: 'Paid plans are not available yet'
       })

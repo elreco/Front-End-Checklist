@@ -24,6 +24,7 @@ import {
   SkeletonStats
 } from '@repo/design-system/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/design-system/ui/tabs'
+import { TooltipHint, TooltipProvider } from '@repo/design-system/ui/tooltip'
 import { fireEvent, render, screen } from '@testing-library/react'
 import React, { act } from 'react'
 
@@ -86,6 +87,29 @@ describe('@repo/design-system', () => {
     const action = screen.getByRole('button', { name: 'Run audit' })
     expect(action.className).toContain('cursor-pointer')
     expect(screen.getByRole('link', { name: 'View pricing' }).getAttribute('href')).toBe('/pricing')
+  })
+
+  it('keeps tooltip hints optional without replacing their accessible trigger', () => {
+    const { rerender } = render(
+      <TooltipProvider>
+        <TooltipHint content="Account settings" enabled={false} side="right">
+          <button type="button">Settings</button>
+        </TooltipHint>
+      </TooltipProvider>
+    )
+
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
+    expect(screen.queryByRole('tooltip')).toBeNull()
+
+    rerender(
+      <TooltipProvider>
+        <TooltipHint content="Account settings" side="right">
+          <button type="button">Settings</button>
+        </TooltipHint>
+      </TooltipProvider>
+    )
+
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
   })
 
   it('renders the centered CodeRocket lockup with editorial typography and a tagline', () => {

@@ -3,7 +3,10 @@ import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
 import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
+import { createPrivateMetadata } from '@/lib/seo'
 import { updateProfile } from './actions'
+
+export const metadata = createPrivateMetadata('Account settings')
 
 export default async function SettingsPage() {
   const context = await getAppShellContext()
@@ -40,7 +43,7 @@ export default async function SettingsPage() {
                 {context.email || 'Managed by your sign-in provider'}
               </p>
               <p className="mt-2 text-muted text-xs">
-                Your historical CodeRocket identity remains the source of truth for sign-in.
+                This email comes from the account you use to sign in.
               </p>
             </div>
             <CodeRocketButton type="submit">Save profile</CodeRocketButton>
@@ -54,8 +57,8 @@ export default async function SettingsPage() {
               <h2 className="font-heading font-semibold text-lg">Useful alerts only</h2>
             </div>
             <p className="mt-3 text-muted text-sm leading-6">
-              CodeRocket emails you only when a new critical or high-priority problem appears, or
-              when a check repeatedly fails to run.
+              CodeRocket emails you only when a new urgent or important problem appears, or when a
+              website repeatedly cannot be checked.
             </p>
           </div>
           <div className="border border-border bg-background p-5">
@@ -64,8 +67,8 @@ export default async function SettingsPage() {
               <h2 className="font-heading font-semibold text-lg">Private by default</h2>
             </div>
             <p className="mt-3 text-muted text-sm leading-6">
-              Projects and results are visible only to your account. Client report links are created
-              explicitly and can expire.
+              Websites and results are visible only to your account. A shared report is created only
+              when you ask for one, and its link can expire.
             </p>
           </div>
         </aside>

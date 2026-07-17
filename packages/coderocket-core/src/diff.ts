@@ -1,9 +1,15 @@
 import { createHash } from 'node:crypto'
 import type { AuditComparison, AuditFinding, AuditFindingInput, FindingStatus } from './types'
 
-function normalizePath(path: string): string {
+/** Normalize a page identity consistently across crawler, CLI, and comparison inputs. */
+export function normalizeAuditPath(path: string): string {
   const parsed = new URL(path, 'https://coderocket.invalid')
-  const decoded = decodeURIComponent(parsed.pathname)
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(parsed.pathname)
+  } catch {
+    decoded = parsed.pathname
+  }
   const collapsed = decoded.replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/'
   return collapsed.toLowerCase()
 }
@@ -14,7 +20,7 @@ export function fingerprintFinding(
   ruleSlug: string,
   occurrenceKey = 'primary'
 ): string {
-  const identity = `${normalizePath(pagePath)}\u0000${ruleSlug.trim().toLowerCase()}\u0000${occurrenceKey.trim().toLowerCase()}`
+  const identity = `${normalizeAuditPath(pagePath)}\u0000${ruleSlug.trim().toLowerCase()}\u0000${occurrenceKey.trim().toLowerCase()}`
   return createHash('sha256').update(identity).digest('hex')
 }
 
@@ -39,6 +45,20 @@ export function compareFindings(options: {
   baselineRulesetVersion?: string
   unreachablePagePaths?: string[]
 }): AuditComparison {
+  const sameRuleset =
+    options.baselineRulesetVersion !== undefined &&
+    options.baselineRulesetVersion === options.currentRulesetVersion
+  const unreachable = new Set((options.unreachablePagePaths ?? []).map(normalizeAuditPath))
+  if (!sameRuleset) {
+    const findings = options.current.map(finding => withFingerprint(finding, 'persistent'))
+    return {
+      gate: unreachable.size > 0 ? 'inconclusive' : 'needs_baseline',
+      findings,
+      counts: { new: 0, persistent: findings.length, resolved: 0 },
+      blockingRegressions: 0
+    }
+  }
+
   const baseline = new Map(
     options.baseline.map(finding => [
       fingerprintFinding(finding.pagePath, finding.ruleSlug, finding.occurrenceKey),
@@ -51,7 +71,6 @@ export function compareFindings(options: {
       finding
     ])
   )
-  const unreachable = new Set((options.unreachablePagePaths ?? []).map(normalizePath))
   const findings: AuditFinding[] = []
 
   for (const [fingerprint, finding] of current) {
@@ -59,31 +78,27 @@ export function compareFindings(options: {
   }
 
   for (const [fingerprint, finding] of baseline) {
-    if (current.has(fingerprint) || unreachable.has(normalizePath(finding.pagePath))) continue
+    if (current.has(fingerprint)) continue
+    if (unreachable.has(normalizeAuditPath(finding.pagePath))) {
+      findings.push(withFingerprint(finding, 'persistent'))
+      continue
+    }
     findings.push(withFingerprint(finding, 'resolved'))
   }
 
   const counts: Record<FindingStatus, number> = { new: 0, persistent: 0, resolved: 0 }
   for (const finding of findings) counts[finding.status] += 1
-  const blockingRegressions = findings.filter(
+  const potentialBlockingRegressions = findings.filter(
     finding =>
       finding.status === 'new' && (finding.priority === 'critical' || finding.priority === 'high')
   ).length
-  const sameRuleset =
-    options.baselineRulesetVersion !== undefined &&
-    options.baselineRulesetVersion === options.currentRulesetVersion
+  const gate =
+    potentialBlockingRegressions > 0 ? 'failed' : unreachable.size > 0 ? 'inconclusive' : 'passed'
 
   return {
-    gate:
-      unreachable.size > 0
-        ? 'inconclusive'
-        : sameRuleset
-          ? blockingRegressions > 0
-            ? 'failed'
-            : 'passed'
-          : 'needs_baseline',
+    gate,
     findings,
     counts,
-    blockingRegressions
+    blockingRegressions: gate === 'failed' ? potentialBlockingRegressions : 0
   }
 }

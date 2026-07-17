@@ -4,11 +4,18 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'CodeRocket',
     short_name: 'CodeRocket',
-    description: 'Know when your website needs attention.',
+    description:
+      'Monitor website availability, search visibility, accessibility, speed, security, and frontend quality.',
+    id: '/',
     start_url: '/',
+    scope: '/',
     display: 'standalone',
+    display_override: ['window-controls-overlay', 'standalone'],
+    orientation: 'any',
     background_color: '#09090B',
     theme_color: '#7C5CFC',
+    categories: ['business', 'developer tools', 'productivity'],
+    lang: 'en',
     icons: [
       { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
       { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }

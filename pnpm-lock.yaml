@@ -87,12 +87,21 @@ catalogs:
     react-dom:
       specifier: ^19.2.6
       version: 19.2.6
+    rehype-pretty-code:
+      specifier: ^0.14.3
+      version: 0.14.3
+    rehype-slug:
+      specifier: ^6.0.0
+      version: 6.0.0
     remark-gfm:
       specifier: ^4.0.1
       version: 4.0.1
     resend:
       specifier: ^6.0.1
       version: 6.12.4
+    shiki:
+      specifier: ^4.1.0
+      version: 4.1.0
     stripe:
       specifier: ^18.4.0
       version: 18.5.0
@@ -167,6 +176,9 @@ importers:
 
   apps/cloud:
     dependencies:
+      '@coderocket/ai':
+        specifier: workspace:*
+        version: link:../../packages/coderocket-ai
       '@coderocket/core':
         specifier: workspace:*
         version: link:../../packages/coderocket-core
@@ -197,9 +209,18 @@ importers:
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.2.15)(react@19.2.6)
+      rehype-pretty-code:
+        specifier: 'catalog:'
+        version: 0.14.3(shiki@4.1.0)
+      rehype-slug:
+        specifier: 'catalog:'
+        version: 6.0.0
       remark-gfm:
         specifier: 'catalog:'
         version: 4.0.1
+      shiki:
+        specifier: 'catalog:'
+        version: 4.1.0
       stripe:
         specifier: 'catalog:'
         version: 18.5.0(@types/node@25.9.1)
@@ -409,16 +430,16 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       rehype-pretty-code:
-        specifier: ^0.14.3
+        specifier: 'catalog:'
         version: 0.14.3(shiki@4.1.0)
       rehype-slug:
-        specifier: ^6.0.0
+        specifier: 'catalog:'
         version: 6.0.0
       remark-gfm:
         specifier: 'catalog:'
         version: 4.0.1
       shiki:
-        specifier: ^4.1.0
+        specifier: 'catalog:'
         version: 4.1.0
       tailwind-merge:
         specifier: 'catalog:'
@@ -602,11 +623,17 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
 
-  packages/coderocket-cli:
+  packages/coderocket-ai:
     dependencies:
-      '@coderocket/core':
+      '@frontendchecklist/rules':
         specifier: workspace:*
-        version: link:../coderocket-core
+        version: link:../rules
+      openai:
+        specifier: ^6.47.0
+        version: 6.47.0(ws@8.21.0)(zod@4.4.3)
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
     devDependencies:
       '@repo/config-typescript':
         specifier: workspace:^
@@ -614,6 +641,27 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.22.3
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
+  packages/coderocket-cli:
+    devDependencies:
+      '@coderocket/core':
+        specifier: workspace:*
+        version: link:../coderocket-core
+      '@repo/config-typescript':
+        specifier: workspace:^
+        version: link:../../configs/config-typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.1
+      esbuild:
+        specifier: ^0.25.12
+        version: 0.25.12
       tsx:
         specifier: 'catalog:'
         version: 4.22.3
@@ -676,6 +724,9 @@ importers:
 
   packages/coderocket-worker:
     dependencies:
+      '@coderocket/ai':
+        specifier: workspace:*
+        version: link:../coderocket-ai
       '@coderocket/core':
         specifier: workspace:*
         version: link:../coderocket-core
@@ -685,6 +736,9 @@ importers:
       resend:
         specifier: 'catalog:'
         version: 6.12.4(@react-email/render@2.0.8(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
     devDependencies:
       '@repo/config-typescript':
         specifier: workspace:^
@@ -1039,6 +1093,10 @@ importers:
         version: 6.0.3
 
   packages/rules:
+    dependencies:
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
     devDependencies:
       '@repo/config-typescript':
         specifier: workspace:^
@@ -6928,6 +6986,26 @@ packages:
   open-graph-scraper@6.11.0:
     resolution: {integrity: sha512-KkO3qMMzJj9KYGtCl19dRtncb+RuBiG/P9BgukcAG4p2w9wSAWTE90vL6/xqth1K9ThkYF/+xfTGrVvU79TJtQ==}
     engines: {node: '>=20.0.0'}
+
+  openai@6.47.0:
+    resolution: {integrity: sha512-xYr+R9woSzWxVxeiqkkNbHhv89tZDEI6eBMbrdPnv3poh+mijHvbhS35a+3o6xHa411/ns8j5ENY3So9DCXWYw==}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   opener@1.5.2:
     resolution: {integrity: sha512-ur5UIdyw5Y7yEj9wLzhqXiy6GZ3Mwx0yGI+5sMn2r0N0v3cKJvUmFH5yPP+WXh9e0xfyzyJX95D8l088DNFj7A==}
@@ -14606,6 +14684,11 @@ snapshots:
       cheerio: 1.2.0
       iconv-lite: 0.7.2
       undici: 7.26.0
+
+  openai@6.47.0(ws@8.21.0)(zod@4.4.3):
+    optionalDependencies:
+      ws: 8.21.0
+      zod: 4.4.3
 
   opener@1.5.2: {}
 

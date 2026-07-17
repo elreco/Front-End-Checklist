@@ -6,9 +6,17 @@ import Link from 'next/link'
 import { type ReactNode, Suspense } from 'react'
 import { MarketingAccountActions } from '@/components/marketing-account-actions'
 import { MarketingChrome } from '@/components/marketing-chrome'
+import { MarketingFooter } from '@/components/marketing-footer'
 import { MarketingNavigationLinks } from '@/components/marketing-navigation-links'
 import { NavigationFeedback } from '@/components/navigation-feedback'
 import { RouteToasts } from '@/components/route-toasts'
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_SOCIAL_IMAGE,
+  PUBLIC_ROBOTS,
+  SITE_NAME,
+  SITE_URL
+} from '@/lib/seo'
 import './globals.css'
 
 const geist = Geist({
@@ -29,22 +37,49 @@ const playfairDisplay = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://coderocket.app'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'CodeRocket — Website health monitoring',
     template: '%s — CodeRocket'
   },
-  description:
-    'Know when your website needs attention. Monitor availability, search, accessibility, performance, security, and frontend quality.',
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: 'technology',
+  referrer: 'origin-when-cross-origin',
   manifest: '/manifest.webmanifest',
-  alternates: { canonical: '/' },
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }]
+  },
   openGraph: {
-    title: 'CodeRocket',
-    description: 'Know when your website needs attention.',
-    url: 'https://coderocket.app',
-    siteName: 'CodeRocket',
-    type: 'website'
-  }
+    title: 'CodeRocket — Website health monitoring',
+    description: DEFAULT_DESCRIPTION,
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    locale: 'en_US',
+    type: 'website',
+    images: [
+      {
+        url: DEFAULT_SOCIAL_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: 'CodeRocket website health monitoring'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'CodeRocket — Website health monitoring',
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_SOCIAL_IMAGE]
+  },
+  robots: PUBLIC_ROBOTS,
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+    : undefined
 }
 
 export const viewport: Viewport = { colorScheme: 'light dark', themeColor: '#0B1020' }
@@ -53,6 +88,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html
       className={`${geist.variable} ${geistMono.variable} ${playfairDisplay.variable}`}
+      data-scroll-behavior="smooth"
       lang="en"
     >
       <body>
@@ -91,26 +127,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           {children}
         </div>
         <MarketingChrome>
-          <footer className="border-border border-t px-5 py-14 text-muted text-sm">
-            <div className="mx-auto grid max-w-7xl gap-10 sm:grid-cols-[1fr_auto]">
-              <div>
-                <CodeRocketLogo
-                  className="h-9 w-9 shrink-0 text-foreground"
-                  tagline={CODEROCKET_TAGLINE}
-                  taglineClassName="text-muted"
-                  wordmarkClassName="text-base text-foreground"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-x-12 gap-y-3 font-mono text-xs">
-                <Link href="/pricing">pricing</Link>
-                <Link href="/legal/privacy">privacy</Link>
-                <Link href="/docs/cli">github & cli</Link>
-                <Link href="/legal/terms">terms</Link>
-                <Link href="/docs/rules">rules reference</Link>
-                <span>© {new Date().getFullYear()}</span>
-              </div>
-            </div>
-          </footer>
+          <MarketingFooter />
         </MarketingChrome>
       </body>
     </html>

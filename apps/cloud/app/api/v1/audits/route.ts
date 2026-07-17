@@ -6,7 +6,8 @@ import {
   getPlanEntitlements,
   type PlanId
 } from '@coderocket/core'
-import { createServiceClient } from '@coderocket/db'
+import { createServiceClient, persistAudit } from '@coderocket/db'
+import { filterBaselineForSubmittedPages, normalizeSubmittedPages } from '@/lib/audit-submission'
 
 export const runtime = 'nodejs'
 const MAX_BODY_BYTES = 5 * 1024 * 1024
@@ -41,14 +42,25 @@ export async function POST(request: Request) {
       { status: 422 }
     )
 
+  let normalizedPages: typeof parsed.data.pages
+  try {
+    normalizedPages = normalizeSubmittedPages(parsed.data.pages)
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Inconsistent audit pages' },
+      { status: 422 }
+    )
+  }
+
   const db = createServiceClient()
   const token = authorization.slice('Bearer '.length)
   const tokenHash = createHash('sha256').update(token).digest('hex')
-  const { data: tokenRow } = await db
+  const { data: tokenRow, error: tokenError } = await db
     .from('cr_api_tokens')
     .select('id,owner_id,project_id,revoked_at,expires_at')
     .eq('token_hash', tokenHash)
     .maybeSingle()
+  if (tokenError) return Response.json({ error: 'Token verification failed' }, { status: 500 })
   if (
     !tokenRow ||
     tokenRow.revoked_at ||
@@ -67,11 +79,13 @@ export async function POST(request: Request) {
   if (replay?.response)
     return Response.json(replay.response, { headers: { 'x-idempotent-replay': 'true' } })
 
-  const { data: subscription } = await db
+  const { data: subscription, error: subscriptionError } = await db
     .from('cr_subscriptions')
     .select('plan_id,status,grace_period_end,current_period_end')
     .eq('owner_id', tokenRow.owner_id)
     .maybeSingle()
+  if (subscriptionError)
+    return Response.json({ error: 'Could not verify project entitlements' }, { status: 500 })
   let plan: PlanId =
     subscription?.plan_id === 'solo' || subscription?.plan_id === 'agency'
       ? subscription.plan_id
@@ -86,7 +100,7 @@ export async function POST(request: Request) {
     new Date(subscription.current_period_end) < new Date()
   if (graceExpired || ended) plan = 'free'
   const limits = getPlanEntitlements(plan)
-  if (parsed.data.pages.length > limits.pagesPerProject)
+  if (normalizedPages.length > limits.pagesPerProject)
     return Response.json(
       { error: `${plan} allows ${limits.pagesPerProject} pages per audit` },
       { status: 429 }
@@ -94,16 +108,18 @@ export async function POST(request: Request) {
   const monthStart = new Date(
     Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)
   ).toISOString()
-  const { count: usedRuns } = await db
+  const { count: usedRuns, error: usedRunsError } = await db
     .from('cr_audits')
     .select('id', { count: 'exact', head: true })
     .eq('owner_id', tokenRow.owner_id)
     .in('trigger', ['manual', 'ci'])
     .gte('created_at', monthStart)
+  if (usedRunsError)
+    return Response.json({ error: 'Could not verify the monthly check quota' }, { status: 500 })
   if ((usedRuns ?? 0) >= limits.onDemandRunsPerMonth)
     return Response.json({ error: 'Monthly manual/CI run quota reached' }, { status: 429 })
 
-  const { data: baselineAudit } = await db
+  const { data: baselineAudit, error: baselineAuditError } = await db
     .from('cr_audits')
     .select('id,ruleset_version')
     .eq('project_id', tokenRow.project_id)
@@ -113,120 +129,100 @@ export async function POST(request: Request) {
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+  if (baselineAuditError)
+    return Response.json({ error: 'Could not load the comparison baseline' }, { status: 500 })
   let baseline: AuditFindingInput[] = []
   if (baselineAudit) {
-    const { data: occurrences } = await db
+    const { data: occurrences, error: occurrencesError } = await db
       .from('cr_occurrences')
       .select(
         'status,message,cr_findings(normalized_path,rule_slug,title,priority,category,source,occurrence_key)'
       )
       .eq('audit_id', baselineAudit.id)
       .neq('status', 'resolved')
-    baseline = (occurrences ?? []).flatMap(occurrence =>
-      occurrence.cr_findings.map(finding => ({
-        pagePath: finding.normalized_path,
-        ruleSlug: finding.rule_slug,
-        title: finding.title,
-        priority: finding.priority,
-        message: occurrence.message,
-        category: finding.category,
-        source: finding.source,
-        occurrenceKey: finding.occurrence_key
-      }))
-    )
+    if (occurrencesError)
+      return Response.json({ error: 'Could not load the baseline findings' }, { status: 500 })
+    const storedBaseline = (occurrences ?? []).flatMap(occurrence => {
+      const relatedFindings = Array.isArray(occurrence.cr_findings)
+        ? occurrence.cr_findings
+        : [occurrence.cr_findings]
+      return relatedFindings.flatMap(finding =>
+        finding
+          ? [
+              {
+                pagePath: finding.normalized_path,
+                ruleSlug: finding.rule_slug,
+                title: finding.title,
+                priority: finding.priority,
+                message: occurrence.message,
+                category: finding.category,
+                source: finding.source,
+                occurrenceKey: finding.occurrence_key
+              }
+            ]
+          : []
+      )
+    })
+    baseline = filterBaselineForSubmittedPages(storedBaseline, normalizedPages)
   }
-  const current = parsed.data.pages.flatMap(page => page.findings)
+  const current = normalizedPages.flatMap(page => page.findings)
   const comparison = compareFindings({
     current,
     baseline,
     currentRulesetVersion: parsed.data.rulesetVersion,
     baselineRulesetVersion: baselineAudit?.ruleset_version,
-    unreachablePagePaths: parsed.data.pages
+    unreachablePagePaths: normalizedPages
       .filter(page => !page.reachable)
       .map(page => new URL(page.url).pathname)
   })
-  const { data: audit, error: auditError } = await db
-    .from('cr_audits')
-    .insert({
-      owner_id: tokenRow.owner_id,
-      project_id: tokenRow.project_id,
+
+  const { error: reservationError } = await db.from('cr_idempotency_keys').insert({
+    owner_id: tokenRow.owner_id,
+    project_id: tokenRow.project_id,
+    key: idempotencyKey,
+    response: null
+  })
+  if (reservationError) {
+    const { data: concurrentReplay } = await db
+      .from('cr_idempotency_keys')
+      .select('response')
+      .eq('project_id', tokenRow.project_id)
+      .eq('key', idempotencyKey)
+      .maybeSingle()
+    if (concurrentReplay?.response)
+      return Response.json(concurrentReplay.response, {
+        headers: { 'x-idempotent-replay': 'true' }
+      })
+    return Response.json(
+      { error: 'A request with this idempotency key is already being processed' },
+      { status: 409, headers: { 'retry-after': '2' } }
+    )
+  }
+
+  let auditId: string
+  try {
+    auditId = await persistAudit({
+      db,
+      ownerId: tokenRow.owner_id,
+      projectId: tokenRow.project_id,
       environment: parsed.data.environment,
       trigger: parsed.data.trigger,
-      status: 'succeeded',
-      gate_status: comparison.gate,
-      ruleset_version: parsed.data.rulesetVersion,
-      baseline_audit_id: baselineAudit?.id,
-      commit_sha: parsed.data.commitSha,
+      rulesetVersion: parsed.data.rulesetVersion,
+      baselineAuditId: baselineAudit?.id,
+      commitSha: parsed.data.commitSha,
       branch: parsed.data.branch,
-      pull_request: parsed.data.pullRequest,
-      new_count: comparison.counts.new,
-      persistent_count: comparison.counts.persistent,
-      resolved_count: comparison.counts.resolved,
-      blocking_count: comparison.blockingRegressions,
-      requested_page_count: parsed.data.pages.length,
-      checked_page_count: parsed.data.pages.filter(page => page.reachable).length,
-      started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString()
+      pullRequest: parsed.data.pullRequest,
+      comparison,
+      pages: normalizedPages,
+      startedAt: new Date().toISOString()
     })
-    .select('id')
-    .single()
-  if (auditError) return Response.json({ error: 'Could not persist the audit' }, { status: 500 })
-  await db.from('cr_audit_pages').insert(
-    parsed.data.pages.map(page => ({
-      owner_id: tokenRow.owner_id,
-      audit_id: audit.id,
-      url: page.url,
-      normalized_path: new URL(page.url).pathname,
-      reachable: page.reachable,
-      http_status: page.httpStatus,
-      duration_ms: page.durationMs,
-      error: page.error
-    }))
-  )
-  for (const finding of comparison.findings) {
-    const { data: existing } = await db
-      .from('cr_findings')
-      .select('id')
+  } catch {
+    await db
+      .from('cr_idempotency_keys')
+      .delete()
       .eq('project_id', tokenRow.project_id)
-      .eq('fingerprint', finding.fingerprint)
-      .maybeSingle()
-    const findingValues = {
-      normalized_path: finding.pagePath,
-      rule_slug: finding.ruleSlug,
-      title: finding.title,
-      priority: finding.priority,
-      category: finding.category ?? 'quality',
-      source: finding.source ?? 'frontend_checklist',
-      occurrence_key: finding.occurrenceKey ?? 'primary',
-      last_seen_audit_id: audit.id,
-      resolved_at: finding.status === 'resolved' ? new Date().toISOString() : null
-    }
-    const { data: stored } = existing
-      ? await db
-          .from('cr_findings')
-          .update(findingValues)
-          .eq('id', existing.id)
-          .select('id')
-          .single()
-      : await db
-          .from('cr_findings')
-          .insert({
-            owner_id: tokenRow.owner_id,
-            project_id: tokenRow.project_id,
-            fingerprint: finding.fingerprint,
-            first_seen_audit_id: audit.id,
-            ...findingValues
-          })
-          .select('id')
-          .single()
-    if (stored)
-      await db.from('cr_occurrences').insert({
-        owner_id: tokenRow.owner_id,
-        audit_id: audit.id,
-        finding_id: stored.id,
-        status: finding.status,
-        message: finding.message
-      })
+      .eq('key', idempotencyKey)
+    return Response.json({ error: 'Could not persist the complete audit' }, { status: 500 })
   }
   await db
     .from('cr_api_tokens')
@@ -234,21 +230,20 @@ export async function POST(request: Request) {
     .eq('id', tokenRow.id)
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://coderocket.app'
   const response = {
-    runUrl: `${origin}/audits/${audit.id}`,
-    auditId: audit.id,
+    runUrl: `${origin}/projects/${tokenRow.project_id}`,
+    auditId,
     diff: comparison.counts,
     blockingRegressions: comparison.blockingRegressions,
     qualityGate: comparison.gate,
     coverage: {
-      requested: parsed.data.pages.length,
-      checked: parsed.data.pages.filter(page => page.reachable).length
+      requested: normalizedPages.length,
+      checked: normalizedPages.filter(page => page.reachable).length
     }
   }
-  await db.from('cr_idempotency_keys').insert({
-    owner_id: tokenRow.owner_id,
-    project_id: tokenRow.project_id,
-    key: idempotencyKey,
-    response
-  })
+  await db
+    .from('cr_idempotency_keys')
+    .update({ response })
+    .eq('project_id', tokenRow.project_id)
+    .eq('key', idempotencyKey)
   return Response.json(response, { status: 201 })
 }

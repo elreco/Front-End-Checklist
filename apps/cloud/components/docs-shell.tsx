@@ -2,6 +2,7 @@ import { Braces } from '@repo/design-system/icons'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { DOCUMENTATION_RULES, DOCUMENTATION_RULESET_VERSION } from '@/lib/docs'
+import { DocsMarkdown } from './docs-markdown'
 import { DocsNavigation } from './docs-navigation'
 
 /** Shared public shell for the official CodeRocket documentation. */
@@ -79,10 +80,16 @@ export function DocsBreadcrumbs({ items }: { items: Array<{ href?: string; label
 }
 
 /** Render a shared terminal-style documentation code block. */
-export function DocsCodeBlock({ children }: { children: string }) {
+export function DocsCodeBlock({
+  children,
+  language = 'plaintext'
+}: {
+  children: string
+  language?: string
+}) {
   return (
-    <pre className="overflow-x-auto border border-border bg-[#0B1020] p-5 font-mono text-[#dce7ff] text-sm leading-7">
-      <code>{children}</code>
-    </pre>
+    <div className="[&_.docs-code-frame]:my-0">
+      <DocsMarkdown content={`~~~${language}\n${children}\n~~~`} />
+    </div>
   )
 }

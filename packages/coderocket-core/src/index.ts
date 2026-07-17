@@ -1,8 +1,25 @@
-export { auditPage, getRulesetVersion, type PageAuditResult } from './audit'
-export { compareFindings, fingerprintFinding } from './diff'
+export { type AuditPageOptions, auditPage, getRulesetVersion, type PageAuditResult } from './audit'
+export {
+  PRODUCTION_HTML_RULE_SLUGS,
+  selectProductionHtmlRules
+} from './automation-profile'
+export { compareFindings, fingerprintFinding, normalizeAuditPath } from './diff'
 export { getPlanEntitlements, PLAN_ENTITLEMENTS } from './plans'
-export { assertPublicHttpsUrl, fetchPublicHtml, type SafeHtmlResponse } from './safe-fetch'
+export {
+  buildProjectPageUrl,
+  normalizeProjectPagePath,
+  normalizeProjectPagePaths
+} from './project-pages'
+export {
+  assertPublicHttpsUrl,
+  fetchPublicHtml,
+  fetchPublicText,
+  type SafeFetchOptions,
+  type SafeHtmlResponse,
+  type SafeTextResponse
+} from './safe-fetch'
 export { auditSubmissionSchema, type ValidAuditSubmission } from './schemas'
+export { auditSiteInfrastructure } from './site-infrastructure'
 export type {
   AuditComparison,
   AuditEnvironment,
@@ -11,11 +28,15 @@ export type {
   AuditStatus,
   AuditSubmission,
   AuditTrigger,
+  CheckProgressStage,
   FindingCategory,
+  FindingEvidence,
+  FindingEvidenceKind,
   FindingPriority,
   FindingSource,
   FindingStatus,
   GateStatus,
   PlanEntitlements,
-  PlanId
+  PlanId,
+  SiteAccessMode
 } from './types'

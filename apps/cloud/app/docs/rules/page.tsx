@@ -6,11 +6,16 @@ import {
   getDocumentationCategories,
   getRuleDocumentationUrl
 } from '@/lib/docs'
+import { createPublicMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPublicMetadata({
   title: 'Rules reference',
-  description: 'The automatically synchronized frontend rule reference used by CodeRocket.'
-}
+  description:
+    'Browse the synchronized Front-End Checklist rules used by CodeRocket for accessibility, SEO, performance, security, HTML, CSS, and JavaScript guidance.',
+  path: '/docs/rules',
+  image: '/docs/opengraph-image',
+  keywords: ['frontend checklist', 'frontend best practices', 'website quality rules']
+})
 
 export default function RulesReferencePage() {
   const categories = getDocumentationCategories()

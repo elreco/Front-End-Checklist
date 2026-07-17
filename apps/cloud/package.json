@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@coderocket/ai": "workspace:*",
     "@frontendchecklist/rules": "workspace:*",
     "@coderocket/core": "workspace:*",
     "@coderocket/db": "workspace:*",
@@ -24,7 +25,10 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-markdown": "^10.1.0",
+    "rehype-pretty-code": "catalog:",
+    "rehype-slug": "catalog:",
     "remark-gfm": "catalog:",
+    "shiki": "catalog:",
     "stripe": "catalog:",
     "zod": "catalog:"
   },

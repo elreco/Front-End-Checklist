@@ -7,8 +7,9 @@ import { parseArguments } from './arguments'
 export async function run(args = process.argv.slice(2)): Promise<0 | 1 | 2> {
   try {
     const options = parseArguments(args, process.env)
-    const page = await auditPage(options.url)
-    if (!page.reachable) throw new Error(page.error ?? 'The page could not be audited')
+    const pages = await Promise.all(
+      options.urls.map(url => auditPage(url, { requestHeaders: options.requestHeaders }))
+    )
     const response = await fetch(options.apiUrl, {
       method: 'POST',
       headers: {
@@ -23,7 +24,7 @@ export async function run(args = process.argv.slice(2)): Promise<0 | 1 | 2> {
         commitSha: options.sha,
         branch: options.branch,
         pullRequest: options.pr,
-        pages: [page]
+        pages
       })
     })
     const result: unknown = await response.json()

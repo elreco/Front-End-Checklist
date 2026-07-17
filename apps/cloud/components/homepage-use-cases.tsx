@@ -1,4 +1,10 @@
-import { BellRing, FileCheck2, ShieldCheck, UserRound } from '@repo/design-system/icons'
+import {
+  BellRing,
+  BrainCircuit,
+  FileCheck2,
+  ShieldCheck,
+  UserRound
+} from '@repo/design-system/icons'
 
 const useCases = [
   {
@@ -15,12 +21,21 @@ const useCases = [
     icon: BellRing,
     title: 'Watch every client site',
     description:
-      'You are a freelancer or agency. Keep a daily eye on client sites after delivery, spot a CMS or hosting change, and open the exact page and explanation before the client calls.',
+      'You are a freelancer or agency. Keep an eye on client sites after delivery, spot an unexpected website change, and open the exact page and explanation before the client calls.',
     result: 'Before: reactive maintenance and scattered screenshots',
     outcome: 'After: a monitored portfolio and dated evidence'
   },
   {
     number: '03',
+    icon: BrainCircuit,
+    title: 'Turn proof into a fix plan',
+    description:
+      'Open a verified problem and choose who needs help. The AI assistant reads the saved evidence and matching Front-End Checklist rule, then prepares clear steps and checks without changing your site.',
+    result: 'Before: copy a technical warning into a generic chatbot',
+    outcome: 'After: a grounded plan that a fresh check can verify'
+  },
+  {
+    number: '04',
     icon: FileCheck2,
     title: 'Share progress without jargon',
     description:
@@ -40,7 +55,7 @@ const categories = [
   'JavaScript',
   'Images',
   'Privacy',
-  'Internationalization',
+  'Languages & regions',
   'Testing'
 ]
 
@@ -55,21 +70,21 @@ export function UseCases() {
             <em>that cost trust.</em>
           </h2>
           <p className="max-w-xl text-lg text-muted leading-8 lg:justify-self-end">
-            CodeRocket is useful without GitHub, and grows with you when you need previews or CI.
-            The same product serves a single site owner, a freelancer, and an agency portfolio.
+            Public websites work with no installation. Protected pages first get an honest access
+            test; private pages can be checked from GitHub Actions or your own environment.
           </p>
         </div>
         <div className="divide-y divide-border">
           {useCases.map(({ description, icon: Icon, number, outcome, result, title }) => (
             <article className="grid gap-7 py-12 lg:grid-cols-[100px_.8fr_1.2fr]" key={number}>
-              <p className="text-muted text-xs">{number} / 03</p>
+              <p className="text-muted text-xs">{number} / 04</p>
               <div>
                 <Icon aria-hidden className="h-6 w-6 text-signal" />
                 <h3 className="mt-5 font-editorial text-4xl">{title}</h3>
               </div>
               <div>
                 <p className="max-w-2xl text-muted leading-7">{description}</p>
-                <div className="mt-6 grid gap-px bg-border sm:grid-cols-2">
+                <div className="mt-6 grid gap-px border border-border bg-border sm:grid-cols-2">
                   <p className="bg-surface p-4 text-muted text-sm">{result}</p>
                   <p className="bg-surface p-4 text-foreground text-sm">{outcome}</p>
                 </div>
@@ -82,10 +97,9 @@ export function UseCases() {
             One maintained source of truth
           </p>
           <p className="mt-3 max-w-3xl text-muted text-sm leading-6">
-            The complete Front-End Checklist remains the technical reference. CodeRocket runs the
-            checks that can be verified reliably from public HTML and HTTP responses, exposes
-            developer checks through GitHub and the CLI, and links manual guidance when human
-            judgment is still required.
+            The complete Front-End Checklist remains the technical reference. CodeRocket
+            automatically runs only the checks it can prove from the page it was allowed to read.
+            When access or a human decision is needed, it says so instead of guessing.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {categories.map(category => (
@@ -118,24 +132,28 @@ export function DecisionRules() {
           {[
             [
               'Every requested page is readable and no new important problem appears',
-              'The website is healthy for this check.'
+              'Nothing new needs your attention.'
             ],
             [
               'A new important problem appears',
-              'The website needs attention and an alert can be sent.'
+              'The result says “Needs attention” and an alert can be sent.'
             ],
             [
               'An existing problem is still present',
-              'It stays visible without becoming a new alert.'
+              'It stays in the open list without creating another alert.'
             ],
-            ['A problem disappears from a checked page', 'It is recorded as resolved.'],
+            ['A problem disappears from a checked page', 'It is recorded as fixed.'],
             [
               'A page cannot be reached',
-              'The check is inconclusive. Previous problems stay open and the CLI returns an operational error.'
+              'The check is marked incomplete. Previous problems stay open.'
             ],
             [
-              'The upstream ruleset changes',
-              'The run requests a fresh baseline so an upstream update does not create fake alerts.'
+              'The technical rule reference changes',
+              'CodeRocket saves a fresh starting point instead of creating false alerts.'
+            ],
+            [
+              'You ask the AI assistant for help',
+              'It explains the saved proof and prepares a fix plan. Only a fresh deterministic check can call the problem fixed.'
             ]
           ].map(([term, detail]) => (
             <div className="grid gap-3 py-6 sm:grid-cols-2" key={term}>

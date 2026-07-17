@@ -1,11 +1,19 @@
-import { type GateStatus, getPlanEntitlements, type PlanId } from '@coderocket/core'
+import {
+  type GateStatus,
+  getPlanEntitlements,
+  type PlanId,
+  type SiteAccessMode
+} from '@coderocket/core'
 import { formatRelativeTime } from './format'
+import { firstRelation } from './supabase/relations'
 import { createSupabaseServerClient } from './supabase/server'
 
 export interface DashboardProject {
   id: string
   name: string
   url: string
+  accessMode: SiteAccessMode
+  hasCompletedCheck: boolean
   pageCount: number
   gate: GateStatus
   blockingCount: number
@@ -33,11 +41,14 @@ export interface DashboardData {
   plan: PlanId
   projectLimit: number
   runLimit: number
+  aiCreditAllowance: number
+  aiCreditsRemaining: number
   projectCount: number
   pageCount: number
   checksThisMonth: number
   attentionCount: number
   incompleteCount: number
+  setupRequiredCount: number
   nextCheck: string
   projects: DashboardProject[]
   activity: DashboardActivity[]
@@ -52,17 +63,22 @@ const demoData: DashboardData = {
   plan: 'free',
   projectLimit: 1,
   runLimit: 10,
+  aiCreditAllowance: 3_000,
+  aiCreditsRemaining: 2_200,
   projectCount: 1,
   pageCount: 5,
   checksThisMonth: 6,
   attentionCount: 2,
   incompleteCount: 0,
+  setupRequiredCount: 0,
   nextCheck: 'tomorrow',
   projects: [
     {
       id: 'demo-acme',
       name: 'Acme Storefront',
       url: 'https://acme.example',
+      accessMode: 'public',
+      hasCompletedCheck: true,
       pageCount: 5,
       gate: 'failed',
       blockingCount: 2,
@@ -103,58 +119,76 @@ export async function getDashboardData(): Promise<DashboardData> {
   const monthStart = new Date()
   monthStart.setUTCDate(1)
   monthStart.setUTCHours(0, 0, 0, 0)
-  const [projectsResult, auditsResult, subscriptionResult, tokensResult, sharesResult, runsResult] =
-    await Promise.all([
-      supabase
-        .from('cr_projects')
-        .select('id,name,production_url,page_paths,next_audit_at,schedule_enabled')
-        .eq('owner_id', auth.user.id)
-        .is('archived_at', null)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('cr_audits')
-        .select(
-          'id,project_id,environment,trigger,status,gate_status,new_count,blocking_count,requested_page_count,checked_page_count,created_at,completed_at,cr_projects(name)'
-        )
-        .eq('owner_id', auth.user.id)
-        .order('created_at', { ascending: false })
-        .limit(40),
-      supabase
-        .from('cr_subscriptions')
-        .select('plan_id')
-        .eq('owner_id', auth.user.id)
-        .maybeSingle(),
-      supabase
-        .from('cr_api_tokens')
-        .select('id', { count: 'exact', head: true })
-        .eq('owner_id', auth.user.id)
-        .is('revoked_at', null),
-      supabase
-        .from('cr_share_links')
-        .select('id', { count: 'exact', head: true })
-        .eq('owner_id', auth.user.id)
-        .is('revoked_at', null),
-      supabase
-        .from('cr_audits')
-        .select('id', { count: 'exact', head: true })
-        .eq('owner_id', auth.user.id)
-        .in('trigger', ['manual', 'ci'])
-        .gte('created_at', monthStart.toISOString())
-    ])
+  const [
+    projectsResult,
+    auditsResult,
+    subscriptionResult,
+    tokensResult,
+    sharesResult,
+    runsResult,
+    activeJobsResult,
+    aiUsageResult
+  ] = await Promise.all([
+    supabase
+      .from('cr_projects')
+      .select('id,name,production_url,page_paths,access_mode,next_audit_at,schedule_enabled')
+      .eq('owner_id', auth.user.id)
+      .is('archived_at', null)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('cr_audits')
+      .select(
+        'id,project_id,environment,trigger,status,gate_status,new_count,blocking_count,requested_page_count,checked_page_count,created_at,completed_at,cr_projects(name)'
+      )
+      .eq('owner_id', auth.user.id)
+      .order('created_at', { ascending: false })
+      .limit(40),
+    supabase.from('cr_subscriptions').select('plan_id').eq('owner_id', auth.user.id).maybeSingle(),
+    supabase
+      .from('cr_api_tokens')
+      .select('project_id')
+      .eq('owner_id', auth.user.id)
+      .is('revoked_at', null),
+    supabase
+      .from('cr_share_links')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', auth.user.id)
+      .is('revoked_at', null),
+    supabase
+      .from('cr_audits')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', auth.user.id)
+      .in('trigger', ['manual', 'ci'])
+      .gte('created_at', monthStart.toISOString()),
+    supabase
+      .from('cr_jobs')
+      .select('project_id')
+      .eq('owner_id', auth.user.id)
+      .eq('kind', 'audit')
+      .in('status', ['queued', 'leased']),
+    supabase
+      .from('cr_ai_usage_accounts')
+      .select('allowance_credits,consumed_credits,reserved_credits')
+      .eq('owner_id', auth.user.id)
+      .maybeSingle()
+  ])
 
   const plan = resolvePlan(subscriptionResult.data?.plan_id)
   const limits = getPlanEntitlements(plan)
   const projects = projectsResult.data ?? []
   const audits = auditsResult.data ?? []
+  const activeProjectIds = new Set(
+    (activeJobsResult.data ?? []).flatMap(job => (job.project_id ? [job.project_id] : []))
+  )
+  const connectedProjectIds = new Set((tokensResult.data ?? []).map(token => token.project_id))
   const summaries = projects.map(project => {
     const latest = audits.find(audit => audit.project_id === project.id)
-    const pending = audits.some(
-      audit => audit.project_id === project.id && ['queued', 'running'].includes(audit.status)
-    )
     return {
       id: project.id,
       name: project.name,
       url: project.production_url,
+      accessMode: resolveAccessMode(project.access_mode),
+      hasCompletedCheck: Boolean(latest),
       pageCount: project.page_paths.length,
       gate: resolveGate(latest?.gate_status),
       blockingCount: latest?.blocking_count ?? 0,
@@ -165,7 +199,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       nextCheck: project.schedule_enabled
         ? formatRelativeTime(project.next_audit_at)
         : 'Automatic checks paused',
-      isChecking: pending
+      isChecking: activeProjectIds.has(project.id)
     }
   })
   const completedAudits = audits.filter(audit => audit.status === 'succeeded')
@@ -178,6 +212,13 @@ export async function getDashboardData(): Promise<DashboardData> {
     plan,
     projectLimit: limits.projects,
     runLimit: limits.onDemandRunsPerMonth,
+    aiCreditAllowance: aiUsageResult.data?.allowance_credits ?? limits.aiCreditsPerMonth,
+    aiCreditsRemaining: Math.max(
+      0,
+      (aiUsageResult.data?.allowance_credits ?? limits.aiCreditsPerMonth) -
+        (aiUsageResult.data?.consumed_credits ?? 0) -
+        (aiUsageResult.data?.reserved_credits ?? 0)
+    ),
     projectCount: projects.length,
     pageCount: projects.reduce((total, project) => total + project.page_paths.length, 0),
     checksThisMonth: runsResult.count ?? 0,
@@ -186,12 +227,15 @@ export async function getDashboardData(): Promise<DashboardData> {
       0
     ),
     incompleteCount: summaries.filter(project => project.gate === 'inconclusive').length,
+    setupRequiredCount: summaries.filter(
+      project => project.accessMode === 'private' && !connectedProjectIds.has(project.id)
+    ).length,
     nextCheck: earliestNextCheck ? formatRelativeTime(earliestNextCheck) : 'Not scheduled',
     projects: summaries,
     activity: audits.slice(0, 5).map(audit => ({
       id: audit.id,
       projectId: audit.project_id,
-      projectName: audit.cr_projects?.[0]?.name ?? 'Archived site',
+      projectName: firstRelation(audit.cr_projects)?.name ?? 'Archived site',
       gate: resolveGate(audit.gate_status),
       status: audit.status,
       environment: audit.environment,
@@ -202,7 +246,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     setup: {
       hasProject: projects.length > 0,
       hasSuccessfulCheck: completedAudits.length > 0,
-      hasDeliveryConnection: (tokensResult.count ?? 0) > 0 || (sharesResult.count ?? 0) > 0
+      hasDeliveryConnection: connectedProjectIds.size > 0 || (sharesResult.count ?? 0) > 0
     }
   }
 }
@@ -213,16 +257,23 @@ function emptyDashboard(): DashboardData {
     plan: 'free',
     projectLimit: limits.projects,
     runLimit: limits.onDemandRunsPerMonth,
+    aiCreditAllowance: limits.aiCreditsPerMonth,
+    aiCreditsRemaining: limits.aiCreditsPerMonth,
     projectCount: 0,
     pageCount: 0,
     checksThisMonth: 0,
     attentionCount: 0,
     incompleteCount: 0,
+    setupRequiredCount: 0,
     nextCheck: 'Add a site first',
     projects: [],
     activity: [],
     setup: { hasProject: false, hasSuccessfulCheck: false, hasDeliveryConnection: false }
   }
+}
+
+function resolveAccessMode(value: unknown): SiteAccessMode {
+  return value === 'protected' || value === 'private' ? value : 'public'
 }
 
 function resolvePlan(value: unknown): PlanId {

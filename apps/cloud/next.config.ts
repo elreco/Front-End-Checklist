@@ -3,7 +3,13 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
-  transpilePackages: ['@coderocket/core', '@coderocket/db', '@repo/design-system'],
+  transpilePackages: [
+    '@coderocket/ai',
+    '@coderocket/core',
+    '@coderocket/db',
+    '@frontendchecklist/rules',
+    '@repo/design-system'
+  ],
   async redirects() {
     return [
       {
@@ -23,7 +29,20 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' }
         ]
-      }
+      },
+      ...[
+        '/audits/:path*',
+        '/dashboard/:path*',
+        '/login/:path*',
+        '/onboarding/:path*',
+        '/projects/:path*',
+        '/recover/:path*',
+        '/reports/:path*',
+        '/settings/:path*'
+      ].map(source => ({
+        source,
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }]
+      }))
     ]
   }
 }

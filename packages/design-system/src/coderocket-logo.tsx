@@ -24,6 +24,7 @@ export function CodeRocketMark(props: CodeRocketMarkProps) {
 }
 
 export interface CodeRocketLogoProps extends CodeRocketMarkProps {
+  lockupClassName?: string
   tagline?: string
   taglineClassName?: string
   wordmarkClassName?: string
@@ -33,13 +34,14 @@ export const CODEROCKET_TAGLINE = 'Website health.'
 
 /** CodeRocket wordmark lockup. */
 export function CodeRocketLogo({
+  lockupClassName,
   tagline,
   taglineClassName,
   wordmarkClassName,
   ...props
 }: CodeRocketLogoProps) {
   return (
-    <span className="inline-flex items-center gap-3 align-middle">
+    <span className={cn('inline-flex items-center gap-2 align-middle', lockupClassName)}>
       <CodeRocketMark {...props} />
       <span className="flex min-w-0 flex-col items-start justify-center text-left">
         <span

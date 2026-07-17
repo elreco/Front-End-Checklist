@@ -1,12 +1,14 @@
-import type { GateStatus, PlanId } from '@coderocket/core'
-import { CODEROCKET_TAGLINE, CodeRocketLogo } from '@repo/design-system/coderocket-logo'
-import { ArrowUpRight, BarChart3, LogOut, Plus } from '@repo/design-system/icons'
+import type { GateStatus } from '@coderocket/core'
+import { CodeRocketLogo } from '@repo/design-system/coderocket-logo'
+import { BarChart3, Plus } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { signOut } from '@/app/actions'
 import { getAppShellContext } from '@/lib/app-shell-data'
+import { getGateLanguage } from '@/lib/product-language'
 import { AppNavigation } from './app-navigation'
+import { AppShellLayout } from './app-shell-layout'
 
 /** Distinct authenticated application frame used by every private product screen. */
 export async function ProductShell({
@@ -21,55 +23,20 @@ export async function ProductShell({
   action?: ReactNode
 }) {
   const context = await getAppShellContext()
+  const cookieStore = await cookies()
+  const initialSidebarCollapsed = cookieStore.get('coderocket-sidebar-collapsed')?.value === 'true'
 
   return (
     <main className="min-h-screen bg-background" data-app-shell>
-      <div className="grid min-h-screen lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="hidden border-border border-r bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:p-4">
-          <Link className="px-2 py-2" href="/dashboard">
-            <CodeRocketLogo
-              className="h-10 w-10 shrink-0 text-foreground"
-              tagline={CODEROCKET_TAGLINE}
-              wordmarkClassName="text-xl"
-            />
-          </Link>
-          <p className="mt-7 px-3 font-mono text-[10px] text-muted uppercase tracking-[.18em]">
-            Workspace
-          </p>
-          <div className="mt-2">
-            <AppNavigation />
-          </div>
-          <PlanPrompt
-            plan={context.plan}
-            projectCount={context.projectCount}
-            projectLimit={context.limits.projects}
-          />
-          <div className="mt-3 border border-border bg-background p-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-accent font-mono font-semibold text-white text-xs">
-                {context.initials}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-sm">{context.displayName}</p>
-                <p className="truncate text-muted text-xs">
-                  {context.email || 'Signed-in workspace'}
-                </p>
-              </div>
-            </div>
-            <form action={signOut} className="mt-3 border-border border-t pt-2">
-              <CodeRocketButton
-                className="w-full justify-start px-1"
-                size="sm"
-                type="submit"
-                variant="ghost"
-              >
-                <LogOut aria-hidden className="h-3.5 w-3.5" />
-                Sign out
-              </CodeRocketButton>
-            </form>
-          </div>
-        </aside>
-
+      <AppShellLayout
+        displayName={context.displayName}
+        email={context.email}
+        initials={context.initials}
+        initialCollapsed={initialSidebarCollapsed}
+        plan={context.plan}
+        projectCount={context.projectCount}
+        projectLimit={context.limits.projects}
+      >
         <div className="min-w-0">
           <header className="sticky top-0 z-40 border-border border-b bg-background">
             <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6 xl:px-10">
@@ -113,7 +80,7 @@ export async function ProductShell({
             <AppNavigation mobile />
           </header>
 
-          <section className="mx-auto max-w-[1480px] px-4 py-7 sm:px-6 sm:py-9 xl:px-10">
+          <section className="cr-page-enter mx-auto max-w-[1480px] px-4 py-7 sm:px-6 sm:py-9 xl:px-10">
             <div className="mb-7 lg:hidden">
               {eyebrow ? (
                 <p className="font-mono text-[10px] text-muted uppercase tracking-[.18em]">
@@ -125,64 +92,13 @@ export async function ProductShell({
             {children}
           </section>
         </div>
-      </div>
+      </AppShellLayout>
     </main>
   )
 }
 
-function PlanPrompt({
-  plan,
-  projectCount,
-  projectLimit
-}: {
-  plan: PlanId
-  projectCount: number
-  projectLimit: number
-}) {
-  const isAgency = plan === 'agency'
-  return (
-    <div className="mt-auto border border-border bg-background p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-mono text-[10px] uppercase tracking-[.14em]">
-          {plan === 'solo' ? 'personal' : plan} plan
-        </p>
-        <span className="text-muted text-xs">
-          {projectCount}/{projectLimit} sites
-        </span>
-      </div>
-      <div
-        className="mt-3 h-1 bg-surface-raised"
-        role="progressbar"
-        aria-label="Sites used"
-        aria-valuemax={projectLimit}
-        aria-valuemin={0}
-        aria-valuenow={projectCount}
-      >
-        <span
-          className="block h-full bg-accent"
-          style={{ width: `${Math.min(100, (projectCount / projectLimit) * 100)}%` }}
-        />
-      </div>
-      <p className="mt-3 text-muted text-xs leading-5">
-        {isAgency
-          ? 'Daily checks and unbranded client reports are active.'
-          : plan === 'solo'
-            ? 'Need more client sites and unbranded reports?'
-            : 'Get daily checks, more sites, and a longer history.'}
-      </p>
-      {!isAgency ? (
-        <Link
-          className="mt-3 inline-flex items-center gap-1 font-mono text-accent text-xs hover:text-signal"
-          href="/pricing"
-        >
-          Compare plans <ArrowUpRight aria-hidden className="h-3.5 w-3.5" />
-        </Link>
-      ) : null}
-    </div>
-  )
-}
-
 export function GateBadge({ status }: { status: GateStatus }) {
+  const language = getGateLanguage(status)
   const className =
     status === 'passed'
       ? 'border-success bg-success/10 text-success'
@@ -195,13 +111,7 @@ export function GateBadge({ status }: { status: GateStatus }) {
     <span
       className={`inline-flex border px-2.5 py-1 font-mono font-semibold text-[10px] uppercase tracking-[.08em] ${className}`}
     >
-      {status === 'inconclusive'
-        ? 'Could not check'
-        : status === 'needs_baseline'
-          ? 'First check needed'
-          : status === 'passed'
-            ? 'All clear'
-            : 'Needs attention'}
+      {language.label}
     </span>
   )
 }

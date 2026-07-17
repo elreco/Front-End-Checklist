@@ -2,10 +2,38 @@ import { loadRules } from '@frontendchecklist/rules'
 import { ArrowRight, Check } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
+import { FaqAccordion } from '@/components/faq-accordion'
 import { AuditDemo } from '@/components/homepage-audit-demo'
 import { DecisionRules, UseCases } from '@/components/homepage-use-cases'
 
 const ruleCount = loadRules().length
+const faqItems = [
+  {
+    question: 'What does CodeRocket monitor?',
+    answer:
+      'CodeRocket checks whether selected pages are reachable and reviews practical website basics across search visibility, accessibility, speed, security, and frontend quality. It then compares each complete check with the previous result.'
+  },
+  {
+    question: 'How is this different from a one-time website checker?',
+    answer:
+      'A one-time checker gives you a snapshot. CodeRocket keeps a trusted baseline, shows which problems are new, still open, or fixed, and alerts you only when an important change appears.'
+  },
+  {
+    question: 'Can CodeRocket check pages behind Cloudflare or a login?',
+    answer:
+      'Public pages can use the cloud checker. Protected, private, or preview pages can use a runner inside GitHub Actions or another environment that already has access. Pages CodeRocket cannot read are marked incomplete, never healthy.'
+  },
+  {
+    question: 'Does CodeRocket change my website?',
+    answer:
+      'No. Checks are read-only. The AI assistant can explain saved evidence and suggest a fix, but it cannot edit a website or mark an issue fixed. A later deterministic check verifies the result.'
+  },
+  {
+    question: 'Who is CodeRocket for?',
+    answer:
+      'It is designed for website owners who want plain explanations, freelancers responsible for client sites, and agencies that need repeatable checks and shareable reports across a portfolio.'
+  }
+]
 
 export function Hero() {
   return (
@@ -24,9 +52,9 @@ export function Hero() {
           </span>
         </h1>
         <p className="mx-auto mt-9 max-w-3xl text-lg text-muted leading-8">
-          Add the pages that matter. CodeRocket checks whether they are reachable, reviews search,
-          accessibility, performance, security, and frontend quality, then tells you what changed in
-          plain language.
+          Add the pages that matter. Public pages are checked automatically; protected and private
+          pages can use a runner you control. CodeRocket tells you in plain language what changed
+          and what it could not verify.
         </p>
         <div className="mt-9 flex flex-wrap justify-center gap-3">
           <CodeRocketButton asChild size="lg">
@@ -54,7 +82,7 @@ function HeroSummary() {
         {[
           ['PAGES ONLINE', '5 / 5'],
           ['NEW PROBLEMS', '2 IMPORTANT'],
-          ['CHECK COVERAGE', '5 / 5'],
+          ['PAGES CHECKED', '5 / 5'],
           ['HEALTH', 'NEEDS ATTENTION']
         ].map(([label, value], index) => (
           <div className="border-border px-4 sm:border-r sm:last:border-r-0" key={label}>
@@ -88,15 +116,16 @@ export function Benefits() {
               <em>not five technical dashboards.</em>
             </h2>
             <p className="mt-7 max-w-3xl text-lg text-muted leading-8">
-              CodeRocket turns hundreds of maintained frontend rules and simple HTTP checks into a
+              CodeRocket turns hundreds of maintained website rules and safe page checks into a
               short list of actions. You see what is new, what still needs work, what was fixed, and
               which pages could not be checked.
             </p>
             <ul className="mt-8 grid gap-3 sm:grid-cols-2">
               {[
-                `${ruleCount} maintained rules from Front-End Checklist`,
-                'Availability, search, accessibility, performance, and security',
+                `${ruleCount} documented best-practice rules`,
+                'Pages online, search visibility, accessibility, speed, and security basics',
                 'Clear coverage: every page checked or explicitly unavailable',
+                'Public cloud checks and a private runner for restricted pages',
                 'Private, revocable reports for clients and collaborators'
               ].map(item => (
                 <li className="flex gap-3 text-sm" key={item}>
@@ -111,8 +140,27 @@ export function Benefits() {
       <AuditDemo />
       <UseCases />
       <DecisionRules />
+      <HomepageFaq />
       <FinalCallToAction />
     </>
+  )
+}
+
+function HomepageFaq() {
+  return (
+    <section className="border-border border-t px-5 py-20 sm:py-28">
+      <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.75fr_1.25fr]">
+        <div>
+          <p className="text-signal text-xs uppercase tracking-[.18em]">Common questions</p>
+          <h2 className="mt-5 font-editorial text-5xl leading-[.98] tracking-[-.03em] sm:text-6xl">
+            Website monitoring,
+            <br />
+            <em>without the mystery.</em>
+          </h2>
+        </div>
+        <FaqAccordion items={faqItems} />
+      </div>
+    </section>
   )
 }
 
@@ -127,8 +175,8 @@ function FinalCallToAction() {
           <em>Know what needs attention.</em>
         </h2>
         <p className="mx-auto mt-7 max-w-xl text-muted leading-7">
-          Add your public HTTPS address, choose up to five important pages, and get a readable
-          baseline you can compare over time.
+          Add your website, tell CodeRocket how it can be reached, and choose up to five important
+          pages for the first comparison.
         </p>
         <CodeRocketButton asChild className="mt-9" size="lg">
           <Link href="/onboarding">

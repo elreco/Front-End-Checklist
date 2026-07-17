@@ -10,7 +10,15 @@ const findingSchema = z.object({
     .enum(['availability', 'search', 'accessibility', 'performance', 'security', 'quality'])
     .optional(),
   source: z.enum(['frontend_checklist', 'http']).optional(),
-  occurrenceKey: z.string().min(1).max(300).optional()
+  occurrenceKey: z.string().min(1).max(300).optional(),
+  evidence: z
+    .object({
+      kind: z.enum(['html', 'header', 'network']),
+      summary: z.string().min(1).max(2000),
+      observed: z.string().max(4000).optional(),
+      expected: z.string().max(4000).optional()
+    })
+    .optional()
 })
 
 export const auditSubmissionSchema = z.object({
@@ -29,6 +37,7 @@ export const auditSubmissionSchema = z.object({
         findings: z.array(findingSchema).max(5000),
         httpStatus: z.number().int().min(100).max(599).optional(),
         durationMs: z.number().int().min(0).max(120_000).optional(),
+        finalUrl: z.url({ protocol: /^https$/ }).optional(),
         error: z.string().max(2000).optional()
       })
     )

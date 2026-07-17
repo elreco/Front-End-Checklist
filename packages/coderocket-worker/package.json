@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "node --env-file=../../apps/cloud/.env.local --watch --import tsx src/index.ts",
     "lint": "biome check .",
     "start": "tsx src/index.ts",
     "test": "node --import tsx --test test/*.test.ts",
@@ -13,9 +13,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@coderocket/ai": "workspace:*",
     "@coderocket/core": "workspace:*",
     "@coderocket/db": "workspace:*",
-    "resend": "catalog:"
+    "resend": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/config-typescript": "workspace:^",

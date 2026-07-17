@@ -5,9 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/dashboard', '/projects', '/audits', '/settings', '/reports']
+      disallow: ['/api/', '/auth/']
     },
-    sitemap: 'https://coderocket.app/sitemap.xml',
-    host: 'https://coderocket.app'
+    sitemap: 'https://coderocket.app/sitemap.xml'
   }
 }

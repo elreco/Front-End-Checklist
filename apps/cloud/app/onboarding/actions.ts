@@ -1,6 +1,12 @@
 'use server'
 
-import { assertPublicHttpsUrl, getPlanEntitlements, type PlanId } from '@coderocket/core'
+import {
+  assertPublicHttpsUrl,
+  getPlanEntitlements,
+  normalizeProjectPagePaths,
+  type PlanId,
+  type SiteAccessMode
+} from '@coderocket/core'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -10,17 +16,23 @@ export async function createProject(formData: FormData) {
   const rawAudience = formData.get('audience')
   const audience =
     rawAudience === 'freelancer' || rawAudience === 'agency' ? rawAudience : 'site_owner'
-  const pagePaths = String(formData.get('pages') ?? '/')
+  const accessMode = resolveAccessMode(formData.get('accessMode'))
+  const rawPagePaths = String(formData.get('pages') ?? '/')
     .split('\n')
     .map(path => path.trim())
     .filter(Boolean)
-    .map(path => (path.startsWith('/') ? path : `/${path}`))
-    .filter((path, index, paths) => paths.indexOf(path) === index)
   if (name.length < 1 || name.length > 120) redirect('/onboarding?notice=invalid-project-name')
+  let productionUrl: string
   try {
-    await assertPublicHttpsUrl(url)
+    productionUrl = (await assertPublicHttpsUrl(url)).origin
   } catch {
     redirect('/onboarding?notice=invalid-url')
+  }
+  let pagePaths: string[]
+  try {
+    pagePaths = normalizeProjectPagePaths(rawPagePaths)
+  } catch {
+    redirect('/onboarding?notice=invalid-pages')
   }
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
@@ -44,17 +56,39 @@ export async function createProject(formData: FormData) {
     .eq('owner_id', auth.user.id)
     .is('archived_at', null)
   if ((count ?? 0) >= limits.projects) redirect('/onboarding?notice=project-limit')
+  const nextAuditAt = new Date(
+    Date.now() + (limits.schedule === 'weekly' ? 7 : 1) * 86_400_000
+  ).toISOString()
   const { data, error } = await supabase
     .from('cr_projects')
-    .insert({ owner_id: auth.user.id, name, production_url: url, page_paths: pagePaths })
+    .insert({
+      owner_id: auth.user.id,
+      name,
+      production_url: productionUrl,
+      page_paths: pagePaths,
+      access_mode: accessMode,
+      schedule_enabled: accessMode !== 'private',
+      next_audit_at: nextAuditAt
+    })
     .select('id')
     .single()
   if (error) redirect('/onboarding?notice=create-failed')
+  if (accessMode === 'private') redirect(`/projects/${data.id}?notice=private-site-created`)
   const { error: queueError } = await supabase.from('cr_jobs').insert({
     owner_id: auth.user.id,
     project_id: data.id,
     kind: 'audit',
-    payload: { environment: 'production', trigger: 'manual' }
+    payload: { environment: 'production', trigger: 'manual' },
+    progress_stage: 'queued',
+    progress_current: 0,
+    progress_total: pagePaths.length,
+    progress_message: 'Waiting for the website checking service',
+    progress_updated_at: new Date().toISOString()
   })
-  redirect(`/projects/${data.id}?notice=${queueError ? 'queue-failed' : 'site-created'}`)
+  const successNotice = accessMode === 'protected' ? 'protected-site-created' : 'site-created'
+  redirect(`/projects/${data.id}?notice=${queueError ? 'queue-failed' : successNotice}`)
+}
+
+function resolveAccessMode(value: FormDataEntryValue | null): SiteAccessMode {
+  return value === 'protected' || value === 'private' ? value : 'public'
 }

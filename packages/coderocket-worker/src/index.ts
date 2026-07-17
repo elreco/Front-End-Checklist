@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { getPlanEntitlements, type PlanId } from '@coderocket/core'
 import { createServiceClient } from '@coderocket/db'
-import { processAuditJob, type WorkerJob } from './audit-job'
+import { failAiAnalysisJob, processAiAnalysisJob } from './ai-analysis-job'
+import { JobCancelledError, processAuditJob, type WorkerJob } from './audit-job'
 import { sendAlertEmail } from './email'
 import { log } from './log'
 
@@ -43,8 +44,10 @@ async function processEmail(job: WorkerJob) {
 }
 
 async function handle(job: WorkerJob) {
-  if (job.payload.kind === 'email') await processEmail(job)
-  else await processAuditJob(job)
+  if (job.payload.kind === 'email') return processEmail(job)
+  if (job.payload.kind === 'audit') return processAuditJob(job)
+  if (job.payload.kind === 'ai_analysis') return processAiAnalysisJob(job)
+  throw new Error(`Unsupported worker job kind: ${String(job.payload.kind)}`)
 }
 
 async function tick() {
@@ -73,7 +76,7 @@ async function tick() {
       .lt('created_at', new Date(Date.now() - 31 * 86_400_000).toISOString())
     lastRetentionAt = Date.now()
   }
-  const { data, error } = await db.rpc('cr_claim_jobs', { p_worker_id: workerId, p_limit: 5 })
+  const { data, error } = await db.rpc('cr_claim_jobs', { p_worker_id: workerId, p_limit: 1 })
   if (error) throw new Error(error.message)
   for (const job of data ?? []) {
     try {
@@ -88,14 +91,42 @@ async function tick() {
       await db.rpc('cr_finish_job', { p_job_id: job.id, p_worker_id: workerId })
       log('info', 'job.succeeded', { jobId: job.id, kind: job.kind })
     } catch (error) {
+      if (error instanceof JobCancelledError) {
+        log('info', 'job.cancelled', { jobId: job.id, kind: job.kind })
+        continue
+      }
       const message = error instanceof Error ? error.message : 'Unknown worker error'
       const delay = Math.min(300, 15 * 2 ** Math.max(0, job.attempts - 1))
+      if (job.kind === 'audit')
+        await db
+          .from('cr_jobs')
+          .update({
+            progress_stage: 'retrying',
+            progress_message:
+              job.attempts >= 3
+                ? 'The check could not finish after three attempts.'
+                : `A temporary problem interrupted the check. Retrying in ${delay} seconds.`,
+            progress_updated_at: new Date().toISOString()
+          })
+          .eq('id', job.id)
+          .eq('lease_owner', workerId)
       await db.rpc('cr_retry_job', {
         p_job_id: job.id,
         p_worker_id: workerId,
         p_error: message,
         p_delay_seconds: delay
       })
+      if (job.kind === 'ai_analysis' && job.attempts >= 3)
+        await failAiAnalysisJob(
+          {
+            id: job.id,
+            owner_id: job.owner_id,
+            project_id: job.project_id,
+            attempts: job.attempts,
+            payload: { ...job.payload, kind: job.kind }
+          },
+          message
+        )
       if (job.kind === 'audit' && job.attempts >= 3) {
         const { data: project } = await db
           .from('cr_projects')

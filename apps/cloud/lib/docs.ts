@@ -12,6 +12,7 @@ export const DOCUMENTATION_RULES = loadRules().sort(
 )
 
 export const DOCUMENTATION_RULESET_VERSION = getRulesetVersion()
+const DOCUMENTATION_RULES_BY_SLUG = new Map(DOCUMENTATION_RULES.map(rule => [rule.slug, rule]))
 
 const CATEGORY_LABELS: Record<FrontendChecklistCategory, string> = {
   accessibility: 'Accessibility',
@@ -71,4 +72,10 @@ export function getAdjacentDocumentationRules(rule: FrontendChecklistRule): {
 /** Build the official CodeRocket URL for a rule from the upstream-backed corpus. */
 export function getRuleDocumentationUrl(rule: FrontendChecklistRule): string {
   return `/docs/rules/${rule.primaryCategory}/${rule.slug}`
+}
+
+/** Resolve a stored finding slug to a canonical route without ever returning a dead link. */
+export function getRuleDocumentationUrlBySlug(slug: string): string {
+  const rule = DOCUMENTATION_RULES_BY_SLUG.get(slug)
+  return rule ? getRuleDocumentationUrl(rule) : '/docs/rules'
 }

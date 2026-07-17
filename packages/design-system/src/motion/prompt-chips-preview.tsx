@@ -1,7 +1,7 @@
 'use client'
 
 import { domAnimation, LazyMotion, m } from 'framer-motion'
-import { HelpCircle, Sparkles, Wrench } from 'lucide-react'
+import { Accessibility, HelpCircle, Wrench } from 'lucide-react'
 import { useReducedMotionPreference } from './reduced-motion-preference'
 
 interface PromptChipsPreviewProps {
@@ -10,7 +10,7 @@ interface PromptChipsPreviewProps {
 }
 
 const prompts = [
-  { text: 'Check accessibility', icon: Sparkles, x: 15, y: 20 },
+  { text: 'Check accessibility', icon: Accessibility, x: 15, y: 20 },
   { text: 'Fix this issue', icon: Wrench, x: 55, y: 45 },
   { text: 'Explain why', icon: HelpCircle, x: 25, y: 70 }
 ]

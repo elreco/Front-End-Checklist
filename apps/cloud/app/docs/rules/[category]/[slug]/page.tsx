@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { DocsMarkdown } from '@/components/docs-markdown'
 import { DocsBreadcrumbs } from '@/components/docs-shell'
+import { JsonLd } from '@/components/json-ld'
 import {
   DOCUMENTATION_RULES,
   DOCUMENTATION_RULESET_VERSION,
@@ -12,6 +13,7 @@ import {
   getDocumentationRule,
   getRuleDocumentationUrl
 } from '@/lib/docs'
+import { absoluteUrl, createPublicMetadata, SITE_URL } from '@/lib/seo'
 
 export const dynamicParams = false
 
@@ -30,11 +32,20 @@ export async function generateMetadata({
   const { category, slug } = await params
   const rule = getDocumentationRule(category, slug)
   if (!rule) return { title: 'Rule not found' }
-  return {
+  return createPublicMetadata({
     title: rule.title,
-    description: `${rule.title} — official CodeRocket ${getCategoryLabel(rule.primaryCategory)} rule reference.`,
-    alternates: { canonical: getRuleDocumentationUrl(rule) }
-  }
+    description:
+      rule.description ??
+      `${rule.title} — official CodeRocket ${getCategoryLabel(rule.primaryCategory)} rule reference.`,
+    path: getRuleDocumentationUrl(rule),
+    image: '/docs/opengraph-image',
+    type: 'article',
+    keywords: [
+      rule.title,
+      `${getCategoryLabel(rule.primaryCategory)} best practices`,
+      'frontend checklist'
+    ]
+  })
 }
 
 /** Return the brand tone for a documented priority. */
@@ -54,9 +65,42 @@ export default async function RuleDocumentationPage({
   const rule = getDocumentationRule(category, slug)
   if (!rule) notFound()
   const adjacent = getAdjacentDocumentationRules(rule)
+  const ruleUrl = absoluteUrl(getRuleDocumentationUrl(rule))
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'TechArticle',
+        '@id': `${ruleUrl}#article`,
+        headline: rule.title,
+        description: rule.description,
+        url: ruleUrl,
+        mainEntityOfPage: ruleUrl,
+        articleSection: getCategoryLabel(rule.primaryCategory),
+        inLanguage: 'en',
+        author: { '@id': `${SITE_URL}/#organization` },
+        publisher: { '@id': `${SITE_URL}/#organization` },
+        isPartOf: { '@id': `${SITE_URL}/docs/rules#reference` }
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Docs', item: absoluteUrl('/docs') },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Rules',
+            item: absoluteUrl('/docs/rules')
+          },
+          { '@type': 'ListItem', position: 3, name: rule.title, item: ruleUrl }
+        ]
+      }
+    ]
+  }
 
   return (
     <article>
+      <JsonLd data={structuredData} />
       <DocsBreadcrumbs
         items={[
           { href: '/docs', label: 'Docs' },

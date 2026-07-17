@@ -1,15 +1,23 @@
 'use client'
 
-import { BookOpen, ListChecks, ShieldCheck, Terminal, Workflow } from '@repo/design-system/icons'
+import {
+  BookOpen,
+  BrainCircuit,
+  ListChecks,
+  ShieldCheck,
+  Terminal,
+  Workflow
+} from '@repo/design-system/icons'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const links = [
-  { href: '/docs', label: 'Overview', icon: BookOpen },
+  { href: '/docs', label: 'Start here', icon: BookOpen },
   { href: '/docs/audits', label: 'How checks work', icon: Workflow },
-  { href: '/docs/cli', label: 'CLI & GitHub', icon: Terminal },
-  { href: '/docs/rules', label: 'Rules reference', icon: ListChecks },
-  { href: '/docs/security', label: 'Security model', icon: ShieldCheck }
+  { href: '/docs/ai', label: 'AI fix assistant', icon: BrainCircuit },
+  { href: '/docs/cli', label: 'Runner & GitHub', icon: Terminal },
+  { href: '/docs/rules', label: 'Website rules', icon: ListChecks },
+  { href: '/docs/security', label: 'Security details', icon: ShieldCheck }
 ]
 
 /** Documentation links with section-aware active states, including rule detail pages. */

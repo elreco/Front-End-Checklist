@@ -1,29 +1,28 @@
-import { Check, Clock3, Globe2, Radar, ShieldCheck } from '@repo/design-system/icons'
+import { Clock3, Radar, ShieldCheck } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
-import { CodeRocketInput, CodeRocketTextarea } from '@repo/design-system/ui/coderocket-field'
 import Link from 'next/link'
 import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
-import { createProject } from './actions'
+import { getPlanLabel } from '@/lib/product-language'
+import { createPrivateMetadata } from '@/lib/seo'
+import { OnboardingForm } from './onboarding-form'
 
-export const metadata = { title: 'Add a site' }
+export const metadata = createPrivateMetadata('Add a site')
 
 const outcomes = [
   {
     icon: Radar,
-    title: 'We read each public page once',
-    description:
-      'CodeRocket checks the page structure, content, accessibility, security, and speed basics.'
+    title: 'The right access method is used',
+    description: 'Public pages use a cloud check. Private pages wait for your runner connection.'
   },
   {
     icon: ShieldCheck,
-    title: 'The first check becomes your reference',
-    description:
-      'Future checks focus on what changed, so old problems do not create constant noise.'
+    title: 'The first result is saved',
+    description: 'This becomes the starting point used to spot future changes.'
   },
   {
     icon: Clock3,
-    title: 'Monitoring continues automatically',
+    title: 'Monitoring continues',
     description: 'Free sites are checked weekly. Paid plans are checked every day.'
   }
 ]
@@ -33,162 +32,40 @@ export default async function OnboardingPage() {
   const limitReached = context.projectCount >= context.limits.projects
 
   return (
-    <ProductShell eyebrow="Guided setup" title="Add a site">
-      <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_390px]">
+    <ProductShell eyebrow="Guided setup" title="Add a website">
+      <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="border border-border bg-surface">
-          <div className="border-border border-b p-5 sm:p-7">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center border border-border bg-background">
-                <Globe2 aria-hidden className="h-5 w-5 text-signal" />
-              </span>
-              <div>
-                <p className="font-mono text-[10px] text-signal uppercase tracking-[.16em]">
-                  Step 1 of 3
-                </p>
-                <h2 className="mt-1 font-heading font-semibold text-2xl">
-                  Which website should we watch?
-                </h2>
-              </div>
-            </div>
-            <p className="mt-4 max-w-2xl text-muted leading-7">
-              Start with the live public website your customers use. You do not need to install
-              anything or change your website.
-            </p>
-          </div>
-
           {limitReached ? (
             <div className="p-5 sm:p-7">
               <div className="border border-accent bg-accent/10 p-5">
-                <p className="font-semibold">
-                  Your {context.plan} plan is using all available sites.
-                </p>
+                <p className="font-heading font-semibold text-xl">Your website limit is reached</p>
                 <p className="mt-2 text-muted text-sm leading-6">
-                  Archive an existing site, or choose a plan with more monitored sites.
+                  Your {getPlanLabel(context.plan)} plan includes {context.limits.projects}{' '}
+                  {context.limits.projects === 1 ? 'website' : 'websites'}. Archive one, or choose a
+                  plan with more room.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <CodeRocketButton asChild>
-                    <Link href="/pricing">Compare plans</Link>
+                    <Link href="/pricing">See plans</Link>
                   </CodeRocketButton>
                   <CodeRocketButton asChild variant="outline">
-                    <Link href="/dashboard#sites">Back to my sites</Link>
+                    <Link href="/dashboard#sites">Back to my websites</Link>
                   </CodeRocketButton>
                 </div>
               </div>
             </div>
           ) : (
-            <form action={createProject} className="space-y-7 p-5 sm:p-7">
-              <fieldset className="space-y-4">
-                <legend className="font-heading font-semibold text-lg">
-                  How will you use CodeRocket?
-                </legend>
-                <p className="text-muted text-sm leading-6">
-                  This only changes the guidance you see. The checks remain identical and you can
-                  change direction later.
-                </p>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    [
-                      'site_owner',
-                      'My own website',
-                      'Portfolio, shop, newsletter, or organization'
-                    ],
-                    ['freelancer', 'Client websites', 'Freelance delivery and ongoing maintenance'],
-                    ['agency', 'Agency portfolio', 'Several client websites and shared reports']
-                  ].map(([value, title, description], index) => (
-                    <label
-                      className="cursor-pointer border border-border bg-background p-4 transition-colors hover:border-accent has-checked:border-accent has-checked:bg-accent/10"
-                      key={value}
-                    >
-                      <input
-                        className="mr-2 accent-accent"
-                        defaultChecked={index === 0}
-                        name="audience"
-                        type="radio"
-                        value={value}
-                      />
-                      <span className="font-semibold text-sm">{title}</span>
-                      <span className="mt-2 block text-muted text-xs leading-5">{description}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-
-              <fieldset className="space-y-5">
-                <legend className="font-heading font-semibold text-lg">Site details</legend>
-                <label className="block font-semibold text-sm" htmlFor="project-name">
-                  A name you will recognize
-                  <CodeRocketInput
-                    id="project-name"
-                    maxLength={120}
-                    name="name"
-                    placeholder="Example: Acme online store"
-                    required
-                  />
-                  <span className="mt-2 block font-normal text-muted text-xs">
-                    This can be a company, client, or project name.
-                  </span>
-                </label>
-                <label className="block font-semibold text-sm" htmlFor="production-url">
-                  Public website address
-                  <CodeRocketInput
-                    autoComplete="url"
-                    id="production-url"
-                    name="url"
-                    placeholder="https://www.example.com"
-                    required
-                    type="url"
-                  />
-                  <span className="mt-2 block font-normal text-muted text-xs">
-                    Use the secure https:// address visible to visitors.
-                  </span>
-                </label>
-              </fieldset>
-
-              <fieldset className="border-border border-t pt-6">
-                <legend className="font-heading font-semibold text-lg">
-                  Important pages to watch
-                </legend>
-                <p className="mt-2 text-muted text-sm leading-6">
-                  Add the parts after your domain, one per line. Start with pages that bring in
-                  leads, sales, or customer trust.
-                </p>
-                <label className="mt-4 block font-semibold text-sm" htmlFor="monitored-pages">
-                  Page paths
-                  <CodeRocketTextarea
-                    defaultValue={'/\n/pricing\n/contact'}
-                    id="monitored-pages"
-                    name="pages"
-                    required
-                  />
-                </label>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-muted text-xs">
-                  <span>Examples: /, /pricing, /contact, /checkout</span>
-                  <span>
-                    {context.limits.pagesPerProject} pages available on {context.plan}
-                  </span>
-                </div>
-              </fieldset>
-
-              <div className="border border-border bg-background p-4 text-sm">
-                <p className="flex items-start gap-2">
-                  <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                  <span>
-                    <strong>No code or payment card required.</strong> The first check starts as
-                    soon as the site is added.
-                  </span>
-                </p>
-              </div>
-              <CodeRocketButton size="lg" type="submit">
-                Add site and start first check
-              </CodeRocketButton>
-            </form>
+            <OnboardingForm
+              pagesPerProject={context.limits.pagesPerProject}
+              planName={getPlanLabel(context.plan)}
+            />
           )}
         </section>
 
         <aside className="space-y-4">
           <div className="border border-border bg-surface p-5 sm:p-6">
             <p className="font-mono text-[10px] text-accent uppercase tracking-[.16em]">
-              What happens next
+              What happens after setup
             </p>
             <ol className="mt-5 space-y-6">
               {outcomes.map(({ description, icon: Icon, title }, index) => (
@@ -207,16 +84,16 @@ export default async function OnboardingPage() {
             </ol>
           </div>
           <div className="border border-border bg-background p-5">
-            <p className="font-semibold text-sm">What CodeRocket does not do</p>
+            <p className="font-semibold text-sm">Safe by design</p>
             <p className="mt-2 text-muted text-xs leading-5">
-              It does not change your site, place orders, submit forms, or run a hidden browser. It
-              reads the public HTML safely and reports what it can prove.
+              CodeRocket does not change your site, place orders, or submit forms. It reports the
+              pages it checked and clearly marks anything it could not reach.
             </p>
             <Link
               className="mt-4 inline-flex font-mono text-accent text-xs hover:text-signal"
               href="/docs/audits"
             >
-              Read how checks work →
+              See exactly how checks work →
             </Link>
           </div>
         </aside>

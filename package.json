@@ -10,6 +10,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "dev:coderocket": "turbo dev --filter=@coderocket/cloud --filter=@coderocket/worker",
     "email:preview": "pnpm --filter @repo/emails preview",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",

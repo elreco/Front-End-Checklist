@@ -1,7 +1,16 @@
 export type PlanId = 'free' | 'solo' | 'agency'
 export type AuditEnvironment = 'production' | 'preview'
 export type AuditTrigger = 'manual' | 'scheduled' | 'ci'
+export type SiteAccessMode = 'public' | 'protected' | 'private'
 export type AuditStatus = 'queued' | 'running' | 'succeeded' | 'failed'
+export type CheckProgressStage =
+  | 'queued'
+  | 'starting'
+  | 'checking_pages'
+  | 'comparing'
+  | 'saving'
+  | 'retrying'
+  | 'completed'
 export type FindingStatus = 'new' | 'persistent' | 'resolved'
 export type GateStatus = 'passed' | 'failed' | 'needs_baseline' | 'inconclusive'
 export type FindingPriority = 'critical' | 'high' | 'medium' | 'low'
@@ -14,6 +23,15 @@ export type FindingCategory =
   | 'quality'
 export type FindingSource = 'frontend_checklist' | 'http'
 
+export type FindingEvidenceKind = 'html' | 'header' | 'network'
+
+export interface FindingEvidence {
+  kind: FindingEvidenceKind
+  summary: string
+  observed?: string
+  expected?: string
+}
+
 export interface PlanEntitlements {
   projects: number
   pagesPerProject: number
@@ -21,6 +39,7 @@ export interface PlanEntitlements {
   onDemandRunsPerMonth: number
   retentionDays: number
   secondaryBranding: boolean
+  aiCreditsPerMonth: number
 }
 
 export interface AuditFindingInput {
@@ -32,6 +51,7 @@ export interface AuditFindingInput {
   category?: FindingCategory
   source?: FindingSource
   occurrenceKey?: string
+  evidence?: FindingEvidence
 }
 
 export interface AuditFinding extends AuditFindingInput {
@@ -60,6 +80,7 @@ export interface AuditSubmission {
     findings: AuditFindingInput[]
     httpStatus?: number
     durationMs?: number
+    finalUrl?: string
     error?: string
   }>
 }
