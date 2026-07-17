@@ -16,6 +16,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/docs/cli', changeFrequency: 'monthly', priority: 0.75 },
     { path: '/docs/rules', changeFrequency: 'weekly', priority: 0.9 },
     { path: '/docs/security', changeFrequency: 'monthly', priority: 0.7 },
+    { path: '/guides/tailwind-ai-components', changeFrequency: 'monthly', priority: 0.75 },
+    { path: '/components/7igf4HoGRDc', changeFrequency: 'yearly', priority: 0.5 },
     { path: '/support', changeFrequency: 'monthly', priority: 0.5 },
     { path: '/legal/privacy', changeFrequency: 'yearly', priority: 0.2 },
     { path: '/legal/terms', changeFrequency: 'yearly', priority: 0.2 },

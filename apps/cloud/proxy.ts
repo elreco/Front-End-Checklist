@@ -15,6 +15,8 @@ const legacyGonePrefixes = [
   '/users'
 ]
 
+const restoredLegacyPaths = new Set(['/components/7igf4HoGRDc'])
+
 /** Apply canonical-host, legacy-route, and authenticated-route behavior at the request boundary. */
 export async function proxy(request: NextRequest) {
   const hostname =
@@ -38,6 +40,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(canonical, 308)
   }
   if (
+    !restoredLegacyPaths.has(request.nextUrl.pathname) &&
     legacyGonePrefixes.some(
       prefix =>
         request.nextUrl.pathname === prefix || request.nextUrl.pathname.startsWith(`${prefix}/`)

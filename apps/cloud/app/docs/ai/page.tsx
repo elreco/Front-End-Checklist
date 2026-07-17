@@ -130,6 +130,12 @@ export default function AiDocumentationPage() {
           <Link className="font-mono text-accent text-xs hover:text-signal" href="/docs/rules">
             Browse website rules →
           </Link>
+          <Link
+            className="font-mono text-accent text-xs hover:text-signal"
+            href="/guides/tailwind-ai-components"
+          >
+            Review Tailwind AI components →
+          </Link>
           <a
             className="font-mono text-accent text-xs hover:text-signal"
             href="https://frontendchecklist.io/mcp"

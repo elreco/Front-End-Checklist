@@ -29,6 +29,9 @@ to the canonical `/docs` section.
 
 - `/pricing` remains a real `200` page with the new CodeRocket offer.
 - Former builder, community, component, and profile routes return `410 Gone` with `noindex`.
+- `/components/7igf4HoGRDc` is the one documented exception: it preserves a historically
+  high-traffic component record as an indexable `200` page and links to the current Tailwind AI
+  review guide.
 - Do not redirect unrelated old URLs to the homepage; that can be treated as a soft 404.
 - Leave the `410` behavior in place while Google removes the old results. Avoid temporary removal
   requests unless an old result exposes sensitive information.

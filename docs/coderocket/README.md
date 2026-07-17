@@ -2,6 +2,9 @@
 
 CodeRocket is the commercial product layer built on the Front-End Checklist corpus. Upstream code remains on `main`; product work lives on `coderocket/main`.
 
+Product and interface decisions must follow the
+[CodeRocket product principles](./product-principles.md).
+
 ## Boundaries
 
 - `apps/cloud`: Next.js marketing site and authenticated SaaS

@@ -284,6 +284,31 @@ export const myToolDefinition = {
 - **Query**: TanStack Query v5 with `getQueryClient()` factory (not singleton)
 - **Dev server**: `portless run next dev`
 
+## CodeRocket Product and UX Principles
+
+These principles apply to every CodeRocket product change. Read
+`docs/coderocket/product-principles.md` before changing a CodeRocket journey, interface, or
+user-facing message.
+
+- Build one product that works for non-developers and developers. Do not make technical knowledge
+  a prerequisite for the default journey.
+- Keep the default path minimal. Adding a website should normally require only its URL; detect,
+  configure, and explain everything else progressively.
+- Lead with the outcome, then the reason and next action. Keep implementation details behind
+  clearly labelled progressive disclosure.
+- Use plain, concrete language. Do not expose internal terms such as ruleset hashes, workers,
+  cookies, tokens, headers, or CI unless a user deliberately opens technical details.
+- Provide sensible defaults and one obvious primary action. Advanced controls must not compete
+  visually with the recommended action.
+- Never imply that CodeRocket can bypass authentication, infrastructure protection, or verification
+  automatically when it cannot. Explain the limitation and offer a safe next step.
+- Design every flow for loading, empty, partial, success, error, retry, long-content, large-data,
+  keyboard, responsive, and reduced-motion states.
+- Preserve evidence and technical traceability without making them dominate the everyday
+  experience.
+- Visually validate user-facing changes in a real browser at relevant viewport sizes before
+  considering the work complete.
+
 ## Learned User Preferences
 
 - Put shared concerns (e.g. fonts, typography) in the design system and import from there; apps wire implementation (e.g. next/font) using config from the design system.

@@ -12,6 +12,14 @@ describe('CodeRocket search foundations', () => {
     assert.ok(entries.every(entry => entry.url.startsWith('https://www.coderocket.app')))
     assert.ok(entries.some(entry => entry.url === 'https://www.coderocket.app/support'))
     assert.ok(entries.some(entry => entry.url === 'https://www.coderocket.app/legal/privacy'))
+    assert.ok(
+      entries.some(
+        entry => entry.url === 'https://www.coderocket.app/guides/tailwind-ai-components'
+      )
+    )
+    assert.ok(
+      entries.some(entry => entry.url === 'https://www.coderocket.app/components/7igf4HoGRDc')
+    )
     assert.ok(!entries.some(entry => entry.url.includes('/login')))
     assert.ok(!entries.some(entry => entry.url.includes('/dashboard')))
     assert.equal(
@@ -74,5 +82,13 @@ describe('CodeRocket search foundations', () => {
       assert.equal(response.status, 410)
       assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive')
     }
+  })
+
+  it('keeps the documented high-value component archive indexable', async () => {
+    const response = await proxy(
+      new NextRequest('https://www.coderocket.app/components/7igf4HoGRDc')
+    )
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('x-robots-tag'), null)
   })
 })

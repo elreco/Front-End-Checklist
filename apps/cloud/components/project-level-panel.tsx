@@ -1,4 +1,4 @@
-import { History, ShieldCheck } from '@repo/design-system/icons'
+import { ChevronDown, History, ShieldCheck } from '@repo/design-system/icons'
 import type { ProjectDetail } from '@/lib/project-data'
 import {
   getStabilityMilestoneLabel,
@@ -42,7 +42,7 @@ export function ProjectLevelPanel({ project }: { project: ProjectDetail }) {
             </div>
           </div>
         </div>
-        <div className="mt-6 grid gap-px border border-border bg-border sm:grid-cols-3">
+        <div className="mt-6 grid gap-px border border-border bg-border sm:grid-cols-2">
           <LevelFact
             label="Verified scope"
             value={
@@ -55,12 +55,12 @@ export function ProjectLevelPanel({ project }: { project: ProjectDetail }) {
             label="Open problems"
             value={project.level.eligible ? String(project.level.openCount) : 'Not counted yet'}
           />
-          <LevelFact label="Rule set" value={latest?.rulesetVersion ?? 'Waiting for first check'} />
         </div>
         <p className="mt-4 text-muted text-xs leading-5">
           Your level uses the most serious open problem in the latest complete check. Marking an
           item as ignored hides it from your work list, but does not improve the level.
         </p>
+        {latest ? <LevelTechnicalDetails rulesetVersion={latest.rulesetVersion} /> : null}
       </div>
 
       <div className="flex flex-col justify-between gap-6 p-5 sm:p-6">
@@ -119,5 +119,27 @@ function LevelFact({ label, value }: { label: string; value: string }) {
       <p className="font-mono text-[9px] text-muted uppercase tracking-[.12em]">{label}</p>
       <p className="mt-2 break-words font-semibold text-sm">{value}</p>
     </div>
+  )
+}
+
+/** Keep the exact checks version available for support and reproducibility. */
+function LevelTechnicalDetails({ rulesetVersion }: { rulesetVersion: string }) {
+  return (
+    <details className="group mt-4 border border-border bg-background">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-3 font-semibold text-sm transition-colors marker:content-none hover:bg-surface-raised">
+        Technical details
+        <ChevronDown
+          aria-hidden
+          className="ml-auto h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none"
+        />
+      </summary>
+      <div className="border-border border-t p-4">
+        <p className="font-mono text-[9px] text-muted uppercase tracking-[.12em]">Checks version</p>
+        <code className="mt-2 block break-all text-xs">{rulesetVersion}</code>
+        <p className="mt-2 max-w-2xl text-muted text-xs leading-5">
+          CodeRocket records this version so checks, history, and shared reports remain comparable.
+        </p>
+      </div>
+    </details>
   )
 }
