@@ -3,18 +3,23 @@
 import { CheckCircle2 } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { Tabs, TabsList, TabsTrigger } from '@repo/design-system/ui/tabs'
-import { useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 import type { ProjectFinding } from '@/lib/project-data'
 import {
   DEFAULT_FINDING_FILTERS,
+  DEFAULT_FINDING_VIEW_STATE,
   type FindingFilter,
+  type FindingViewState,
   getFindingCategories,
   getFindingPages,
   getVisibleFindingGroups,
   groupProjectFindings,
   hasActiveFindingFilters,
   matchesFindingFilter,
-  resolveFindingFilter
+  readFindingViewSearchParams,
+  resolveFindingFilter,
+  writeFindingViewSearchParams
 } from '@/lib/project-finding-groups'
 import { ProjectAnalysisSummary } from './project-analysis-summary'
 import { ProjectFindingGroupCard } from './project-finding-group-card'
@@ -30,17 +35,21 @@ export function ProjectFindingsPanel({
   findings: ProjectFinding[]
   updateWorkflow: (formData: FormData) => Promise<void>
 }) {
-  const [filter, setFilter] = useState<FindingFilter>('action')
-  const [advancedFilters, setAdvancedFilters] = useState(DEFAULT_FINDING_FILTERS)
-  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE)
+  const searchParams = useSearchParams()
   const groups = useMemo(() => groupProjectFindings(findings), [findings])
   const categories = useMemo(() => getFindingCategories(groups), [groups])
   const pages = useMemo(() => getFindingPages(groups), [groups])
+  const [view, setView] = useState<FindingViewState>(() =>
+    normalizeInitialView(readFindingViewSearchParams(searchParams), categories, pages)
+  )
+  const { filter, resultPage, ...advancedFilters } = view
   const visible = useMemo(
     () => getVisibleFindingGroups(groups, { ...advancedFilters, filter }),
     [advancedFilters, filter, groups]
   )
-  const shown = visible.slice(0, visibleLimit)
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+  const currentPage = Math.min(resultPage, pageCount)
+  const shown = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const filterOptions = getFilterOptions(groups)
   const activeFilter = filterOptions.find(option => option.value === filter) ?? filterOptions[0]
   const newCount = filterOptions.find(option => option.value === 'new')?.count ?? 0
@@ -54,14 +63,27 @@ export function ProjectFindingsPanel({
   ).length
   const advancedFiltersActive = hasActiveFindingFilters(advancedFilters)
 
+  useEffect(() => {
+    const nextSearchParams = writeFindingViewSearchParams(
+      new URLSearchParams(window.location.search),
+      view
+    )
+    const query = nextSearchParams.toString()
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`
+    window.history.replaceState(window.history.state, '', nextUrl)
+  }, [view])
+
+  useEffect(() => {
+    if (resultPage > pageCount)
+      setView(current => ({ ...current, resultPage: pageCount }))
+  }, [pageCount, resultPage])
+
   function updateAdvancedFilters(filters: typeof DEFAULT_FINDING_FILTERS) {
-    setAdvancedFilters(filters)
-    setVisibleLimit(PAGE_SIZE)
+    setView(current => ({ ...current, ...filters, resultPage: 1 }))
   }
 
   function clearAdvancedFilters() {
-    setAdvancedFilters(DEFAULT_FINDING_FILTERS)
-    setVisibleLimit(PAGE_SIZE)
+    setView(current => ({ ...current, ...DEFAULT_FINDING_FILTERS, resultPage: 1 }))
   }
 
   return (
@@ -85,8 +107,11 @@ export function ProjectFindingsPanel({
 
       <Tabs
         onValueChange={value => {
-          setFilter(resolveFindingFilter(value))
-          setVisibleLimit(PAGE_SIZE)
+          setView(current => ({
+            ...current,
+            filter: resolveFindingFilter(value),
+            resultPage: 1
+          }))
         }}
         value={filter}
       >
@@ -184,18 +209,46 @@ export function ProjectFindingsPanel({
                 updateWorkflow={updateWorkflow}
               />
             ))}
-            {shown.length < visible.length ? (
+            {pageCount > 1 ? (
               <div className="flex flex-col items-center justify-between gap-3 bg-background px-5 py-4 sm:flex-row">
                 <p className="text-muted text-xs">
-                  Showing {shown.length} of {visible.length} matching problems.
+                  Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+                  {Math.min(currentPage * PAGE_SIZE, visible.length)} of {visible.length} matching
+                  problems.
                 </p>
-                <CodeRocketButton
-                  onClick={() => setVisibleLimit(limit => limit + PAGE_SIZE)}
-                  size="sm"
-                  variant="outline"
-                >
-                  Show {Math.min(PAGE_SIZE, visible.length - shown.length)} more
-                </CodeRocketButton>
+                <div className="flex items-center gap-3">
+                  <CodeRocketButton
+                    disabled={currentPage === 1}
+                    onClick={() =>
+                      setView(current => ({
+                        ...current,
+                        resultPage: Math.max(1, current.resultPage - 1)
+                      }))
+                    }
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Previous
+                  </CodeRocketButton>
+                  <span className="font-mono text-[10px] text-muted uppercase tracking-[.1em]">
+                    Page {currentPage} of {pageCount}
+                  </span>
+                  <CodeRocketButton
+                    disabled={currentPage === pageCount}
+                    onClick={() =>
+                      setView(current => ({
+                        ...current,
+                        resultPage: Math.min(pageCount, current.resultPage + 1)
+                      }))
+                    }
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Next
+                  </CodeRocketButton>
+                </div>
               </div>
             ) : null}
           </div>
@@ -203,6 +256,19 @@ export function ProjectFindingsPanel({
       </Tabs>
     </section>
   )
+}
+
+function normalizeInitialView(
+  view: FindingViewState,
+  categories: ProjectFinding['category'][],
+  pages: string[]
+): FindingViewState {
+  return {
+    ...DEFAULT_FINDING_VIEW_STATE,
+    ...view,
+    category: view.category === 'all' || categories.includes(view.category) ? view.category : 'all',
+    page: view.page === 'all' || pages.includes(view.page) ? view.page : 'all'
+  }
 }
 
 function getFilterOptions(groups: ReturnType<typeof groupProjectFindings>) {

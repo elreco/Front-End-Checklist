@@ -1,5 +1,5 @@
 import { cn } from '@repo/utils'
-import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import type { InputHTMLAttributes, TextareaHTMLAttributes } from 'react'
 
 const fieldClasses =
   'mt-2 w-full border border-border bg-background px-4 py-3 text-foreground outline-none transition-colors duration-200 placeholder:text-muted focus:border-signal disabled:cursor-not-allowed disabled:opacity-50'
@@ -15,15 +15,4 @@ export function CodeRocketTextarea({
   ...props
 }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={cn(fieldClasses, 'min-h-36 resize-y', className)} {...props} />
-}
-
-/** Renders a shared CodeRocket native select field. */
-export function CodeRocketSelect({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      className={cn(fieldClasses, 'min-h-11 cursor-pointer appearance-none py-2.5', className)}
-      data-slot="coderocket-select"
-      {...props}
-    />
-  )
 }

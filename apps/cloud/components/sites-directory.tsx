@@ -2,7 +2,8 @@
 
 import { Plus, Search } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
-import { CodeRocketInput, CodeRocketSelect } from '@repo/design-system/ui/coderocket-field'
+import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
+import { CodeRocketSelect } from '@repo/design-system/ui/coderocket-select'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import type { DashboardProject } from '@/lib/dashboard-data'
@@ -239,18 +240,13 @@ function DirectorySelect<T extends string>({
       <CodeRocketSelect
         className="mt-2 w-full"
         id={id}
-        onChange={event => {
-          const selected = options.find(option => option.value === event.target.value)
+        onValueChange={value => {
+          const selected = options.find(option => option.value === value)
           if (selected) onChange(selected.value)
         }}
+        options={options}
         value={value}
-      >
-        {options.map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </CodeRocketSelect>
+      />
     </label>
   )
 }

@@ -75,3 +75,15 @@ test('resolveRulesDirectory finds monorepo rules from a bundled server runtime',
     assert.ok(loadRules(rulesDirectory).some(rule => rule.slug === 'responsive-images'))
   }
 })
+
+test('resolveRulesDirectory uses the configured runtime directory outside the app cwd', () => {
+  const expectedDirectory = path.resolve(repositoryRoot, 'packages/content/rules/en')
+  const rulesDirectory = resolveRulesDirectory({
+    environmentDirectory: expectedDirectory,
+    moduleDirectory: '/app/apps/cloud/.next/standalone/apps/cloud/.next/server/chunks',
+    workingDirectory: '/'
+  })
+
+  assert.equal(rulesDirectory, expectedDirectory)
+  assert.ok(loadRules(rulesDirectory).some(rule => rule.slug === 'responsive-images'))
+})

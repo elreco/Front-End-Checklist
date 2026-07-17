@@ -1,9 +1,10 @@
 'use client'
 
-import { ExternalLink, EyeOff, FileSearch2, RotateCcw } from '@repo/design-system/icons'
+import { ExternalLink, EyeOff, FileSearch2, RefreshCw, RotateCcw } from '@repo/design-system/icons'
 import { Badge } from '@repo/design-system/ui/badge'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
+import { useFormStatus } from 'react-dom'
 import { getCategoryLabel } from '@/lib/product-language'
 import type { ProjectFinding } from '@/lib/project-data'
 import type { FindingGroup } from '@/lib/project-finding-groups'
@@ -109,18 +110,27 @@ export function ProjectFindingGroupCard({
                 value={finding.findingId}
               />
             ))}
-            <CodeRocketButton size="sm" type="submit" variant="ghost">
-              {group.workflowStatus === 'muted' ? (
-                <RotateCcw aria-hidden />
-              ) : (
-                <EyeOff aria-hidden />
-              )}
-              {group.workflowStatus === 'muted' ? 'Track again' : 'Ignore for now'}
-            </CodeRocketButton>
+            <WorkflowSubmitButton muted={group.workflowStatus === 'muted'} />
           </form>
         </div>
       </div>
     </article>
+  )
+}
+
+function WorkflowSubmitButton({ muted }: { muted: boolean }) {
+  const { pending } = useFormStatus()
+  return (
+    <CodeRocketButton aria-disabled={pending} disabled={pending} size="sm" type="submit" variant="ghost">
+      {pending ? (
+        <RefreshCw aria-hidden className="animate-spin motion-reduce:animate-none" />
+      ) : muted ? (
+        <RotateCcw aria-hidden />
+      ) : (
+        <EyeOff aria-hidden />
+      )}
+      {pending ? (muted ? 'Restoring…' : 'Ignoring…') : muted ? 'Track again' : 'Ignore for now'}
+    </CodeRocketButton>
   )
 }
 

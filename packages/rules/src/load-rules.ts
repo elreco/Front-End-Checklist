@@ -16,6 +16,7 @@ import { RULE_CATEGORIES, RULE_SUBCATEGORIES } from './types.js'
 const CURRENT_DIR = path.dirname(fileURLToPath(import.meta.url))
 
 interface RulesDirectoryOptions {
+  environmentDirectory?: string
   moduleDirectory?: string
   workingDirectory?: string
 }
@@ -154,9 +155,12 @@ function parseRelatedRules(
  * @returns The first rule directory available to the current process.
  */
 export function resolveRulesDirectory(options: RulesDirectoryOptions = {}): string {
+  const environmentDirectory =
+    options.environmentDirectory ?? process.env.FRONTEND_CHECKLIST_RULES_DIR
   const moduleDirectory = options.moduleDirectory ?? CURRENT_DIR
   const workingDirectory = options.workingDirectory ?? process.cwd()
   const candidates = [
+    ...(environmentDirectory ? [path.resolve(environmentDirectory)] : []),
     path.resolve(moduleDirectory, '../rules/en'),
     path.resolve(moduleDirectory, '../../content/rules/en'),
     path.resolve(workingDirectory, 'packages/rules/rules/en'),

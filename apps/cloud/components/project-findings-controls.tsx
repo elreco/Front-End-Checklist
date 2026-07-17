@@ -1,13 +1,14 @@
 'use client'
 
 import { Search } from '@repo/design-system/icons'
-import { CodeRocketInput, CodeRocketSelect } from '@repo/design-system/ui/coderocket-field'
+import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
+import { CodeRocketSelect } from '@repo/design-system/ui/coderocket-select'
 import { getCategoryLabel } from '@/lib/product-language'
 import type { ProjectFinding } from '@/lib/project-data'
-import type {
-  FindingAdvancedFilters,
-  FindingImpact,
-  FindingSort
+import {
+  type FindingAdvancedFilters,
+  resolveFindingImpact,
+  resolveFindingSort
 } from '@/lib/project-finding-groups'
 
 /** Search, narrow, and order the grouped website problem list. */
@@ -54,7 +55,7 @@ export function ProjectFindingsControls({
       <FindingSelect
         id="finding-impact"
         label="Impact"
-        onChange={value => update('impact', resolveImpact(value))}
+        onChange={value => update('impact', resolveFindingImpact(value))}
         options={[
           ['all', 'All impacts'],
           ['important', 'Important only'],
@@ -85,7 +86,7 @@ export function ProjectFindingsControls({
       <FindingSelect
         id="finding-sort"
         label="Sort by"
-        onChange={value => update('sort', resolveSort(value))}
+        onChange={value => update('sort', resolveFindingSort(value))}
         options={[
           ['priority', 'Highest impact'],
           ['status', 'New first'],
@@ -117,29 +118,13 @@ function FindingSelect({
       <CodeRocketSelect
         className="mt-2 w-full"
         id={id}
-        onChange={event => onChange(event.target.value)}
+        onValueChange={onChange}
+        options={options.map(([optionValue, optionLabel]) => ({
+          label: optionLabel,
+          value: optionValue
+        }))}
         value={value}
-      >
-        {options.map(([optionValue, optionLabel]) => (
-          <option key={optionValue} value={optionValue}>
-            {optionLabel}
-          </option>
-        ))}
-      </CodeRocketSelect>
+      />
     </label>
   )
-}
-
-function resolveImpact(value: string): FindingImpact {
-  return value === 'critical' ||
-    value === 'high' ||
-    value === 'important' ||
-    value === 'low' ||
-    value === 'medium'
-    ? value
-    : 'all'
-}
-
-function resolveSort(value: string): FindingSort {
-  return value === 'affected-pages' || value === 'status' || value === 'title' ? value : 'priority'
 }

@@ -1,3 +1,4 @@
+import { getRulesetVersion } from '@coderocket/core'
 import { createServiceClient } from '@coderocket/db'
 
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,7 @@ export async function GET() {
         status: workerHealthy ? 'ok' : 'degraded',
         database: 'ok',
         worker: workerHealthy ? 'ok' : 'stale',
+        rulesetVersion: getRulesetVersion(),
         latencyMs: Date.now() - startedAt
       },
       // A delayed worker must remain visible without removing the healthy web process from traffic.

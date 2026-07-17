@@ -38,6 +38,49 @@ export interface FindingViewOptions extends FindingAdvancedFilters {
   filter: FindingFilter
 }
 
+export interface FindingViewState extends FindingViewOptions {
+  resultPage: number
+}
+
+export const DEFAULT_FINDING_VIEW_STATE: FindingViewState = {
+  ...DEFAULT_FINDING_FILTERS,
+  filter: 'action',
+  resultPage: 1
+}
+
+interface SearchParamReader {
+  get: (name: string) => string | null
+}
+
+/** Restore a shareable findings view from the current URL query string. */
+export function readFindingViewSearchParams(searchParams: SearchParamReader): FindingViewState {
+  const rawPage = Number.parseInt(searchParams.get('findings-page') ?? '', 10)
+  return {
+    category: searchParams.get('findings-area')?.trim() || 'all',
+    filter: resolveFindingFilter(searchParams.get('findings-view') ?? ''),
+    impact: resolveFindingImpact(searchParams.get('findings-impact') ?? ''),
+    page: searchParams.get('findings-path')?.trim() || 'all',
+    query: searchParams.get('findings-q')?.trim() ?? '',
+    resultPage: Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1,
+    sort: resolveFindingSort(searchParams.get('findings-sort') ?? '')
+  }
+}
+
+/** Persist a findings view without discarding unrelated route parameters. */
+export function writeFindingViewSearchParams(
+  searchParams: URLSearchParams,
+  state: FindingViewState
+): URLSearchParams {
+  setOptionalParam(searchParams, 'findings-view', state.filter, 'action')
+  setOptionalParam(searchParams, 'findings-q', state.query.trim(), '')
+  setOptionalParam(searchParams, 'findings-impact', state.impact, 'all')
+  setOptionalParam(searchParams, 'findings-area', state.category, 'all')
+  setOptionalParam(searchParams, 'findings-path', state.page, 'all')
+  setOptionalParam(searchParams, 'findings-sort', state.sort, 'priority')
+  setOptionalParam(searchParams, 'findings-page', String(state.resultPage), '1')
+  return searchParams
+}
+
 /** Group repeated rule occurrences so one action can represent every affected page. */
 export function groupProjectFindings(findings: ProjectFinding[]): FindingGroup[] {
   const groups = new Map<string, FindingGroup>()
@@ -86,6 +129,24 @@ export function resolveFindingFilter(value: string): FindingFilter {
   return value === 'all' || value === 'fixed' || value === 'muted' || value === 'new'
     ? value
     : 'action'
+}
+
+/** Keep arbitrary impact values inside the supported finding impact union. */
+export function resolveFindingImpact(value: string): FindingImpact {
+  return value === 'critical' ||
+    value === 'high' ||
+    value === 'important' ||
+    value === 'low' ||
+    value === 'medium'
+    ? value
+    : 'all'
+}
+
+/** Keep arbitrary sort values inside the supported finding sort union. */
+export function resolveFindingSort(value: string): FindingSort {
+  return value === 'affected-pages' || value === 'status' || value === 'title'
+    ? value
+    : 'priority'
 }
 
 /** List every affected page represented by the current check. */
@@ -157,4 +218,14 @@ function priorityRank(priority: ProjectFinding['priority']): number {
 
 function statusRank(status: ProjectFinding['status']): number {
   return { new: 0, persistent: 1, resolved: 2 }[status]
+}
+
+function setOptionalParam(
+  searchParams: URLSearchParams,
+  name: string,
+  value: string,
+  defaultValue: string
+) {
+  if (value === defaultValue) searchParams.delete(name)
+  else searchParams.set(name, value)
 }
