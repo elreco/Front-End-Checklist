@@ -1,137 +1,68 @@
 'use client'
 
 import type {
-  AiAudience,
   AiFindingAnalysis,
   LegacyAiFindingAnalysis,
   StoredAiFindingAnalysis
 } from '@coderocket/ai/schema'
-import { LoaderCircle, Sparkles } from '@repo/design-system/icons'
-import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
-import { toast } from '@repo/design-system/ui/coderocket-toast'
-import { AI_AUDIENCE_OPTIONS, aiAudienceLabel } from './finding-ai-audience'
+import { Wrench } from '@repo/design-system/icons'
+import { buildFindingResolutionCopy } from '@/lib/finding-resolution-copy'
 import {
   Diagnosis,
   FreshCheckNotice,
   LikelyFiles,
   References,
-  ResultMeta,
-  ShareableBrief,
   Verification
-} from './finding-ai-result-parts'
+} from './finding-ai-evidence'
+import { ResultMeta } from './finding-ai-result-parts'
+import { FindingAiSharePanel } from './finding-ai-share-panel'
 
 interface ResultTask {
-  audience: AiAudience
   result: StoredAiFindingAnalysis | null
   sources: Array<{ title: string; url: string }>
 }
 
-/** Present a saved plan with switchable audience views and legacy-plan support. */
-export function AnalysisResult({
-  audience,
-  loading,
-  onAudienceChange,
-  onUpgrade,
-  task
-}: {
-  audience: AiAudience
-  loading: boolean
-  onAudienceChange: (audience: AiAudience) => void
-  onUpgrade: () => void
-  task: ResultTask
-}) {
+/** Present one clear resolution path with optional share and handoff formats. */
+export function AnalysisResult({ findingTitle, task }: { findingTitle: string; task: ResultTask }) {
   const result = task.result
   if (!result) return null
-  if (!isCurrentAnalysis(result)) {
-    return (
-      <LegacyAnalysisResult
-        audience={task.audience}
-        loading={loading}
-        onUpgrade={onUpgrade}
-        result={result}
-        sources={task.sources}
-      />
-    )
-  }
-  return (
-    <CurrentAnalysisResult
-      audience={audience}
-      onAudienceChange={onAudienceChange}
-      result={result}
-      sources={task.sources}
-    />
+  const copy = buildFindingResolutionCopy({
+    findingTitle,
+    result,
+    sources: task.sources
+  })
+
+  return isCurrentAnalysis(result) ? (
+    <CurrentAnalysisResult copy={copy} result={result} sources={task.sources} />
+  ) : (
+    <LegacyAnalysisResult copy={copy} result={result} sources={task.sources} />
   )
 }
 
+/** Render a current analysis with the plain-language presentation first. */
 function CurrentAnalysisResult({
-  audience,
-  onAudienceChange,
+  copy,
   result,
   sources
 }: {
-  audience: AiAudience
-  onAudienceChange: (audience: AiAudience) => void
+  copy: ReturnType<typeof buildFindingResolutionCopy>
   result: AiFindingAnalysis
   sources: ResultTask['sources']
 }) {
-  const presentation = result.presentations[audience]
-  const audienceLabel = aiAudienceLabel(audience)
-
-  async function copyBrief() {
-    await navigator.clipboard.writeText(presentation.brief)
-    toast.success(`${audienceLabel} brief copied`, {
-      description: 'Paste it into an issue, email, or project task.'
-    })
-  }
+  const presentation = result.presentations.site_owner
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="plan-view-title" className="border border-border bg-background p-4">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h3 className="font-heading font-semibold text-base" id="plan-view-title">
-              Choose your view
-            </h3>
-            <p className="mt-1 text-muted text-xs leading-5">
-              Same evidence and fix plan. Switch the wording whenever you need.
-            </p>
-          </div>
-          <span className="mt-2 w-fit border border-border px-2.5 py-1 font-mono text-[10px] text-accent uppercase tracking-[.1em] sm:mt-0">
-            3 views included
-          </span>
-        </div>
-        <div aria-label="Fix plan audience" className="mt-4 grid gap-px bg-border sm:grid-cols-3">
-          {AI_AUDIENCE_OPTIONS.map(option => (
-            <button
-              aria-pressed={audience === option.value}
-              className={`min-h-12 cursor-pointer bg-surface px-4 py-3 text-left font-semibold text-sm transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
-                audience === option.value
-                  ? 'text-accent shadow-[inset_0_-2px_0_var(--accent)]'
-                  : 'text-muted hover:bg-surface-raised hover:text-foreground'
-              }`}
-              key={option.value}
-              onClick={() => onAudienceChange(option.value)}
-              type="button"
-            >
-              {option.shortLabel}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <ResultMeta
-        confidence={result.diagnosis.confidence}
-        difficulty={result.difficulty}
-        viewLabel={`${audienceLabel} view`}
-      />
+      <ResolutionAction copy={copy} difficulty={result.difficulty} />
+      <ResultMeta confidence={result.diagnosis.confidence} difficulty={result.difficulty} />
       <section aria-live="polite">
-        <h3 className="font-heading font-semibold text-xl">{presentation.summary}</h3>
+        <p className="font-mono text-[10px] text-signal uppercase tracking-[.14em]">In short</p>
+        <h3 className="mt-2 font-heading font-semibold text-xl">{presentation.summary}</h3>
         <p className="mt-2 text-muted text-sm leading-6">{presentation.whyItMatters}</p>
       </section>
-      <Diagnosis diagnosis={result.diagnosis} />
 
       <section>
-        <h3 className="font-heading font-semibold text-lg">Fix plan</h3>
+        <h3 className="font-heading font-semibold text-lg">What to do</h3>
         <ol className="mt-3 divide-y divide-border border border-border">
           {result.nextSteps.map((step, index) => (
             <li className="grid gap-3 p-4 sm:grid-cols-[2rem_1fr]" key={step.title}>
@@ -140,7 +71,7 @@ function CurrentAnalysisResult({
               </span>
               <div>
                 <h4 className="font-semibold text-sm">{step.title}</h4>
-                <p className="mt-1 text-muted text-sm leading-6">{step.guidance[audience]}</p>
+                <p className="mt-1 text-muted text-sm leading-6">{step.guidance.site_owner}</p>
                 <Verification>{step.verification}</Verification>
               </div>
             </li>
@@ -148,81 +79,35 @@ function CurrentAnalysisResult({
         </ol>
       </section>
 
-      {audience === 'developer' ? <LikelyFiles files={result.likelyFiles} /> : null}
-      <ShareableBrief
-        buttonLabel={`Copy ${audienceLabel.toLowerCase()} brief`}
-        onCopy={copyBrief}
-        text={presentation.brief}
-      />
+      <TechnicalDetails diagnosis={result.diagnosis} files={result.likelyFiles} />
+      <FindingAiSharePanel copy={copy} />
       <References sources={sources} />
       <FreshCheckNotice />
     </div>
   )
 }
 
+/** Render saved legacy analyses through the same simplified experience. */
 function LegacyAnalysisResult({
-  audience,
-  loading,
-  onUpgrade,
+  copy,
   result,
   sources
 }: {
-  audience: AiAudience
-  loading: boolean
-  onUpgrade: () => void
+  copy: ReturnType<typeof buildFindingResolutionCopy>
   result: LegacyAiFindingAnalysis
   sources: ResultTask['sources']
 }) {
-  async function copyBrief() {
-    await navigator.clipboard.writeText(result.brief)
-    toast.success('Brief copied', {
-      description: 'Paste it into an issue, email, or project task.'
-    })
-  }
-
   return (
     <div className="space-y-6">
-      <section className="border border-accent bg-background p-4">
-        <div className="flex items-start gap-3">
-          <Sparkles aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
-          <div className="flex-1">
-            <h3 className="font-heading font-semibold text-base">Add all 3 audience views</h3>
-            <p className="mt-1 text-muted text-xs leading-5">
-              This saved plan only contains the {aiAudienceLabel(audience).toLowerCase()} view.
-              Prepare the new format to switch between owner, client, and developer wording.
-            </p>
-            <p className="mt-2 text-[11px] text-muted leading-5">
-              Preparing the upgraded plan creates a new AI result and uses AI credits.
-            </p>
-            <CodeRocketButton
-              className="mt-3"
-              disabled={loading}
-              onClick={onUpgrade}
-              size="sm"
-              type="button"
-            >
-              {loading ? (
-                <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />
-              ) : (
-                <Sparkles aria-hidden />
-              )}
-              {loading ? 'Starting…' : 'Add all 3 views'}
-            </CodeRocketButton>
-          </div>
-        </div>
-      </section>
-      <ResultMeta
-        confidence={result.diagnosis.confidence}
-        difficulty={result.difficulty}
-        viewLabel={`${aiAudienceLabel(audience)} view`}
-      />
+      <ResolutionAction copy={copy} difficulty={result.difficulty} />
+      <ResultMeta confidence={result.diagnosis.confidence} difficulty={result.difficulty} />
       <section>
-        <h3 className="font-heading font-semibold text-xl">{result.summary}</h3>
+        <p className="font-mono text-[10px] text-signal uppercase tracking-[.14em]">In short</p>
+        <h3 className="mt-2 font-heading font-semibold text-xl">{result.summary}</h3>
         <p className="mt-2 text-muted text-sm leading-6">{result.whyItMatters}</p>
       </section>
-      <Diagnosis diagnosis={result.diagnosis} />
       <section>
-        <h3 className="font-heading font-semibold text-lg">Fix plan</h3>
+        <h3 className="font-heading font-semibold text-lg">What to do</h3>
         <ol className="mt-3 divide-y divide-border border border-border">
           {result.nextSteps.map((step, index) => (
             <li className="grid gap-3 p-4 sm:grid-cols-[2rem_1fr]" key={step.title}>
@@ -238,14 +123,90 @@ function LegacyAnalysisResult({
           ))}
         </ol>
       </section>
-      <LikelyFiles files={result.likelyFiles} />
-      <ShareableBrief buttonLabel="Copy brief" onCopy={copyBrief} text={result.brief} />
+      <TechnicalDetails diagnosis={result.diagnosis} files={result.likelyFiles} />
+      <FindingAiSharePanel copy={copy} />
       <References sources={sources} />
       <FreshCheckNotice />
     </div>
   )
 }
 
+/** Present the recommended next action and its assistant-ready copy action. */
+function ResolutionAction({
+  copy,
+  difficulty
+}: {
+  copy: ReturnType<typeof buildFindingResolutionCopy>
+  difficulty: 'quick' | 'moderate' | 'advanced'
+}) {
+  const content = fixabilityContent(difficulty)
+  return (
+    <section className="border border-accent bg-background p-5">
+      <div className="flex items-start gap-3">
+        <Wrench aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-[10px] text-accent uppercase tracking-[.14em]">
+            Recommended next step
+          </p>
+          <h3 className="mt-2 font-heading font-semibold text-lg">{content.title}</h3>
+          <p className="mt-1 max-w-2xl text-muted text-sm leading-6">{content.description}</p>
+          <div className="mt-4">
+            <FindingAiSharePanel copy={copy} primary />
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** Keep supporting technical evidence available without dominating the flow. */
+function TechnicalDetails({
+  diagnosis,
+  files
+}: {
+  diagnosis: AiFindingAnalysis['diagnosis'] | LegacyAiFindingAnalysis['diagnosis']
+  files: AiFindingAnalysis['likelyFiles'] | LegacyAiFindingAnalysis['likelyFiles']
+}) {
+  return (
+    <details className="border border-border bg-background">
+      <summary className="cursor-pointer px-4 py-3 font-semibold text-sm transition-colors hover:bg-surface-raised">
+        See the technical proof
+      </summary>
+      <div className="space-y-5 border-border border-t p-4">
+        <Diagnosis diagnosis={diagnosis} />
+        <LikelyFiles files={files} />
+      </div>
+    </details>
+  )
+}
+
+/** Explain the amount of implementation help that is likely to be needed. */
+function fixabilityContent(difficulty: 'quick' | 'moderate' | 'advanced'): {
+  description: string
+  title: string
+} {
+  if (difficulty === 'quick') {
+    return {
+      title: 'A straightforward change is ready to hand off',
+      description:
+        'Copy the complete task into a coding assistant or send it to a developer. Review the change, then check the website again.'
+    }
+  }
+  if (difficulty === 'moderate') {
+    return {
+      title: 'Developer help is recommended',
+      description:
+        'The task is ready to hand off, but the implementation needs repository context and a human review before it is published.'
+    }
+  }
+  return {
+    title: 'Specialist review is recommended',
+    description:
+      'CodeRocket has prepared the evidence and acceptance criteria. A developer should inspect the wider implementation before changing it.'
+  }
+}
+
+/** Detect the current stored analysis schema. */
 function isCurrentAnalysis(result: StoredAiFindingAnalysis): result is AiFindingAnalysis {
   return 'version' in result && result.version === 2
 }

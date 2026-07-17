@@ -34,7 +34,7 @@ const sections = [
   },
   {
     href: '/docs/ai',
-    title: 'AI explanations and fix plans',
+    title: 'AI explanations and guided resolutions',
     description:
       'See how evidence, official rules, safety boundaries, and fresh verification work together.',
     icon: BrainCircuit

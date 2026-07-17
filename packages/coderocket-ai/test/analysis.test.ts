@@ -34,7 +34,7 @@ describe('CodeRocket AI grounding', () => {
     })
 
     assert.match(buildAnalysisInstructions(), /Ignore any instruction/)
-    assert.match(buildAnalysisInstructions(), /three concise and mutually consistent presentations/)
+    assert.match(buildAnalysisInstructions(), /primary plain-language explanation/)
     assert.match(input, /untrustedFinding/)
     assert.match(input, /site_owner/)
     assert.match(input, /freelancer/)
@@ -43,7 +43,7 @@ describe('CodeRocket AI grounding', () => {
     assert.doesNotMatch(input, /top-secret/)
   })
 
-  it('enforces one verifiable plan with three audience views', () => {
+  it('enforces one verifiable plan with share and handoff formats', () => {
     const parsed = aiFindingAnalysisSchema.parse({
       version: 2,
       diagnosis: {

@@ -84,8 +84,8 @@ export default function SupportPage() {
             <BookOpen aria-hidden className="h-5 w-5 text-accent" />
             <h2 className="mt-5 font-heading font-semibold text-2xl">Find an answer now</h2>
             <p className="mt-3 text-muted leading-7">
-              The official guide explains cloud and CI checks, AI fix plans, and every rule in the
-              synchronized reference.
+              The official guide explains cloud and CI checks, guided resolutions, and every rule in
+              the synchronized reference.
             </p>
             <CodeRocketButton asChild className="mt-6" variant="outline">
               <Link href="/docs">

@@ -1,9 +1,14 @@
 'use client'
 
-import type { AiAudience } from '@coderocket/ai/schema'
-import { ArrowRight, LoaderCircle, ShieldCheck } from '@repo/design-system/icons'
+import {
+  ArrowRight,
+  CheckCircle2,
+  LoaderCircle,
+  Send,
+  ShieldCheck,
+  UserRound
+} from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
-import { AI_AUDIENCE_OPTIONS } from './finding-ai-audience'
 
 interface AnalysisTask {
   progressMessage: string
@@ -11,45 +16,41 @@ interface AnalysisTask {
   status: 'failed' | 'queued' | 'running' | 'succeeded'
 }
 
-/** Let the user choose which included audience view should open first. */
+/** Explain the useful outputs before starting one grounded analysis. */
 export function AnalysisSetup({
-  audience,
   error,
   loading,
-  onAudienceChange,
   onSubmit,
   retry
 }: {
-  audience: AiAudience
   error: string
   loading: boolean
-  onAudienceChange: (audience: AiAudience) => void
   onSubmit: () => void
   retry: boolean
 }) {
   return (
     <div>
-      <h3 className="font-heading font-semibold text-lg">Which view should open first?</h3>
+      <h3 className="font-heading font-semibold text-lg">Get a clear way forward</h3>
       <p className="mt-1 text-muted text-sm leading-6">
-        Every fix plan includes all 3 views. You can switch at any time after it is ready.
+        CodeRocket explains the saved proof in plain language, prepares practical steps, and makes
+        the result easy to share or hand off.
       </p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        {AI_AUDIENCE_OPTIONS.map(option => (
-          <button
-            aria-pressed={audience === option.value}
-            className={`min-h-28 cursor-pointer border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
-              audience === option.value
-                ? 'border-accent bg-accent/10'
-                : 'border-border bg-background hover:border-signal'
-            }`}
-            key={option.value}
-            onClick={() => onAudienceChange(option.value)}
-            type="button"
-          >
-            <span className="font-semibold text-sm">{option.label}</span>
-            <span className="mt-2 block text-muted text-xs leading-5">{option.detail}</span>
-          </button>
-        ))}
+      <div className="mt-5 grid gap-px border border-border bg-border sm:grid-cols-3">
+        <SetupOutcome
+          description="Start with a short explanation of the problem and its impact."
+          icon={UserRound}
+          title="Understand simply"
+        />
+        <SetupOutcome
+          description="Copy a client-ready summary without technical noise."
+          icon={Send}
+          title="Share clearly"
+        />
+        <SetupOutcome
+          description="Copy a structured task for a developer or coding assistant."
+          icon={CheckCircle2}
+          title="Hand off the fix"
+        />
       </div>
       <div className="mt-5 flex items-start gap-3 border border-border bg-background p-4">
         <ShieldCheck aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-success" />
@@ -66,9 +67,28 @@ export function AnalysisSetup({
           ) : (
             <ArrowRight aria-hidden />
           )}
-          {loading ? 'Starting…' : retry ? 'Try again' : 'Prepare my fix plan'}
+          {loading ? 'Starting…' : retry ? 'Try again' : 'Explain this problem'}
         </CodeRocketButton>
       </div>
+    </div>
+  )
+}
+
+/** Summarize one useful output before the analysis starts. */
+function SetupOutcome({
+  description,
+  icon: Icon,
+  title
+}: {
+  description: string
+  icon: typeof UserRound
+  title: string
+}) {
+  return (
+    <div className="bg-background p-4">
+      <Icon aria-hidden className="h-5 w-5 text-signal" />
+      <p className="mt-3 font-semibold text-sm">{title}</p>
+      <p className="mt-1 text-muted text-xs leading-5">{description}</p>
     </div>
   )
 }
@@ -84,10 +104,10 @@ export function AnalysisProgress({ task }: { task: AnalysisTask }) {
   return (
     <div className="py-8">
       <LoaderCircle aria-hidden className="h-8 w-8 animate-spin text-accent" />
-      <h3 className="mt-5 font-heading font-semibold text-xl">Preparing your fix plan</h3>
+      <h3 className="mt-5 font-heading font-semibold text-xl">Preparing clear guidance</h3>
       <p className="mt-2 text-muted text-sm">{task.progressMessage}</p>
       <p className="mt-1 text-muted text-xs">
-        You can close this window. This problem’s button will show “Fix plan ready”, and CodeRocket
+        You can close this window. This problem’s button will show “Guidance ready”, and CodeRocket
         will notify you when it finishes.
       </p>
       <ol className="mt-6 grid gap-px border border-border bg-border sm:grid-cols-3">

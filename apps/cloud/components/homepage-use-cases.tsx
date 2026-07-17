@@ -28,7 +28,7 @@ const useCases = [
   {
     number: '03',
     icon: BrainCircuit,
-    title: 'Turn proof into a fix plan',
+    title: 'Turn proof into a clear next step',
     description:
       'Open a verified problem and choose who needs help. The AI assistant reads the saved evidence and matching Front-End Checklist rule, then prepares clear steps and checks without changing your site.',
     result: 'Before: copy a technical warning into a generic chatbot',
@@ -155,7 +155,7 @@ export function DecisionRules() {
             ],
             [
               'You ask the AI assistant for help',
-              'It explains the saved proof and prepares a fix plan. Only a fresh deterministic check can call the problem fixed.'
+              'It explains the saved proof, prepares practical steps, and makes the result easy to share or hand off. Only a fresh deterministic check can call the problem fixed.'
             ]
           ].map(([term, detail]) => (
             <div className="grid gap-3 py-6 sm:grid-cols-2" key={term}>

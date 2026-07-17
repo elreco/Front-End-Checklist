@@ -55,6 +55,8 @@
     "mcp:audit:security": "pnpm dlx mcp-security-auditor@latest scan packages/mcp/src --fail-on critical",
     "mcp:evaluate": "pnpm --filter @repo/mcp evaluate",
     "mcp:impact": "tsx scripts/audit/mcp-impact-benchmark.ts",
+    "changeset": "changeset",
+    "version:coderocket-cli": "changeset version",
     "audit:url": "tsx packages/cli/src/index.ts",
     "crawl:site": "tsx packages/crawler/src/run.ts",
     "ci:check": "pnpm run lint && pnpm run typecheck && pnpm run validate:rule-structure && pnpm run validate:guide-structure && pnpm run validate:guides && pnpm run validate:evidence && pnpm run test:ci",
@@ -62,6 +64,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
+    "@changesets/cli": "^2.31.1",
     "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^21.0.2",
     "@mdn/browser-compat-data": "^8.0.0",

@@ -130,7 +130,7 @@ export async function processAiAnalysisJob(job: WorkerJob): Promise<void> {
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('OPENAI_API_KEY is not configured')
-  await updateAiProgress(job, 'checking_pages', 'Preparing a clear explanation and fix plan')
+  await updateAiProgress(job, 'checking_pages', 'Preparing clear guidance and handoff formats')
   const provider = new OpenAiFindingAnalysisProvider({
     apiKey,
     model: process.env.CODEROCKET_AI_MODEL ?? context.task.model ?? DEFAULT_AI_MODEL

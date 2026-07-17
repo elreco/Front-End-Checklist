@@ -133,8 +133,9 @@ export function BillingAiUsage({ account, plan }: { account: BillingAccountData;
               </div>
             </div>
             <p className="text-muted text-xs leading-5">
-              A full fix plan reserves up to 1,000 credits; shorter completed responses often use
-              less. Warnings appear here at 80%, and new paid analyses stop at 100% of your budget.
+              A full guided resolution reserves up to 1,000 credits; shorter completed responses
+              often use less. Warnings appear here at 80%, and new paid analyses stop at 100% of
+              your budget.
             </p>
           </div>
 

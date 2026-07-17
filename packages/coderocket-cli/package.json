@@ -15,6 +15,15 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elreco/Front-End-Checklist.git",
+    "directory": "packages/coderocket-cli"
+  },
+  "homepage": "https://www.coderocket.app/docs/cli",
+  "bugs": {
+    "url": "https://github.com/elreco/Front-End-Checklist/issues"
+  },
   "scripts": {
     "audit:local": "tsx src/index.ts",
     "build": "node scripts/build.mjs",

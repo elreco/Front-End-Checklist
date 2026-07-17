@@ -14,7 +14,7 @@ import { createPublicMetadata } from '@/lib/seo'
 export const metadata: Metadata = createPublicMetadata({
   title: 'AI fix assistant',
   description:
-    'How CodeRocket grounds AI explanations and fix plans in verified evidence and synchronized Front-End Checklist rules.',
+    'How CodeRocket grounds explanations and guided resolutions in verified evidence and synchronized Front-End Checklist rules.',
   path: '/docs/ai',
   image: '/docs/opengraph-image'
 })
@@ -36,7 +36,7 @@ const flow = [
     icon: BrainCircuit,
     title: 'Switch views without rerunning the analysis',
     description:
-      'Every fix plan includes plain owner wording, a client-ready brief, and a developer-focused view. Switch at any time; the proof and remediation stay the same.'
+      'Every guided resolution starts with a plain-language explanation and includes copy-ready client and developer handoff formats built from the same proof.'
   },
   {
     icon: CheckCircle2,

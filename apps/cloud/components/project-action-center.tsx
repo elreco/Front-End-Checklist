@@ -140,11 +140,10 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
         <p className="mt-4 font-mono text-[10px] text-accent uppercase tracking-[.12em]">
           Optional help on every finding
         </p>
-        <h2 className="mt-2 font-heading font-semibold text-lg">From proof to a fix plan</h2>
+        <h2 className="mt-2 font-heading font-semibold text-lg">From proof to a clear next step</h2>
         <p className="mt-2 text-muted text-sm leading-6">
-          Open any problem and choose “Explain &amp; plan a fix”. Every plan includes owner, client,
-          and developer views built from the same saved evidence and official rule, plus clear
-          verification steps.
+          Open any problem and choose “Help me fix this”. Start with a simple explanation, then copy
+          a client summary or a structured task for a developer or coding assistant.
         </p>
       </section>
 
@@ -215,7 +214,7 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
               </h2>
               <p className="mt-2 max-w-4xl text-muted text-sm leading-6">
                 Get more monitored pages, 90 days of history, 100 checks started by you or CI, and
-                at least 100 evidence-grounded AI fix plans each month.
+                at least 100 evidence-grounded guided resolutions each month.
               </p>
             </div>
             <CodeRocketButton asChild className="shrink-0" size="sm">

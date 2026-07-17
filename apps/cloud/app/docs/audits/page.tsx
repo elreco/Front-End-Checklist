@@ -195,8 +195,9 @@ export default function AuditDocumentationPage() {
         <p className="mt-6 border-border border-t pt-6 text-muted text-sm leading-6">
           The check itself does not use an LLM: finding identity, evidence, comparison, and
           resolution stay deterministic. After a finding is saved, the optional AI assistant can
-          explain that proof and prepare a fix plan. CodeRocket still does not run a headless
-          browser, execute client JavaScript, collect Lighthouse measurements, or compare pixels.
+          explain that proof and prepare practical resolution guidance. CodeRocket still does not
+          run a headless browser, execute client JavaScript, collect Lighthouse measurements, or
+          compare pixels.
         </p>
       </section>
 

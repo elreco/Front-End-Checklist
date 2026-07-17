@@ -51,9 +51,13 @@ export function CodeRocketSelect({
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           align="start"
-          className="z-50 max-h-[min(22rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden border border-border bg-background shadow-lg"
+          className="z-50 overflow-hidden border border-border bg-background shadow-lg"
           position="popper"
           sideOffset={4}
+          style={{
+            maxHeight: 'min(22rem, var(--radix-select-content-available-height))',
+            minWidth: 'var(--radix-select-trigger-width)'
+          }}
         >
           <SelectPrimitive.ScrollUpButton className="flex h-8 items-center justify-center border-border border-b bg-surface text-muted">
             <ChevronUp aria-hidden className="h-4 w-4" />
@@ -61,11 +65,11 @@ export function CodeRocketSelect({
           <SelectPrimitive.Viewport className="p-1">
             {options.map(option => (
               <SelectPrimitive.Item
-                className="relative flex min-h-10 cursor-pointer select-none items-center py-2 pr-3 pl-9 text-sm outline-none transition-colors focus:bg-surface-raised data-[state=checked]:text-signal"
+                className="flex min-h-10 cursor-pointer select-none items-center gap-3 px-3 py-2 text-sm outline-none transition-colors data-[highlighted]:bg-surface-raised data-[state=checked]:text-signal"
                 key={option.value}
                 value={option.value}
               >
-                <span className="absolute left-3 flex h-4 w-4 items-center justify-center">
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center">
                   <SelectPrimitive.ItemIndicator>
                     <Check aria-hidden className="h-4 w-4" />
                   </SelectPrimitive.ItemIndicator>

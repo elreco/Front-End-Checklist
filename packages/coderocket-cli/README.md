@@ -26,3 +26,16 @@ These headers are sent only to the original audited origin. They are never inclu
 payload sent to CodeRocket. Use a dedicated, least-privileged test session.
 
 Exit code `0` means the quality gate passed or needs a new baseline, `1` means a new critical or high-priority regression was found, and `2` means the check could not produce a reliable result.
+
+## Releasing
+
+Changes to this package must include a Changeset:
+
+```bash
+pnpm changeset
+```
+
+Select `@coderocketapp/cli` and the appropriate semantic version bump. After the
+change reaches `coderocket/main`, the release workflow opens or updates a version
+pull request. Merging that pull request publishes the package to npm through GitHub
+trusted publishing; no npm token is stored in GitHub.

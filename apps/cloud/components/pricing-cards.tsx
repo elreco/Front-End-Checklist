@@ -23,7 +23,7 @@ const plans: Array<{
       '1 website · 5 important pages',
       'Weekly automatic health check',
       '10 extra checks started by you or CI / month',
-      'At least 3 AI fix plans / month · 3 audience views included',
+      'At least 3 guided resolutions / month · sharing and handoff included',
       '30-day history and private reports'
     ]
   },
@@ -35,7 +35,7 @@ const plans: Array<{
       '3 websites · 25 pages each',
       'Daily automatic health checks',
       '100 extra checks started by you or CI / month',
-      'At least 100 AI fix plans · owner, client, and developer views included',
+      'At least 100 guided resolutions · client and developer handoff included',
       '90-day history and email alerts'
     ]
   },
@@ -47,7 +47,7 @@ const plans: Array<{
       '50 websites · 50 pages each',
       'Daily automatic health checks',
       '500 extra checks started by you or CI / month',
-      'At least 600 AI fix plans · 3 audience views included',
+      'At least 600 guided resolutions · sharing and handoff included',
       '365-day history',
       'Reports without secondary branding'
     ]
