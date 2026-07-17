@@ -2,6 +2,7 @@
 
 import { getPlanEntitlements, type PlanId } from '@coderocket/core'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -62,6 +63,7 @@ export async function queueProjectAudit(projectId: string): Promise<void> {
 
 /** Update the review state for one or more owner-scoped findings. */
 export async function updateFindingWorkflow(projectId: string, formData: FormData) {
+  const returnPath = resolveProjectReturnPath(projectId, (await headers()).get('referer'))
   const requestedStatus = formData.get('status')
   const status =
     requestedStatus === 'acknowledged' || requestedStatus === 'muted' ? requestedStatus : 'open'
@@ -69,7 +71,7 @@ export async function updateFindingWorkflow(projectId: string, formData: FormDat
     .getAll('findingId')
     .filter((value): value is string => typeof value === 'string' && value.length > 0)
     .slice(0, 100)
-  if (findingIds.length === 0) redirect(`/projects/${projectId}?notice=workflow-failed`)
+  if (findingIds.length === 0) redirect(withNotice(returnPath, 'workflow-failed'))
 
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
@@ -85,5 +87,27 @@ export async function updateFindingWorkflow(projectId: string, formData: FormDat
     .in('id', findingIds)
 
   revalidatePath(`/projects/${projectId}`)
-  redirect(`/projects/${projectId}?notice=${error ? 'workflow-failed' : `workflow-${status}`}`)
+  redirect(withNotice(returnPath, error ? 'workflow-failed' : `workflow-${status}`))
+}
+
+function resolveProjectReturnPath(projectId: string, referer: string | null): string {
+  const fallback = `/projects/${projectId}`
+  if (!referer) return fallback
+  try {
+    const url = new URL(referer)
+    if (url.pathname !== fallback) return fallback
+    const searchParams = new URLSearchParams()
+    for (const [name, value] of url.searchParams)
+      if (name.startsWith('findings-')) searchParams.append(name, value)
+    const query = searchParams.toString()
+    return query ? `${fallback}?${query}` : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function withNotice(path: string, notice: string): string {
+  const url = new URL(path, 'https://coderocket.local')
+  url.searchParams.set('notice', notice)
+  return `${url.pathname}?${url.searchParams.toString()}`
 }

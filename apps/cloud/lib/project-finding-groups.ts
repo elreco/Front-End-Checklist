@@ -144,9 +144,7 @@ export function resolveFindingImpact(value: string): FindingImpact {
 
 /** Keep arbitrary sort values inside the supported finding sort union. */
 export function resolveFindingSort(value: string): FindingSort {
-  return value === 'affected-pages' || value === 'status' || value === 'title'
-    ? value
-    : 'priority'
+  return value === 'affected-pages' || value === 'status' || value === 'title' ? value : 'priority'
 }
 
 /** List every affected page represented by the current check. */

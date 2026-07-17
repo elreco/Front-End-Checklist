@@ -1,6 +1,6 @@
 'use client'
 
-import { type AiAudience, aiFindingAnalysisSchema } from '@coderocket/ai/schema'
+import { type AiAudience, storedAiFindingAnalysisSchema } from '@coderocket/ai/schema'
 import {
   AlertTriangle,
   BrainCircuit,
@@ -20,13 +20,14 @@ import {
 } from '@repo/design-system/ui/dialog'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { z } from 'zod'
-import { AnalysisProgress, AnalysisResult, AnalysisSetup } from './finding-ai-assistant-content'
+import { AnalysisProgress, AnalysisSetup } from './finding-ai-assistant-content'
+import { AnalysisResult } from './finding-ai-assistant-result'
 
 const taskSchema = z.object({
   id: z.string(),
   status: z.enum(['queued', 'running', 'succeeded', 'failed']),
   audience: z.enum(['site_owner', 'freelancer', 'developer']),
-  result: aiFindingAnalysisSchema.nullable(),
+  result: storedAiFindingAnalysisSchema.nullable(),
   error: z.string().nullable(),
   model: z.string(),
   promptVersion: z.string(),
@@ -180,13 +181,20 @@ export function FindingAiAssistant({
           </DialogTitle>
           <DialogDescription className="max-w-2xl leading-6">
             CodeRocket uses the saved proof and the matching Front-End Checklist rule. AI can
-            explain and plan, but only a fresh website check can mark the problem fixed.
+            explain it once in owner, client, and developer views, but only a fresh website check
+            can mark the problem fixed.
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-6">
           {task?.status === 'succeeded' && task.result ? (
-            <AnalysisResult task={task} />
+            <AnalysisResult
+              audience={audience}
+              loading={loading}
+              onAudienceChange={setAudience}
+              onUpgrade={() => requestAnalysis(true)}
+              task={task}
+            />
           ) : task?.status === 'queued' || task?.status === 'running' ? (
             <AnalysisProgress task={task} />
           ) : (

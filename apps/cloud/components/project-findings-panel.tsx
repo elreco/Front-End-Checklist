@@ -74,8 +74,7 @@ export function ProjectFindingsPanel({
   }, [view])
 
   useEffect(() => {
-    if (resultPage > pageCount)
-      setView(current => ({ ...current, resultPage: pageCount }))
+    if (resultPage > pageCount) setView(current => ({ ...current, resultPage: pageCount }))
   }, [pageCount, resultPage])
 
   function updateAdvancedFilters(filters: typeof DEFAULT_FINDING_FILTERS) {
@@ -266,7 +265,10 @@ function normalizeInitialView(
   return {
     ...DEFAULT_FINDING_VIEW_STATE,
     ...view,
-    category: view.category === 'all' || categories.includes(view.category) ? view.category : 'all',
+    category:
+      view.category === 'all' || categories.some(category => category === view.category)
+        ? view.category
+        : 'all',
     page: view.page === 'all' || pages.includes(view.page) ? view.page : 'all'
   }
 }

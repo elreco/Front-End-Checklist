@@ -34,9 +34,9 @@ jobs:
       - name: Lint CodeRocket
         run: pnpm biome check apps/cloud packages/coderocket-core packages/coderocket-db packages/coderocket-cli packages/coderocket-worker packages/design-system/src/coderocket-logo.tsx
       - name: Typecheck CodeRocket
-        run: pnpm turbo typecheck --filter='@coderocket/*'
+        run: pnpm turbo typecheck --filter='@coderocket/*' --filter=@coderocketapp/cli
       - name: Test CodeRocket
-        run: pnpm turbo test:ci --filter='@coderocket/*'
+        run: pnpm turbo test:ci --filter='@coderocket/*' --filter=@coderocketapp/cli
       - name: Build cloud app
         run: pnpm --filter @coderocket/cloud build
       - name: Build deployment image

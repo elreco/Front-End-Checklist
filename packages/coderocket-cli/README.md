@@ -3,7 +3,7 @@
 Run the same deterministic Front-End Checklist profile used by CodeRocket and submit a preview result to your project.
 
 ```bash
-npx @coderocket/cli@latest audit https://preview.example.com \
+npx @coderocketapp/cli@latest audit https://preview.example.com \
   --page /pricing \
   --page /account \
   --token "$CODEROCKET_TOKEN" \

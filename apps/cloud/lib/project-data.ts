@@ -28,6 +28,8 @@ import {
 import { getSupabaseServerConfig } from './supabase/config'
 import { createSupabaseServerClient } from './supabase/server'
 
+const OCCURRENCE_BATCH_SIZE = 500
+
 export interface ProjectAudit {
   id: string
   status: AuditStatus
@@ -357,14 +359,18 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
   let findings: ProjectFinding[] = []
   let latestPages: ProjectPageCheck[] = []
   if (latestAudit) {
-    const [{ data: occurrences }, { data: auditPages }] = await Promise.all([
+    const fetchOccurrenceBatch = (from: number) =>
       supabase
         .from('cr_occurrences')
         .select(
           'id,status,message,evidence,cr_findings(id,priority,title,normalized_path,rule_slug,category,source,workflow_status,workflow_note)'
         )
         .eq('audit_id', latestAudit.id)
-        .eq('owner_id', auth.user.id),
+        .eq('owner_id', auth.user.id)
+        .order('id')
+        .range(from, from + OCCURRENCE_BATCH_SIZE - 1)
+    const [firstOccurrenceBatch, { data: auditPages }] = await Promise.all([
+      fetchOccurrenceBatch(0),
       supabase
         .from('cr_audit_pages')
         .select('url,normalized_path,reachable,http_status,duration_ms,error')
@@ -372,6 +378,16 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
         .eq('owner_id', auth.user.id)
         .order('normalized_path')
     ])
+    if (firstOccurrenceBatch.error) throw new Error(firstOccurrenceBatch.error.message)
+    let occurrences = firstOccurrenceBatch.data ?? []
+    let latestBatchSize = occurrences.length
+    while (latestBatchSize === OCCURRENCE_BATCH_SIZE) {
+      const nextBatch = await fetchOccurrenceBatch(occurrences.length)
+      if (nextBatch.error) throw new Error(nextBatch.error.message)
+      const rows = nextBatch.data ?? []
+      occurrences = [...occurrences, ...rows]
+      latestBatchSize = rows.length
+    }
     findings = (occurrences ?? []).flatMap(occurrence => {
       const relatedFindings = Array.isArray(occurrence.cr_findings)
         ? occurrence.cr_findings

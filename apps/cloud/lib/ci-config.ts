@@ -48,7 +48,7 @@ export function buildCiAuditCommand(options: Pick<CiConfigOptions, 'pages' | 'si
   const [firstPath = '/', ...remainingPaths] = paths
   const firstUrl = new URL(firstPath, options.siteUrl).toString()
   const pageArguments = remainingPaths.map(path => ` --page ${quoteShell(path)}`).join('')
-  return `npx @coderocket/cli@latest audit ${quoteShell(firstUrl)}${pageArguments} --environment production`
+  return `npx @coderocketapp/cli@latest audit ${quoteShell(firstUrl)}${pageArguments} --environment production`
 }
 
 /** Build a copy-ready provider configuration around the shared CodeRocket CLI. */

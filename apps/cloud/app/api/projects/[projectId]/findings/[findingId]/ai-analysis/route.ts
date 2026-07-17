@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto'
 import {
   AI_PROMPT_VERSION,
   aiAudienceSchema,
-  aiFindingAnalysisSchema,
   buildRuleSnapshot,
-  DEFAULT_AI_MODEL
+  DEFAULT_AI_MODEL,
+  storedAiFindingAnalysisSchema
 } from '@coderocket/ai'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -34,7 +34,7 @@ const taskSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(['queued', 'running', 'succeeded', 'failed']),
   audience: aiAudienceSchema,
-  result: aiFindingAnalysisSchema.nullable(),
+  result: storedAiFindingAnalysisSchema.nullable(),
   error: z.string().nullable(),
   model: z.string(),
   prompt_version: z.string(),
@@ -123,7 +123,6 @@ export async function POST(request: Request, context: RouteContext) {
         projectId,
         findingId,
         parsedBody.data.occurrenceId,
-        parsedBody.data.audience,
         rule.ruleHash,
         AI_PROMPT_VERSION,
         model,

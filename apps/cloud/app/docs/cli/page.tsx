@@ -56,7 +56,7 @@ jobs:
         env:
           CODEROCKET_SITE_HEADERS_JSON: "\${{ secrets.CODEROCKET_SITE_HEADERS_JSON }}"
         run: >-
-          npx @coderocket/cli@latest audit "\${{ vars.PREVIEW_URL }}"
+          npx @coderocketapp/cli@latest audit "\${{ vars.PREVIEW_URL }}"
           --token "\${{ secrets.CODEROCKET_TOKEN }}"
           --environment preview
           --sha "\${{ github.sha }}"

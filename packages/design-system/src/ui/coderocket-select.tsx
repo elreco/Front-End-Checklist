@@ -37,7 +37,7 @@ export function CodeRocketSelect({
       <SelectPrimitive.Trigger
         className={cn(
           'flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 border border-border bg-background px-4 py-2.5 text-left text-foreground outline-none transition-colors',
-          'focus:border-signal data-[placeholder]:text-muted disabled:cursor-not-allowed disabled:opacity-50',
+          'focus:border-signal disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted',
           className
         )}
         data-slot="coderocket-select"

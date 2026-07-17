@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { randomUUID } from 'node:crypto'
+import { realpathSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { auditPage, getRulesetVersion } from '@coderocket/core'
 import { parseArguments } from './arguments'
 
@@ -43,4 +45,7 @@ export async function run(args = process.argv.slice(2)): Promise<0 | 1 | 2> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exitCode = await run()
+const entryPath = process.argv[1]
+if (entryPath && realpathSync(entryPath) === fileURLToPath(import.meta.url)) {
+  process.exitCode = await run()
+}

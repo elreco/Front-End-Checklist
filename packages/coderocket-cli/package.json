@@ -1,5 +1,5 @@
 {
-  "name": "@coderocket/cli",
+  "name": "@coderocketapp/cli",
   "version": "0.1.0",
   "private": false,
   "description": "Run CodeRocket website quality gates from CI and GitHub Actions",

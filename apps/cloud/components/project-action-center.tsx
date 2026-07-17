@@ -142,9 +142,9 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
         </p>
         <h2 className="mt-2 font-heading font-semibold text-lg">From proof to a fix plan</h2>
         <p className="mt-2 text-muted text-sm leading-6">
-          Open any problem and choose “Explain &amp; plan a fix”. The assistant can write for you, a
-          client, or a developer. It uses the saved evidence and official rule, then tells you how
-          to verify the change.
+          Open any problem and choose “Explain &amp; plan a fix”. Every plan includes owner, client,
+          and developer views built from the same saved evidence and official rule, plus clear
+          verification steps.
         </p>
       </section>
 

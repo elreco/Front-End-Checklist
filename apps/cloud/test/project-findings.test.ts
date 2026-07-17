@@ -2,9 +2,12 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { ProjectFinding } from '../lib/project-data'
 import {
+  DEFAULT_FINDING_VIEW_STATE,
   type FindingViewOptions,
   getVisibleFindingGroups,
-  groupProjectFindings
+  groupProjectFindings,
+  readFindingViewSearchParams,
+  writeFindingViewSearchParams
 } from '../lib/project-finding-groups'
 
 const defaults: FindingViewOptions = {
@@ -85,6 +88,30 @@ describe('project finding filters', () => {
       groups.map(group => group.rule),
       originalOrder
     )
+  })
+
+  it('round-trips a filtered and paginated view through the query string', () => {
+    const serialized = writeFindingViewSearchParams(new URLSearchParams('notice=queued'), {
+      ...DEFAULT_FINDING_VIEW_STATE,
+      category: 'accessibility',
+      filter: 'new',
+      impact: 'important',
+      page: '/contact',
+      query: 'label field',
+      resultPage: 3,
+      sort: 'affected-pages'
+    })
+
+    assert.equal(serialized.get('notice'), 'queued')
+    assert.deepEqual(readFindingViewSearchParams(serialized), {
+      category: 'accessibility',
+      filter: 'new',
+      impact: 'important',
+      page: '/contact',
+      query: 'label field',
+      resultPage: 3,
+      sort: 'affected-pages'
+    })
   })
 })
 

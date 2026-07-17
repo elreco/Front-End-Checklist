@@ -19,7 +19,7 @@ describe('CI setup configuration', () => {
     const command = buildCiAuditCommand(project)
     assert.equal(
       command,
-      "npx @coderocket/cli@latest audit 'https://example.com/' --page '/pricing' --page '/account' --environment production"
+      "npx @coderocketapp/cli@latest audit 'https://example.com/' --page '/pricing' --page '/account' --environment production"
     )
   })
 
@@ -36,7 +36,7 @@ describe('CI setup configuration', () => {
     assert.match(buildCiConfiguration('bitbucket', project), /custom:\n {4}coderocket:/)
     assert.match(buildCiConfiguration('other', project), /protected secret store/)
     for (const platform of ['gitlab', 'bitbucket', 'other'] as const) {
-      assert.match(buildCiConfiguration(platform, project), /@coderocket\/cli@latest audit/)
+      assert.match(buildCiConfiguration(platform, project), /@coderocketapp\/cli@latest audit/)
     }
   })
 

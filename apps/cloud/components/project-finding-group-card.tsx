@@ -121,7 +121,13 @@ export function ProjectFindingGroupCard({
 function WorkflowSubmitButton({ muted }: { muted: boolean }) {
   const { pending } = useFormStatus()
   return (
-    <CodeRocketButton aria-disabled={pending} disabled={pending} size="sm" type="submit" variant="ghost">
+    <CodeRocketButton
+      aria-disabled={pending}
+      disabled={pending}
+      size="sm"
+      type="submit"
+      variant="ghost"
+    >
       {pending ? (
         <RefreshCw aria-hidden className="animate-spin motion-reduce:animate-none" />
       ) : muted ? (

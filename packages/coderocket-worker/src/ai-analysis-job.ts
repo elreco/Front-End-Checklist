@@ -137,7 +137,6 @@ export async function processAiAnalysisJob(job: WorkerJob): Promise<void> {
   })
   const evidence = context.occurrence.evidence
   const result = await provider.analyze({
-    audience: context.task.audience,
     finding: {
       findingId: context.finding.id,
       title: context.finding.title,

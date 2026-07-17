@@ -34,9 +34,9 @@ const flow = [
   },
   {
     icon: BrainCircuit,
-    title: 'Explain for the right person',
+    title: 'Switch views without rerunning the analysis',
     description:
-      'Choose plain owner wording, a client-ready brief, or a developer-focused plan. The proof does not change with the audience.'
+      'Every fix plan includes plain owner wording, a client-ready brief, and a developer-focused view. Switch at any time; the proof and remediation stay the same.'
   },
   {
     icon: CheckCircle2,
