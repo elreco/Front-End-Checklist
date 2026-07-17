@@ -75,7 +75,7 @@ export function FindingAiAssistant({
     const parsed = responseSchema.parse(body)
     setTask(parsed.task)
     if (parsed.task) setAudience(parsed.task.audience)
-    if (!parsed.configured) setError('AI explanations need an OpenAI key on this deployment.')
+    setError(parsed.configured ? '' : 'AI explanations need an OpenAI key on this deployment.')
   }, [endpoint, occurrenceId])
 
   useEffect(() => {
@@ -192,7 +192,7 @@ export function FindingAiAssistant({
           ) : (
             <AnalysisSetup
               audience={audience}
-              error={error || task?.error || ''}
+              error={error || userFacingTaskError(task?.error)}
               loading={loading}
               onAudienceChange={setAudience}
               onSubmit={() => requestAnalysis(task?.status === 'failed')}
@@ -215,6 +215,12 @@ function readApiError(value: unknown): string {
 
 function toMessage(value: unknown): string {
   return value instanceof Error ? value.message : 'The AI assistant is temporarily unavailable.'
+}
+
+function userFacingTaskError(error: string | null | undefined): string {
+  if (error?.includes('stored rule snapshot'))
+    return 'This attempt used an outdated rule snapshot. Try again to start a fresh fix plan.'
+  return error ? 'The AI assistant is temporarily unavailable. Try again in a moment.' : ''
 }
 
 function taskButtonLabel(status: AiTask['status'] | undefined): string {

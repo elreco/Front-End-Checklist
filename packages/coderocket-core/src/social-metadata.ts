@@ -1,4 +1,4 @@
-import { assertPublicHttpsUrl } from './safe-fetch'
+import { probePublicImage, type SafeFetchOptions } from './safe-fetch'
 
 const META_TAG_PATTERN = /<meta\b[^>]*>/gi
 const HEAD_PATTERN = /<head\b[^>]*>([\s\S]*?)<\/head>/i
@@ -71,7 +71,8 @@ export function extractSocialImageUrl(html: string, pageUrl: string): string | u
 
 /** Return a safe image update only when the monitored home page was actually reachable. */
 export async function resolveProjectSocialImage(
-  pages: Array<{ reachable: boolean; socialImageUrl?: string; url: string }>
+  pages: Array<{ finalUrl?: string; reachable: boolean; socialImageUrl?: string; url: string }>,
+  options: SafeFetchOptions = {}
 ): Promise<string | null | undefined> {
   const homePage = pages.find(page => {
     try {
@@ -82,9 +83,22 @@ export async function resolveProjectSocialImage(
   })
   if (!homePage?.reachable) return undefined
   if (!homePage.socialImageUrl) return null
+
+  const candidates = [homePage.socialImageUrl]
   try {
-    return (await assertPublicHttpsUrl(homePage.socialImageUrl)).toString()
+    const declaredUrl = new URL(homePage.socialImageUrl)
+    const auditedUrl = new URL(homePage.finalUrl ?? homePage.url)
+    if (declaredUrl.origin !== auditedUrl.origin)
+      candidates.push(
+        new URL(`${declaredUrl.pathname}${declaredUrl.search}`, auditedUrl).toString()
+      )
   } catch {
     return null
   }
+
+  for (const candidate of candidates)
+    try {
+      return await probePublicImage(candidate, options)
+    } catch {}
+  return null
 }

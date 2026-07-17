@@ -6,22 +6,9 @@ import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
 import { getCategoryLabel } from '@/lib/product-language'
 import type { ProjectFinding } from '@/lib/project-data'
+import type { FindingGroup } from '@/lib/project-finding-groups'
 import { FindingAiAssistant } from './finding-ai-assistant'
 import { FindingPriorityBadge, FindingStatusBadge } from './finding-badges'
-
-export interface FindingGroup {
-  category: ProjectFinding['category']
-  evidence?: ProjectFinding['evidence']
-  findings: ProjectFinding[]
-  key: string
-  message: string
-  priority: ProjectFinding['priority']
-  rule: string
-  source: ProjectFinding['source']
-  status: ProjectFinding['status']
-  title: string
-  workflowStatus: ProjectFinding['workflowStatus']
-}
 
 /** Render one grouped website problem with proof, guidance, and workflow actions. */
 export function ProjectFindingGroupCard({

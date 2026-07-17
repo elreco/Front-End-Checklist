@@ -14,6 +14,7 @@ export {
   assertPublicHttpsUrl,
   fetchPublicHtml,
   fetchPublicText,
+  probePublicImage,
   type SafeFetchOptions,
   type SafeHtmlResponse,
   type SafeTextResponse

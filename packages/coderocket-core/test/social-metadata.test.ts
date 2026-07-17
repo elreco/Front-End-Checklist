@@ -54,6 +54,8 @@ describe('social image metadata', () => {
   })
 
   it('clears stale images only after a reachable home-page check', async () => {
+    const imageFetch: typeof fetch = async () =>
+      new Response('', { status: 200, headers: { 'content-type': 'image/jpeg' } })
     assert.equal(
       await resolveProjectSocialImage([
         { url: 'https://93.184.216.34/', reachable: true, socialImageUrl: undefined }
@@ -61,14 +63,46 @@ describe('social image metadata', () => {
       null
     )
     assert.equal(
-      await resolveProjectSocialImage([
-        {
-          url: 'https://93.184.216.34/',
-          reachable: false,
-          socialImageUrl: 'https://93.184.216.34/social.jpg'
-        }
-      ]),
+      await resolveProjectSocialImage(
+        [
+          {
+            url: 'https://93.184.216.34/',
+            reachable: false,
+            socialImageUrl: 'https://93.184.216.34/social.jpg'
+          }
+        ],
+        { fetchImplementation: imageFetch }
+      ),
       undefined
     )
+  })
+
+  it('rebases a broken canonical image onto the audited deployment origin', async () => {
+    const requestedUrls: string[] = []
+    const imageFetch: typeof fetch = async input => {
+      const url = String(input)
+      requestedUrls.push(url)
+      return url.startsWith('https://example.com/')
+        ? new Response('', { status: 404, headers: { 'content-type': 'text/html' } })
+        : new Response('', { status: 200, headers: { 'content-type': 'image/png' } })
+    }
+
+    assert.equal(
+      await resolveProjectSocialImage(
+        [
+          {
+            url: 'https://example.net/',
+            reachable: true,
+            socialImageUrl: 'https://example.com/images/share.png'
+          }
+        ],
+        { fetchImplementation: imageFetch }
+      ),
+      'https://example.net/images/share.png'
+    )
+    assert.deepEqual(requestedUrls, [
+      'https://example.com/images/share.png',
+      'https://example.net/images/share.png'
+    ])
   })
 })

@@ -5,10 +5,21 @@ import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { Tabs, TabsList, TabsTrigger } from '@repo/design-system/ui/tabs'
 import { useMemo, useState } from 'react'
 import type { ProjectFinding } from '@/lib/project-data'
+import {
+  DEFAULT_FINDING_FILTERS,
+  type FindingFilter,
+  getFindingCategories,
+  getFindingPages,
+  getVisibleFindingGroups,
+  groupProjectFindings,
+  hasActiveFindingFilters,
+  matchesFindingFilter,
+  resolveFindingFilter
+} from '@/lib/project-finding-groups'
 import { ProjectAnalysisSummary } from './project-analysis-summary'
-import { type FindingGroup, ProjectFindingGroupCard } from './project-finding-group-card'
+import { ProjectFindingGroupCard } from './project-finding-group-card'
+import { ProjectFindingsControls } from './project-findings-controls'
 
-type FindingFilter = 'action' | 'all' | 'fixed' | 'muted' | 'new'
 const PAGE_SIZE = 8
 
 /** Groups repeated page occurrences into a filterable, evidence-first action list. */
@@ -20,42 +31,38 @@ export function ProjectFindingsPanel({
   updateWorkflow: (formData: FormData) => Promise<void>
 }) {
   const [filter, setFilter] = useState<FindingFilter>('action')
+  const [advancedFilters, setAdvancedFilters] = useState(DEFAULT_FINDING_FILTERS)
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE)
-  const groups = useMemo(() => groupFindings(findings), [findings])
-  const visible = groups.filter(group => matchesFilter(group, filter))
+  const groups = useMemo(() => groupProjectFindings(findings), [findings])
+  const categories = useMemo(() => getFindingCategories(groups), [groups])
+  const pages = useMemo(() => getFindingPages(groups), [groups])
+  const visible = useMemo(
+    () => getVisibleFindingGroups(groups, { ...advancedFilters, filter }),
+    [advancedFilters, filter, groups]
+  )
   const shown = visible.slice(0, visibleLimit)
-  const filterOptions: Array<{ count: number; label: string; value: FindingFilter }> = [
-    {
-      value: 'action',
-      label: 'Open',
-      count: groups.filter(group => matchesFilter(group, 'action')).length
-    },
-    {
-      value: 'new',
-      label: 'New',
-      count: groups.filter(group => matchesFilter(group, 'new')).length
-    },
-    {
-      value: 'fixed',
-      label: 'Fixed',
-      count: groups.filter(group => matchesFilter(group, 'fixed')).length
-    },
-    {
-      value: 'muted',
-      label: 'Ignored',
-      count: groups.filter(group => matchesFilter(group, 'muted')).length
-    },
-    { value: 'all', label: 'All', count: groups.length }
-  ]
+  const filterOptions = getFilterOptions(groups)
   const activeFilter = filterOptions.find(option => option.value === filter) ?? filterOptions[0]
   const newCount = filterOptions.find(option => option.value === 'new')?.count ?? 0
   const knownCount = groups.filter(
-    group => matchesFilter(group, 'action') && group.status === 'persistent'
+    group => matchesFindingFilter(group, 'action') && group.status === 'persistent'
   ).length
   const importantCount = groups.filter(
     group =>
-      matchesFilter(group, 'action') && (group.priority === 'critical' || group.priority === 'high')
+      matchesFindingFilter(group, 'action') &&
+      (group.priority === 'critical' || group.priority === 'high')
   ).length
+  const advancedFiltersActive = hasActiveFindingFilters(advancedFilters)
+
+  function updateAdvancedFilters(filters: typeof DEFAULT_FINDING_FILTERS) {
+    setAdvancedFilters(filters)
+    setVisibleLimit(PAGE_SIZE)
+  }
+
+  function clearAdvancedFilters() {
+    setAdvancedFilters(DEFAULT_FINDING_FILTERS)
+    setVisibleLimit(PAGE_SIZE)
+  }
 
   return (
     <section aria-labelledby="findings-title" className="border border-border bg-surface">
@@ -65,8 +72,8 @@ export function ProjectFindingsPanel({
             What needs attention
           </h2>
           <p className="mt-1 max-w-2xl text-muted text-sm leading-6">
-            Similar problems are grouped together. Each item shows the affected pages, what
-            CodeRocket found, and how to fix it.
+            Similar problems are grouped together. Search, filter, and sort them to plan the next
+            fixes across the affected pages.
           </p>
         </div>
         <ProjectAnalysisSummary
@@ -78,7 +85,7 @@ export function ProjectFindingsPanel({
 
       <Tabs
         onValueChange={value => {
-          setFilter(resolveFilter(value))
+          setFilter(resolveFindingFilter(value))
           setVisibleLimit(PAGE_SIZE)
         }}
         value={filter}
@@ -116,17 +123,56 @@ export function ProjectFindingsPanel({
           </p>
         </div>
 
+        <ProjectFindingsControls
+          categories={categories}
+          filters={advancedFilters}
+          onChange={updateAdvancedFilters}
+          pages={pages}
+        />
+
+        {advancedFiltersActive ? (
+          <div className="flex items-center justify-between gap-3 border-border border-b bg-background px-5 py-3 sm:px-6">
+            <p className="text-muted text-xs">
+              Showing <span className="font-semibold text-foreground">{visible.length}</span> of{' '}
+              {groups.filter(group => matchesFindingFilter(group, filter)).length} problems in this
+              view.
+            </p>
+            <CodeRocketButton
+              onClick={clearAdvancedFilters}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              Clear filters
+            </CodeRocketButton>
+          </div>
+        ) : null}
+
         {visible.length === 0 ? (
           <div className="p-10 text-center">
             <CheckCircle2 aria-hidden className="mx-auto h-8 w-8 text-success" />
             <p className="mt-3 font-semibold">
-              {filter === 'action' ? 'Nothing needs your attention' : 'Nothing in this view'}
+              {advancedFiltersActive
+                ? 'No problems match these filters'
+                : filter === 'action'
+                  ? 'Nothing needs your attention'
+                  : 'Nothing in this view'}
             </p>
             <p className="mx-auto mt-2 max-w-md text-muted text-sm leading-6">
-              {filter === 'action'
-                ? 'You are caught up. The next complete check will add anything that changes.'
+              {advancedFiltersActive
+                ? 'Try another search, page, area, or impact level.'
                 : 'Choose another view, or wait for the next complete website check.'}
             </p>
+            {advancedFiltersActive ? (
+              <CodeRocketButton
+                className="mt-5"
+                onClick={clearAdvancedFilters}
+                type="button"
+                variant="outline"
+              >
+                Show every problem in this view
+              </CodeRocketButton>
+            ) : null}
           </div>
         ) : (
           <div className="divide-y divide-border">
@@ -141,7 +187,7 @@ export function ProjectFindingsPanel({
             {shown.length < visible.length ? (
               <div className="flex flex-col items-center justify-between gap-3 bg-background px-5 py-4 sm:flex-row">
                 <p className="text-muted text-xs">
-                  Showing {shown.length} of {visible.length} problems in this view.
+                  Showing {shown.length} of {visible.length} matching problems.
                 </p>
                 <CodeRocketButton
                   onClick={() => setVisibleLimit(limit => limit + PAGE_SIZE)}
@@ -159,49 +205,19 @@ export function ProjectFindingsPanel({
   )
 }
 
-/** Group repeated rule occurrences so one action can represent every affected page. */
-function groupFindings(findings: ProjectFinding[]): FindingGroup[] {
-  const groups = new Map<string, FindingGroup>()
-  for (const finding of findings) {
-    const key = [finding.rule, finding.status, finding.priority, finding.workflowStatus].join(':')
-    const existing = groups.get(key)
-    if (existing) {
-      existing.findings.push(finding)
-      continue
-    }
-    groups.set(key, { ...finding, findings: [finding], key })
-  }
-  return [...groups.values()].sort((left, right) => {
-    const priorityDifference = priorityRank(left.priority) - priorityRank(right.priority)
-    return priorityDifference !== 0
-      ? priorityDifference
-      : statusRank(left.status) - statusRank(right.status)
-  })
-}
-
-/** Return whether a grouped finding belongs in the selected user-facing view. */
-function matchesFilter(group: FindingGroup, filter: FindingFilter): boolean {
-  if (filter === 'all') return true
-  if (filter === 'muted') return group.workflowStatus === 'muted'
-  if (group.workflowStatus === 'muted') return false
-  if (filter === 'new') return group.status === 'new'
-  if (filter === 'fixed') return group.status === 'resolved'
-  return group.status !== 'resolved'
-}
-
-/** Keep arbitrary tab values inside the supported finding filter union. */
-function resolveFilter(value: string): FindingFilter {
-  return value === 'all' || value === 'fixed' || value === 'muted' || value === 'new'
-    ? value
-    : 'action'
-}
-
-/** Sort finding priorities from the most urgent to the least urgent. */
-function priorityRank(priority: ProjectFinding['priority']): number {
-  return { critical: 0, high: 1, medium: 2, low: 3 }[priority]
-}
-
-/** Sort new findings before persistent findings and resolved findings. */
-function statusRank(status: ProjectFinding['status']): number {
-  return { new: 0, persistent: 1, resolved: 2 }[status]
+function getFilterOptions(groups: ReturnType<typeof groupProjectFindings>) {
+  const options: Array<{ count: number; label: string; value: FindingFilter }> = [
+    { value: 'action', label: 'Open', count: 0 },
+    { value: 'new', label: 'New', count: 0 },
+    { value: 'fixed', label: 'Fixed', count: 0 },
+    { value: 'muted', label: 'Ignored', count: 0 },
+    { value: 'all', label: 'All', count: groups.length }
+  ]
+  return options.map(option => ({
+    ...option,
+    count:
+      option.value === 'all'
+        ? groups.length
+        : groups.filter(group => matchesFindingFilter(group, option.value)).length
+  }))
 }
