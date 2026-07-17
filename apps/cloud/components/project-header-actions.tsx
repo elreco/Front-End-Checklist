@@ -21,8 +21,9 @@ export function ProjectHeaderActions({
           pages={project.pages}
           plan={project.plan}
           projectId={project.id}
+          receivedChecks={project.ciRuns}
           siteUrl={project.url}
-          triggerLabel="Set up the CI check"
+          triggerLabel="Connect secure access"
         />
       ) : null}
       <ProjectSiteEditor

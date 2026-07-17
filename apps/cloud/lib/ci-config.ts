@@ -1,6 +1,9 @@
+import type { SecureAccessMethod } from './secure-access-copy'
+
 export type CiPlatform = 'github' | 'gitlab' | 'bitbucket' | 'other'
 
 interface CiConfigOptions {
+  accessMethod?: SecureAccessMethod
   pages: string[]
   plan: 'free' | 'solo' | 'agency'
   siteUrl: string
@@ -54,16 +57,22 @@ export function buildCiAuditCommand(options: Pick<CiConfigOptions, 'pages' | 'si
 /** Build a copy-ready provider configuration around the shared CodeRocket CLI. */
 export function buildCiConfiguration(platform: CiPlatform, options: CiConfigOptions): string {
   const command = buildCiAuditCommand(options)
-  if (platform === 'github') return buildGitHubWorkflow(command, options.plan)
+  if (platform === 'github')
+    return buildGitHubWorkflow(command, options.plan, options.accessMethod === 'network')
   if (platform === 'gitlab') return buildGitLabJob(command)
   if (platform === 'bitbucket') return buildBitbucketPipeline(command)
   return buildGenericJob(command)
 }
 
-/** Wrap the audit command in a scheduled GitHub Actions workflow. */
-function buildGitHubWorkflow(command: string, plan: CiConfigOptions['plan']): string {
+/** Wrap the audit command in a manual and scheduled GitHub Actions workflow. */
+function buildGitHubWorkflow(
+  command: string,
+  plan: CiConfigOptions['plan'],
+  selfHosted: boolean
+): string {
   const cron = plan === 'free' ? '17 7 * * 1' : '17 7 * * *'
-  return `name: CodeRocket
+  const runner = selfHosted ? 'self-hosted' : 'ubuntu-latest'
+  return `name: CodeRocket secure website check
 
 on:
   workflow_dispatch:
@@ -71,12 +80,12 @@ on:
     - cron: '${cron}'
 
 jobs:
-  website-health:
-    runs-on: ubuntu-latest
+  protected-site-check:
+    runs-on: ${runner}
     permissions:
       contents: read
     steps:
-      - name: Check website HTML
+      - name: Check protected website HTML
         env:
           CODEROCKET_TOKEN: \${{ secrets.CODEROCKET_TOKEN }}
           CODEROCKET_SITE_HEADERS_JSON: \${{ secrets.CODEROCKET_SITE_HEADERS_JSON }}
@@ -85,16 +94,15 @@ jobs:
 `
 }
 
-/** Wrap the audit command in a GitLab job for default, manual, and scheduled pipelines. */
+/** Wrap the audit command in a GitLab job for manual and scheduled pipelines. */
 function buildGitLabJob(command: string): string {
-  return `coderocket:
+  return `coderocket-secure-check:
   image: node:22
   script:
     - ${command}
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "web"'
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 `
 }
 

@@ -18,7 +18,7 @@ const footerGroups = [
     links: [
       { href: '/docs', label: 'Documentation' },
       { href: '/docs/rules', label: 'Rules reference' },
-      { href: '/docs/cli', label: 'CI checks' },
+      { href: '/docs/cli', label: 'Protected site access' },
       { href: '/docs/security', label: 'Security model' }
     ]
   },

@@ -4,7 +4,6 @@ import {
   BrainCircuit,
   CheckCircle2,
   Cloud,
-  GitBranch,
   LockKeyhole,
   ShieldCheck
 } from '@repo/design-system/icons'
@@ -15,6 +14,7 @@ import { getProjectRecoveryKind } from '@/lib/project-recovery'
 import { UpgradeLink } from './plan-limit-upsell'
 import { ProjectActionStep, ProjectCoverageMetric } from './project-action-center-parts'
 import { ProjectCliSetup } from './project-cli-setup'
+import { ProjectPreviewProtectionCard } from './project-preview-protection-card'
 
 /** Shows next actions, monitoring coverage, integrations, and contextual plan value. */
 export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
@@ -38,7 +38,6 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
       : undefined
   const access = accessContent(project, recoveryKind)
   const AccessIcon = access.icon
-
   return (
     <aside
       aria-label="Website monitoring guidance"
@@ -64,6 +63,7 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
               pages={project.pages}
               plan={project.plan}
               projectId={project.id}
+              receivedChecks={project.ciRuns}
               siteUrl={project.url}
             />
           </div>
@@ -113,24 +113,23 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
             title="Work through known problems"
           />
           <ProjectActionStep
-            complete={project.apiTokenConfigured}
-            description={
-              project.apiTokenConfigured
-                ? `${project.ciRuns} CI ${project.ciRuns === 1 ? 'check' : 'checks'} received.`
-                : project.accessMode === 'private'
-                  ? 'Required: run the check from an environment that can open the restricted pages.'
-                  : 'Optional: check a test version before it reaches the live site.'
+            complete={
+              project.accessMode === 'private' ? project.ciRuns > 0 : project.scheduleEnabled
             }
-            title={project.accessMode === 'private' ? 'Set up the CI check' : 'Connect your CI'}
-          />
-          <ProjectActionStep
-            complete={project.scheduleEnabled}
             description={
-              project.scheduleEnabled
-                ? `Automatic monitoring is active. Next check ${project.nextCheck}.`
-                : 'Turn on automatic checks so changes are not missed.'
+              project.accessMode === 'private'
+                ? project.ciRuns > 0
+                  ? `${project.ciRuns} secure ${project.ciRuns === 1 ? 'check has' : 'checks have'} reached CodeRocket.`
+                  : 'Required: connect an environment that can already open the protected pages.'
+                : project.scheduleEnabled
+                  ? `Automatic monitoring is active. Next check ${project.nextCheck}.`
+                  : 'Turn on automatic checks so changes to the live site are not missed.'
             }
-            title="Keep monitoring active"
+            title={
+              project.accessMode === 'private'
+                ? 'Connect secure access'
+                : 'Keep automatic monitoring active'
+            }
           />
         </ol>
       </section>
@@ -148,35 +147,45 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
       </section>
 
       <section className="h-full border border-border bg-surface p-5">
-        <GitBranch aria-hidden className="h-5 w-5 text-signal" />
+        {project.accessMode === 'private' ? (
+          <LockKeyhole aria-hidden className="h-5 w-5 text-signal" />
+        ) : (
+          <Cloud aria-hidden className="h-5 w-5 text-signal" />
+        )}
         <p className="mt-4 font-mono text-[10px] text-signal uppercase tracking-[.12em]">
-          {project.accessMode === 'private'
-            ? 'Required for restricted pages'
-            : 'Optional · for development teams'}
+          {project.accessMode === 'private' ? 'Required for protected pages' : 'Active by default'}
         </p>
         <h2 className="mt-2 font-heading font-semibold text-lg">
           {project.accessMode === 'private'
-            ? 'Check from your CI environment'
-            : 'Check before publishing'}
+            ? 'Secure access from your own environment'
+            : 'Monitor the published website'}
         </h2>
         <p className="mt-2 text-muted text-sm leading-6">
           {project.accessMode === 'private'
-            ? 'The CI job opens the pages from GitHub, GitLab, Bitbucket, or your own environment, then sends only the check result to CodeRocket.'
-            : 'Connect your CI platform to check a test version before it replaces the live website. A release is stopped only when a new urgent or important problem appears.'}
+            ? 'A runner in GitHub, GitLab, Bitbucket, or your private network opens the protected pages. Passwords, cookies, and access headers stay there.'
+            : `CodeRocket checks the live pages from the cloud. Next automatic check ${project.nextCheck}. No repository setup is needed.`}
         </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <ProjectCliSetup
-            configured={project.apiTokenConfigured}
-            pages={project.pages}
-            plan={project.plan}
-            projectId={project.id}
-            siteUrl={project.url}
-          />
-          <span className="font-mono text-[10px] text-muted uppercase tracking-[.1em]">
-            {project.apiTokenConfigured ? 'CI access ready' : 'Not connected'}
-          </span>
-        </div>
+        {project.accessMode === 'private' ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <ProjectCliSetup
+              configured={project.apiTokenConfigured}
+              pages={project.pages}
+              plan={project.plan}
+              projectId={project.id}
+              receivedChecks={project.ciRuns}
+              siteUrl={project.url}
+            />
+            <span className="font-mono text-[10px] text-muted uppercase tracking-[.1em]">
+              {project.ciRuns > 0
+                ? 'Secure access connected'
+                : project.apiTokenConfigured
+                  ? 'Waiting for first check'
+                  : 'Not connected'}
+            </span>
+          </div>
+        ) : null}
       </section>
+      <ProjectPreviewProtectionCard />
 
       <section className="h-full border border-border bg-background p-5">
         <div className="flex items-center gap-2">
@@ -254,17 +263,25 @@ function accessContent(
   if (recoveryKind === 'access')
     return {
       icon: LockKeyhole,
-      title: 'Protected pages need CI access',
+      title: 'Protected pages need secure access',
       description:
         'Sign-in, a firewall, or a challenge blocked the cloud check. Run it from an environment that can already open these pages.'
     }
   if (project.accessMode === 'private')
     return {
       icon: LockKeyhole,
-      title: project.apiTokenConfigured ? 'CI check connected' : 'CI check required',
-      description: project.apiTokenConfigured
-        ? 'Cloud monitoring stays off. Checks are accepted through this project’s CI access key.'
-        : 'These pages need private access. CodeRocket will not try to bypass the sign-in screen or store your normal account password.'
+      title:
+        project.ciRuns > 0
+          ? 'Secure access connected'
+          : project.apiTokenConfigured
+            ? 'Waiting for the first secure check'
+            : 'Secure access required',
+      description:
+        project.ciRuns > 0
+          ? 'Cloud monitoring stays off. Protected-page results arrive from your own secure runner.'
+          : project.apiTokenConfigured
+            ? 'A project key exists. Run the generated job once to confirm that every protected page can be opened.'
+            : 'These pages need private access. CodeRocket will not try to bypass the sign-in screen or store your normal account password.'
     }
   if (project.accessMode === 'protected')
     return {

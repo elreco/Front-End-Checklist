@@ -64,7 +64,7 @@ export function OnboardingPagesStep({
             <span>
               Your first
               {accessMode === 'private'
-                ? ' check will start after you connect your CI environment.'
+                ? ' check will start after you connect secure access.'
                 : ' check starts automatically after this step.'}
             </span>
           </p>

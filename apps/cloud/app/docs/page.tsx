@@ -19,7 +19,7 @@ import { createPublicMetadata } from '@/lib/seo'
 export const metadata: Metadata = createPublicMetadata({
   title: 'Documentation',
   description:
-    'Official CodeRocket documentation for website checks, AI fix guidance, CI checks, security, and the synchronized frontend rules reference.',
+    'Official CodeRocket documentation for website checks, guided fixes, protected-site access, security, and the synchronized frontend rules reference.',
   path: '/docs',
   image: '/docs/opengraph-image',
   keywords: ['CodeRocket documentation', 'website health checks', 'frontend checklist rules']
@@ -41,9 +41,9 @@ const sections = [
   },
   {
     href: '/docs/cli',
-    title: 'CI checks for restricted pages',
+    title: 'Secure access for protected pages',
     description:
-      'Set up GitHub, GitLab, Bitbucket, or another CI to check pages it can already reach.',
+      'Run checks from GitHub, GitLab, Bitbucket, or another environment that already has access.',
     icon: GitPullRequest
   },
   {

@@ -10,9 +10,9 @@ import { DocsCodeBlock, DocsHeader } from '@/components/docs-shell'
 import { createPublicMetadata } from '@/lib/seo'
 
 export const metadata: Metadata = createPublicMetadata({
-  title: 'CI checks',
+  title: 'Protected site access',
   description:
-    'Run CodeRocket from GitHub, GitLab, Bitbucket, or another CI environment that can reach restricted pages and preview deployments.',
+    'Let CodeRocket check protected pages from GitHub, GitLab, Bitbucket, or another environment that already has access.',
   path: '/docs/cli',
   image: '/docs/opengraph-image'
 })
@@ -44,32 +44,35 @@ const platforms = [
   }
 ]
 
-const workflow = `name: CodeRocket
-on: pull_request
+const workflow = `name: CodeRocket secure website check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 7 * * *'
 
 jobs:
-  frontend-quality:
+  protected-site-check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - name: Audit deployed preview
+      - name: Check protected website HTML
         env:
-          CODEROCKET_SITE_HEADERS_JSON: "\${{ secrets.CODEROCKET_SITE_HEADERS_JSON }}"
+          CODEROCKET_TOKEN: \${{ secrets.CODEROCKET_TOKEN }}
+          CODEROCKET_SITE_HEADERS_JSON: \${{ secrets.CODEROCKET_SITE_HEADERS_JSON }}
         run: >-
-          npx @coderocketapp/cli@latest audit "\${{ vars.PREVIEW_URL }}"
-          --token "\${{ secrets.CODEROCKET_TOKEN }}"
-          --environment preview
-          --sha "\${{ github.sha }}"
-          --branch "\${{ github.head_ref }}"
-          --pr "\${{ github.event.number }}"`
+          npx @coderocketapp/cli@latest audit 'https://example.com/'
+          --page '/account'
+          --environment production`
 
 export default function CliDocumentationPage() {
   return (
     <>
       <DocsHeader
-        description="Run the same audit engine from an environment that can reach the page. CodeRocket receives the result, never the private access headers."
-        eyebrow="Restricted and preview checks"
-        title="Connect the CI you already use."
+        description="Run the same website check from an environment that can already open protected pages. CodeRocket receives the result, never the private access headers."
+        eyebrow="Protected website access"
+        title="Check restricted pages without weakening their protection."
       />
 
       <section className="py-10">
@@ -77,23 +80,21 @@ export default function CliDocumentationPage() {
         <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">Command contract</h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
           Generate a token from the CodeRocket project, store it as a CI secret, and audit the HTTPS
-          URL after your hosting platform finishes deploying it. Public websites need only the
-          project token.
+          URL from an environment that can already reach it. Public websites normally use the
+          automatic cloud checker and do not need this setup.
         </p>
         <div className="mt-6">
           <DocsCodeBlock language="bash">{`coderocket audit https://preview.example.com \\
   --page /pricing \\
   --page /account \\
   --token "$CODEROCKET_TOKEN" \\
-  --environment preview \\
-  --sha "$GITHUB_SHA" \\
-  --branch "feature/checkout" \\
-          --pr "184"`}</DocsCodeBlock>
+          --environment production`}</DocsCodeBlock>
         </div>
         <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
           The first URL and each <DocsInlineCode>--page</DocsInlineCode> stay on the same HTTPS
-          website. Use <DocsInlineCode>--environment production</DocsInlineCode> for the first
-          trusted check of a private live site; later preview checks compare against that baseline.
+          website. The protected-site setup uses{' '}
+          <DocsInlineCode>--environment production</DocsInlineCode> and can run manually or on a
+          schedule.
         </p>
       </section>
 
@@ -116,19 +117,23 @@ export default function CliDocumentationPage() {
 }`}</DocsCodeBlock>
         </div>
         <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
-          Use a dedicated, least-privileged test account. The current CI check reads returned HTML
-          and response headers; it does not inspect repository source files, execute page
-          JavaScript, or automate a multi-step sign-in journey.
+          Use a dedicated, least-privileged test account. The secure runner reads returned HTML and
+          response headers; it does not inspect repository source files, execute page JavaScript, or
+          automate a multi-step sign-in, MFA, or CAPTCHA journey.
         </p>
       </section>
 
       <section className="py-10">
         <Terminal aria-hidden className="h-6 w-6 text-signal" />
-        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">Choose your CI platform</h2>
+        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">
+          Choose where the secure check runs
+        </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
-          Open a project and choose <strong className="text-foreground">Set up a CI check</strong>.
-          The guided setup creates the correct file and shows where to save the same revocable
-          <DocsInlineCode>CODEROCKET_TOKEN</DocsInlineCode> for each platform.
+          Open a protected project and choose{' '}
+          <strong className="text-foreground">Connect secure access</strong>. You can copy a safe
+          handoff for a developer or hosting provider, or open the advanced configuration yourself.
+          Shared instructions never include the revocable{' '}
+          <DocsInlineCode>CODEROCKET_TOKEN</DocsInlineCode>.
         </p>
         <div className="mt-7 grid gap-px border border-border bg-border sm:grid-cols-2">
           {platforms.map(({ detail, icon: Icon, secretLocation, title }) => (
@@ -162,16 +167,32 @@ export default function CliDocumentationPage() {
 
       <section className="py-10">
         <GitBranch aria-hidden className="h-6 w-6 text-signal" />
-        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">GitHub Actions example</h2>
+        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">
+          Manual and scheduled GitHub check
+        </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
-          Keep the package on <DocsInlineCode>@latest</DocsInlineCode> so the workflow follows the
-          maintained CodeRocket client. Configure the workflow name as a required check in the
-          repository branch protection. The project setup dialog generates the equivalent GitLab,
-          Bitbucket, and generic CI configurations.
+          The current generated workflow checks the protected live website manually and on a
+          schedule. It does not automatically check every pull request or merge request. The setup
+          dialog generates equivalent GitLab, Bitbucket, and generic runner configurations.
         </p>
         <div className="mt-6">
           <DocsCodeBlock language="yaml">{workflow}</DocsCodeBlock>
         </div>
+      </section>
+
+      <section className="border border-border bg-surface p-6 sm:p-8">
+        <GitBranch aria-hidden className="h-6 w-6 text-muted" />
+        <p className="mt-5 font-mono text-muted text-xs uppercase tracking-[.14em]">
+          Separate planned feature
+        </p>
+        <h2 className="mt-3 font-heading font-semibold text-xl">
+          Preview release protection is not enabled by this setup
+        </h2>
+        <p className="mt-3 max-w-3xl text-muted leading-7">
+          Checking every MR or PR requires a deployed preview URL and a provider-specific trigger.
+          CodeRocket will present that as a separate connection when the full preview workflow is
+          available.
+        </p>
       </section>
 
       <section className="grid gap-6 border border-border bg-surface p-6 sm:grid-cols-[auto_1fr] sm:p-8">

@@ -76,15 +76,15 @@ const notices: Record<string, ToastMessage> = {
   },
   'private-site-created': {
     description:
-      'Cloud monitoring is off. Follow the guided CI setup to check pages that require access.',
+      'Cloud monitoring is off. Connect secure access from an environment that can open these pages.',
     kind: 'success',
     title: 'Restricted site added'
   },
   'private-runner-required': {
     description:
-      'This site requires private access, so CodeRocket will not send the public cloud checker. Run the check from your CI environment instead.',
+      'This site requires private access, so CodeRocket will not send the public cloud checker. Connect an environment that can already open it.',
     kind: 'info',
-    title: 'Set up a CI check'
+    title: 'Connect secure access'
   },
   'protected-site-created': {
     description: 'CodeRocket is checking whether it can read and confirm each selected page.',

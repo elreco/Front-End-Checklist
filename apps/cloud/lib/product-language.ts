@@ -64,7 +64,7 @@ const planLabels: Record<PlanId, string> = {
 const accessModeLabels: Record<SiteAccessMode, string> = {
   public: 'Cloud check',
   protected: 'Cloud check',
-  private: 'CI check'
+  private: 'Secure runner'
 }
 
 /** Return the same plain-language result label everywhere in the product. */
@@ -106,7 +106,7 @@ function getEnvironmentLabel(environment: AuditEnvironment): string {
 function getTriggerLabel(trigger: AuditTrigger): string {
   if (trigger === 'scheduled') return 'Automatic'
   if (trigger === 'manual') return 'Started by you'
-  return 'CI'
+  return 'Secure runner'
 }
 
 export {

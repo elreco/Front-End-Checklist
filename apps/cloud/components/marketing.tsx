@@ -22,7 +22,7 @@ const faqItems = [
   {
     question: 'Can CodeRocket check pages behind Cloudflare or a login?',
     answer:
-      'Pages that open without sign-in use the cloud checker, whether or not they use Cloudflare. Restricted or preview pages run from GitHub, GitLab, Bitbucket, or another CI environment that already has access. Pages CodeRocket cannot confirm are marked incomplete, never healthy.'
+      'Pages that open without sign-in use the cloud checker, whether or not they use Cloudflare. Restricted pages use a secure runner in an environment that already has access. Pages CodeRocket cannot confirm are marked incomplete, never healthy.'
   },
   {
     question: 'Does CodeRocket change my website?',
@@ -55,8 +55,8 @@ export function Hero() {
         </h1>
         <p className="mx-auto mt-9 max-w-3xl text-lg text-muted leading-8">
           Add the pages that matter. Open pages are checked automatically; restricted pages can run
-          from a CI environment you control. CodeRocket tells you in plain language what changed and
-          what it could not verify.
+          from a secure environment you control. CodeRocket tells you in plain language what changed
+          and what it could not verify.
         </p>
         <div className="mt-9 flex flex-wrap justify-center gap-3">
           <CodeRocketButton asChild size="lg">
@@ -127,7 +127,7 @@ export function Benefits() {
     {
       title: 'The right check for each access level',
       description:
-        'Open pages run from the cloud. Restricted pages run from a CI environment that already has access.'
+        'Open pages run from the cloud. Restricted pages use a secure runner in an environment that already has access.'
     },
     {
       title: 'Reports built to share',

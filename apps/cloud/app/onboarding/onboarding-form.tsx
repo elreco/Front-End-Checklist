@@ -227,7 +227,9 @@ export function OnboardingForm({
             </CodeRocketButton>
           ) : (
             <CodeRocketButton key="submit" size="lg" type="submit">
-              {accessMode === 'private' ? 'Add site and set up CI' : 'Add site and check access'}{' '}
+              {accessMode === 'private'
+                ? 'Add site and connect secure access'
+                : 'Add site and check access'}{' '}
               <ArrowRight aria-hidden />
             </CodeRocketButton>
           )}

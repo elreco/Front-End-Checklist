@@ -15,7 +15,7 @@ const links = [
   { href: '/docs', label: 'Start here', icon: BookOpen },
   { href: '/docs/audits', label: 'How checks work', icon: Workflow },
   { href: '/docs/ai', label: 'AI fix assistant', icon: BrainCircuit },
-  { href: '/docs/cli', label: 'CI checks', icon: Terminal },
+  { href: '/docs/cli', label: 'Protected sites', icon: Terminal },
   { href: '/docs/rules', label: 'Website rules', icon: ListChecks },
   { href: '/docs/security', label: 'Security details', icon: ShieldCheck }
 ]

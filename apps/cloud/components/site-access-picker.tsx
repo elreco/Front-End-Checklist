@@ -16,7 +16,7 @@ const options = [
     title: 'Sign-in or private access is required',
     description:
       'Choose this for customer accounts, private previews, access headers, or an internal network.',
-    badge: 'CI setup'
+    badge: 'Secure setup'
   }
 ] as const
 
@@ -88,9 +88,9 @@ function getAccessExplanation(mode: SiteAccessMode) {
   if (mode === 'private')
     return {
       icon: LockKeyhole,
-      title: 'We will guide you through CI setup',
+      title: 'We will guide you through secure access',
       description:
-        'Run the same HTML check from GitHub, GitLab, Bitbucket, or another environment that already has access. CodeRocket does not store your website password.'
+        'Run the same HTML check from an environment that already has access. You can copy the setup for a developer, and CodeRocket never stores your normal website password.'
     }
   return {
     icon: Cloud,

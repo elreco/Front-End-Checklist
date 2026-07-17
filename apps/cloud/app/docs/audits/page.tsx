@@ -61,7 +61,7 @@ export default function AuditDocumentationPage() {
             label="No sign-in required"
           />
           <CheckType
-            description="The cloud check stays off. GitHub, GitLab, Bitbucket, or another CI environment with access opens the page and sends only the result."
+            description="The cloud check stays off. A secure runner in GitHub, GitLab, Bitbucket, or another environment with access opens the page and sends only the result."
             icon={LockKeyhole}
             label="Sign-in or private access required"
           />
@@ -182,9 +182,9 @@ export default function AuditDocumentationPage() {
             label="Live website checks"
           />
           <CheckType
-            description="The CLI can inspect a deployed preview and submit its signed result, commit, branch, and pull-request context to the same comparison engine."
+            description="A secure runner can inspect protected live pages and submit only the signed result. The generated setup runs manually or on a schedule."
             icon={Code2}
-            label="Preview and CI checks"
+            label="Protected site checks"
           />
           <CheckType
             description="All maintained Front-End Checklist rules stay available in CodeRocket, including browser, source-code, testing, privacy, and human-review guidance."

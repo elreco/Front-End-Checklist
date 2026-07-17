@@ -71,10 +71,10 @@ export function OnboardingChecklist({ data }: { data: DashboardData }) {
       icon: Globe2
     },
     {
-      title: data.setupRequiredCount > 0 ? 'Set up the CI check' : 'Let the first check finish',
+      title: data.setupRequiredCount > 0 ? 'Connect secure access' : 'Let the first check finish',
       description:
         data.setupRequiredCount > 0
-          ? 'Run the HTML check from GitHub, GitLab, Bitbucket, or another environment that can open the restricted pages.'
+          ? 'Send the guided setup to a developer, or connect an environment that can open the protected pages.'
           : 'This creates your reference point, so later changes can be compared fairly.',
       complete: data.setup.hasSuccessfulCheck,
       href: data.projects[0] ? `/projects/${data.projects[0].id}` : '/onboarding',

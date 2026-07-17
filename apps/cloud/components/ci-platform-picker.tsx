@@ -5,7 +5,7 @@ import {
   GitHubBrandIcon,
   GitLabBrandIcon
 } from '@repo/design-system/brand-icons'
-import { Terminal } from '@repo/design-system/icons'
+import { Check, Terminal } from '@repo/design-system/icons'
 import type { ComponentType } from 'react'
 import type { CiPlatform } from '@/lib/ci-config'
 
@@ -83,6 +83,9 @@ export function CiPlatformPicker({
                   <span className="block font-semibold text-sm">{platform.label}</span>
                   <span className="mt-0.5 block text-muted text-xs">{platform.description}</span>
                 </span>
+                {selected ? (
+                  <Check aria-hidden className="ml-auto h-4 w-4 shrink-0 text-success" />
+                ) : null}
               </span>
             </label>
           )

@@ -71,8 +71,9 @@ export function ProjectAccessRecovery({
                 pages={project.pages}
                 plan={project.plan}
                 projectId={project.id}
+                receivedChecks={project.ciRuns}
                 siteUrl={project.url}
-                triggerLabel="Set up CI check"
+                triggerLabel="Connect secure access"
               />
             ) : null}
             {canRetryCloud ? (
@@ -130,14 +131,14 @@ function getRecoveryContent(kind: ReturnType<typeof getProjectRecoveryKind>, pri
     }
   if (kind === 'access')
     return {
-      title: 'Open the protected pages from CI',
+      title: 'Give CodeRocket secure access',
       description:
-        'The website answered, but access was blocked by sign-in, a firewall, or a challenge. Run the check from an environment that can already open these pages.'
+        'The website answered, but sign-in, a firewall, or a challenge blocked the cloud check. Run it from an environment that can already open these pages.'
     }
   return {
     title: 'Retry the incomplete check',
     description: privateSite
-      ? 'The website could not return every selected page. Run the CI check again; edit the URLs if the failure continues.'
+      ? 'The website could not return every selected page. Run the secure check again; edit the URLs if the failure continues.'
       : 'The website could not return every selected page. Retry first; edit the URLs if the failure continues.'
   }
 }

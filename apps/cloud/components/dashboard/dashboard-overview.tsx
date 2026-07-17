@@ -45,7 +45,7 @@ export function DashboardOverview({
             {data.projectCount === 0
               ? `Welcome, ${firstName}. Let’s add your first site.`
               : data.setupRequiredCount > 0
-                ? `${data.setupRequiredCount} restricted ${data.setupRequiredCount === 1 ? 'site needs' : 'sites need'} CI setup.`
+                ? `${data.setupRequiredCount} restricted ${data.setupRequiredCount === 1 ? 'site needs' : 'sites need'} secure access.`
                 : data.attentionCount > 0
                   ? `${data.attentionCount} new ${data.attentionCount === 1 ? 'problem needs' : 'problems need'} a look.`
                   : data.incompleteCount > 0
@@ -56,7 +56,7 @@ export function DashboardOverview({
             {data.projectCount === 0
               ? 'CodeRocket checks your live pages, remembers the current state, and tells you only when something important changes.'
               : data.setupRequiredCount > 0
-                ? 'Restricted pages are never checked from the public cloud. Open the site and connect GitHub, GitLab, Bitbucket, or another CI environment that can reach it.'
+                ? 'Restricted pages are never checked from the public cloud. Open the site to send clear setup instructions or connect an environment that can reach it.'
                 : data.attentionCount > 0
                   ? 'These problems appeared after the previous complete check. Known problems stay visible, but do not create a new alert.'
                   : data.incompleteCount > 0

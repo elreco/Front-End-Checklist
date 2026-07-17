@@ -1,6 +1,14 @@
 'use client'
 
-import { CheckCircle2, Copy, KeyRound, LoaderCircle, Terminal } from '@repo/design-system/icons'
+import {
+  Check,
+  Copy,
+  LockKeyhole,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Terminal
+} from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { toast } from '@repo/design-system/ui/coderocket-toast'
 import {
@@ -14,213 +22,168 @@ import {
   DialogTrigger
 } from '@repo/design-system/ui/dialog'
 import Link from 'next/link'
-import { type ReactNode, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   buildCiConfiguration,
   type CiPlatform,
   getCiConfigLocation,
-  getCiPlatformLabel,
-  getCiSecretLocation
+  getCiPlatformLabel
 } from '@/lib/ci-config'
+import {
+  buildSecureAccessCopy,
+  type SecureAccessCopy,
+  type SecureAccessMethod
+} from '@/lib/secure-access-copy'
 import { CiPlatformPicker } from './ci-platform-picker'
+import { SecureAccessAdvancedSetup } from './secure-access-advanced-setup'
+import { SecureAccessMethodPicker } from './secure-access-method-picker'
 
-interface TokenResponse {
-  message: string
-  prefix: string
-  token: string
-}
-
-interface ProjectCliSetupProps {
+interface ProjectSecureAccessSetupProps {
   configured: boolean
   pages: string[]
   plan: 'free' | 'solo' | 'agency'
   projectId: string
+  receivedChecks?: number
   siteUrl: string
   triggerLabel?: string
 }
 
-/** Guide an owner through a copy-ready CI setup for restricted website checks. */
+/** Guide owners and developers through secure checks without exposing CI first. */
 export function ProjectCliSetup({
   configured,
   pages,
   plan,
   projectId,
+  receivedChecks = 0,
   siteUrl,
   triggerLabel
-}: ProjectCliSetupProps) {
-  const [loading, setLoading] = useState(false)
+}: ProjectSecureAccessSetupProps) {
+  const [accessMethod, setAccessMethod] = useState<SecureAccessMethod>('unknown')
+  const [copied, setCopied] = useState<keyof SecureAccessCopy | null>(null)
   const [platform, setPlatform] = useState<CiPlatform>('github')
-  const [token, setToken] = useState('')
   const configuration = useMemo(
-    () => buildCiConfiguration(platform, { pages, plan, siteUrl }),
-    [pages, plan, platform, siteUrl]
+    () => buildCiConfiguration(platform, { accessMethod, pages, plan, siteUrl }),
+    [accessMethod, pages, plan, platform, siteUrl]
+  )
+  const copy = useMemo(
+    () =>
+      buildSecureAccessCopy({
+        accessMethod,
+        configuration,
+        configurationLocation: getCiConfigLocation(platform),
+        pages,
+        platformLabel: getCiPlatformLabel(platform),
+        siteUrl
+      }),
+    [accessMethod, configuration, pages, platform, siteUrl]
   )
 
-  /** Create one project-scoped credential labelled for the selected CI platform. */
-  async function createToken() {
-    setLoading(true)
+  /** Copy one safe handoff without including credentials. */
+  async function copyText(kind: keyof SecureAccessCopy) {
     try {
-      const response = await fetch(`/api/projects/${projectId}/tokens`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: getCiPlatformLabel(platform) })
-      })
-      const payload: unknown = await response.json()
-      if (!response.ok || !isTokenResponse(payload)) throw new Error(readError(payload))
-      setToken(payload.token)
-      toast.success('Project key created', {
-        description: `Save it in ${getCiPlatformLabel(platform)} now. CodeRocket stores only its secure hash.`
-      })
-    } catch (error) {
-      toast.error('Project key could not be created', {
-        description: error instanceof Error ? error.message : 'Please try again.'
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  /** Copy a generated value and announce whether the browser accepted the request. */
-  async function copyValue(value: string, label: string) {
-    try {
-      await navigator.clipboard.writeText(value)
-      toast.success(`${label} copied`)
+      await navigator.clipboard.writeText(copy[kind])
+      setCopied(kind)
+      toast.success(
+        kind === 'developerInstructions' ? 'Developer setup copied' : 'Access request copied',
+        {
+          description: 'No project key, password, cookie, or access secret was included.'
+        }
+      )
+      window.setTimeout(() => setCopied(null), 2_000)
     } catch {
-      toast.error(`${label} could not be copied`)
+      toast.error('Could not copy the instructions')
     }
   }
 
-  const buttonLabel = triggerLabel ?? (configured ? 'CI check details' : 'Set up a CI check')
+  const connected = receivedChecks > 0
+  const buttonLabel =
+    triggerLabel ??
+    (connected
+      ? 'Secure access details'
+      : configured
+        ? 'Finish secure access'
+        : 'Connect secure access')
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <CodeRocketButton size="sm" variant={configured ? 'outline' : 'primary'}>
-          <Terminal aria-hidden /> {buttonLabel}
+        <CodeRocketButton size="sm" variant={connected || configured ? 'outline' : 'primary'}>
+          <LockKeyhole aria-hidden /> {buttonLabel}
         </CodeRocketButton>
       </DialogTrigger>
       <DialogContent
-        className="flex max-h-[calc(100dvh-2rem)] max-w-3xl flex-col gap-0 overflow-hidden rounded-none bg-surface p-0"
+        className="flex max-h-[calc(100dvh-2rem)] max-w-4xl flex-col gap-0 overflow-hidden rounded-none bg-surface p-0"
         showClose
       >
         <DialogHeader className="shrink-0 border-border border-b p-6 pr-14">
           <div className="flex items-start gap-4">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-signal bg-background text-signal">
-              <Terminal aria-hidden className="h-5 w-5" />
+              <LockKeyhole aria-hidden className="h-5 w-5" />
             </span>
             <div>
               <p className="font-mono text-[10px] text-signal uppercase tracking-[.14em]">
-                Guided CI setup
+                Protected site access
               </p>
               <DialogTitle className="mt-2 font-heading text-2xl">
-                Run checks from your project
+                Let CodeRocket reach protected pages
               </DialogTitle>
               <DialogDescription className="mt-2 max-w-2xl leading-6">
-                Use an environment that can already open the website. The check analyzes returned
-                HTML and response headers; it does not read repository source files or run browser
-                JavaScript.
+                Run the check from an environment that can already open this site. Website
+                credentials stay there; CodeRocket receives only the check result.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <section
-          aria-label="CI setup steps"
-          className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-6"
-        >
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-6">
+          <ConnectionStatus configured={configured} receivedChecks={receivedChecks} />
+          <SecureAccessMethodPicker onChange={setAccessMethod} value={accessMethod} />
           <CiPlatformPicker onChange={setPlatform} value={platform} />
 
-          <SetupSection
-            complete={configured || Boolean(token)}
-            number="01"
-            title="Save the project key"
-          >
-            <p className="text-muted text-sm leading-6">
-              Create a website-specific key, then save it as{' '}
-              <code className="font-mono text-foreground text-xs">CODEROCKET_TOKEN</code> in{' '}
-              {getCiSecretLocation(platform)}.
-            </p>
-            {token ? (
-              <div className="mt-4 border border-signal bg-surface p-4">
-                <p className="font-mono text-[10px] text-signal uppercase tracking-[.1em]">
-                  Shown once · copy it now
-                </p>
-                <code className="mt-3 block max-h-24 overflow-auto break-all border border-border bg-background p-3 text-xs leading-6">
-                  {token}
-                </code>
-                <CodeRocketButton
-                  className="mt-3"
-                  onClick={() => copyValue(token, 'Project key')}
-                  size="sm"
-                  type="button"
-                >
-                  <Copy aria-hidden /> Copy project key
-                </CodeRocketButton>
-              </div>
-            ) : (
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <CodeRocketButton
-                  disabled={loading}
-                  onClick={createToken}
-                  size="sm"
-                  type="button"
-                  variant={configured ? 'outline' : 'primary'}
-                >
-                  {loading ? (
-                    <LoaderCircle aria-hidden className="animate-spin" />
-                  ) : (
-                    <KeyRound aria-hidden />
-                  )}
-                  {loading ? 'Creating…' : configured ? 'Create another key' : 'Create project key'}
-                </CodeRocketButton>
-                {configured ? (
-                  <span className="inline-flex items-center gap-2 text-success text-xs">
-                    <CheckCircle2 aria-hidden className="h-4 w-4" /> A key is already active
-                  </span>
-                ) : null}
-              </div>
-            )}
-          </SetupSection>
-
-          <SetupSection number="02" title={`Add ${getCiConfigLocation(platform)}`}>
-            <p className="text-muted text-sm leading-6">
-              Copy this configuration into your repository. It runs the current lightweight HTML
-              check; no Playwright installation is required.
-            </p>
-            <div className="relative mt-4">
-              <CodeRocketButton
-                aria-label="Copy CI configuration"
-                className="absolute top-2 right-2 z-10"
-                onClick={() => copyValue(configuration, 'CI configuration')}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <Copy aria-hidden /> Copy
-              </CodeRocketButton>
-              <pre className="max-h-72 overflow-auto whitespace-pre-wrap border border-border bg-background p-4 pr-24 font-mono text-xs leading-6">
-                <code>{configuration}</code>
-              </pre>
+          <section aria-labelledby="handoff-title" className="border border-border bg-background">
+            <div className="border-border border-b p-5">
+              <p className="font-mono text-[10px] text-signal uppercase tracking-[.12em]">
+                No technical setup required from you
+              </p>
+              <h3 className="mt-2 font-heading font-semibold text-lg" id="handoff-title">
+                Send the right instructions
+              </h3>
+              <p className="mt-1 text-muted text-sm leading-6">
+                Choose who can configure access. Secrets are deliberately excluded from both
+                formats.
+              </p>
             </div>
-            <p className="mt-3 text-muted text-xs leading-5">
-              If the site needs a cookie or access headers, also save them as{' '}
-              <code className="font-mono text-foreground">CODEROCKET_SITE_HEADERS_JSON</code>. They
-              are used inside CI and are never included in the submitted result.
-            </p>
-          </SetupSection>
+            <div className="grid gap-px bg-border sm:grid-cols-2">
+              <HandoffAction
+                copied={copied === 'developerInstructions'}
+                description="Includes the generated configuration, protected pages, and success criteria."
+                icon={Terminal}
+                label="Send to my developer"
+                onCopy={() => copyText('developerInstructions')}
+              />
+              <HandoffAction
+                copied={copied === 'providerRequest'}
+                description="Explains the narrow access needed without asking anyone to disable protection."
+                icon={Send}
+                label="Ask my hosting or security provider"
+                onCopy={() => copyText('providerRequest')}
+              />
+            </div>
+          </section>
 
-          <SetupSection number="03" title="Run the first check">
-            <p className="text-muted text-sm leading-6">
-              Start the generated job once. CodeRocket will confirm the connection when the first
-              result arrives. GitHub includes the {plan === 'free' ? 'weekly' : 'daily'} schedule;
-              configure the equivalent pipeline schedule in other platforms.
-            </p>
-          </SetupSection>
-        </section>
+          <SecureAccessAdvancedSetup
+            accessMethod={accessMethod}
+            configuration={configuration}
+            configured={configured}
+            plan={plan}
+            platform={platform}
+            projectId={projectId}
+          />
+        </div>
 
         <DialogFooter className="shrink-0 border-border border-t bg-background p-4 sm:items-center sm:justify-between">
           <CodeRocketButton asChild size="sm" variant="ghost">
-            <Link href="/docs/cli">Open the advanced guide →</Link>
+            <Link href="/docs/cli">Open the protected-site guide →</Link>
           </CodeRocketButton>
           <DialogClose asChild>
             <CodeRocketButton size="sm" type="button" variant="outline">
@@ -233,47 +196,88 @@ export function ProjectCliSetup({
   )
 }
 
-/** Render one numbered setup section with an optional ready state. */
-function SetupSection({
-  children,
-  complete = false,
-  number,
-  title
+/** Explain whether a key or a complete secure check has been observed. */
+function ConnectionStatus({
+  configured,
+  receivedChecks
 }: {
-  children: ReactNode
-  complete?: boolean
-  number: string
-  title: string
+  configured: boolean
+  receivedChecks: number
+}) {
+  if (receivedChecks > 0)
+    return (
+      <div className="flex items-start gap-3 border border-success bg-success/10 p-4">
+        <ShieldCheck aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-success" />
+        <div>
+          <p className="font-semibold text-sm">Secure access connected</p>
+          <p className="mt-1 text-muted text-xs leading-5">
+            CodeRocket has received {receivedChecks} secure{' '}
+            {receivedChecks === 1 ? 'check' : 'checks'} from your runner.
+          </p>
+        </div>
+      </div>
+    )
+  if (configured)
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 border border-signal bg-signal/10 p-4">
+        <div>
+          <p className="font-semibold text-sm">Waiting for the first secure check</p>
+          <p className="mt-1 text-muted text-xs leading-5">
+            A project key exists. Run the generated job once, then refresh this page.
+          </p>
+        </div>
+        <CodeRocketButton
+          onClick={() => window.location.reload()}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <RefreshCw aria-hidden /> Refresh status
+        </CodeRocketButton>
+      </div>
+    )
+  return (
+    <div className="flex items-start gap-3 border border-border bg-background p-4">
+      <LockKeyhole aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-signal" />
+      <div>
+        <p className="font-semibold text-sm">Secure access is not connected yet</p>
+        <p className="mt-1 text-muted text-xs leading-5">
+          Start by describing the protection, then send the instructions or open the advanced setup.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** Render one copy-first handoff option. */
+function HandoffAction({
+  copied,
+  description,
+  icon: Icon,
+  label,
+  onCopy
+}: {
+  copied: boolean
+  description: string
+  icon: typeof Copy
+  label: string
+  onCopy: () => void
 }) {
   return (
-    <section className="border border-border bg-surface p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="font-heading font-semibold text-base">{title}</h3>
-        <span className={`font-mono text-[10px] ${complete ? 'text-success' : 'text-muted'}`}>
-          {complete ? 'READY' : number}
-        </span>
-      </div>
-      <div className="mt-3">{children}</div>
-    </section>
+    <article className="flex flex-col bg-surface p-5">
+      <Icon aria-hidden className="h-5 w-5 text-signal" />
+      <h4 className="mt-4 font-heading font-semibold text-base">{label}</h4>
+      <p className="mt-2 flex-1 text-muted text-xs leading-5">{description}</p>
+      <CodeRocketButton
+        className="mt-4 justify-center"
+        onClick={onCopy}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+        <span aria-live="polite">{copied ? 'Copied' : 'Copy instructions'}</span>
+      </CodeRocketButton>
+    </article>
   )
-}
-
-/** Validate the token endpoint payload before exposing a one-time secret. */
-function isTokenResponse(value: unknown): value is TokenResponse {
-  if (!value || typeof value !== 'object') return false
-  return (
-    'token' in value &&
-    typeof value.token === 'string' &&
-    'prefix' in value &&
-    typeof value.prefix === 'string' &&
-    'message' in value &&
-    typeof value.message === 'string'
-  )
-}
-
-/** Extract a safe API error message with a stable fallback. */
-function readError(value: unknown): string {
-  return value && typeof value === 'object' && 'error' in value && typeof value.error === 'string'
-    ? value.error
-    : 'Please try again.'
 }

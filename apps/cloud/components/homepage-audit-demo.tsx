@@ -3,7 +3,7 @@ import { AlertTriangle, Check, Globe2, Radar } from '@repo/design-system/icons'
 const steps = [
   {
     label: 'Choose how the page is reached',
-    detail: 'Use the cloud for open pages or your CI environment for restricted pages.'
+    detail: 'Use the cloud for open pages or a secure runner for restricted pages.'
   },
   {
     label: 'Check what visitors receive',

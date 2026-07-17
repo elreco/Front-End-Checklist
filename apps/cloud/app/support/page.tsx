@@ -14,7 +14,7 @@ import { createPublicMetadata, SUPPORT_EMAIL } from '@/lib/seo'
 export const metadata: Metadata = createPublicMetadata({
   title: 'Support',
   description:
-    'Get help with CodeRocket website checks, account access, billing, security, CI checks, and client reports.',
+    'Get help with CodeRocket website checks, account access, billing, security, protected sites, and client reports.',
   path: '/support',
   keywords: ['CodeRocket support', 'website monitoring help']
 })
@@ -84,8 +84,8 @@ export default function SupportPage() {
             <BookOpen aria-hidden className="h-5 w-5 text-accent" />
             <h2 className="mt-5 font-heading font-semibold text-2xl">Find an answer now</h2>
             <p className="mt-3 text-muted leading-7">
-              The official guide explains cloud and CI checks, guided resolutions, and every rule in
-              the synchronized reference.
+              The official guide explains cloud checks, protected-site access, guided resolutions,
+              and every rule in the synchronized reference.
             </p>
             <CodeRocketButton asChild className="mt-6" variant="outline">
               <Link href="/docs">

@@ -27,6 +27,7 @@ export function ProjectPrimaryAction({
         pages={project.pages}
         plan={project.plan}
         projectId={project.id}
+        receivedChecks={project.ciRuns}
         siteUrl={project.url}
       />
     )

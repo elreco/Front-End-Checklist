@@ -7,7 +7,7 @@ export function GET() {
 
 > Website health monitoring that shows what changed, what still needs attention, and what could not be verified.
 
-CodeRocket monitors selected website pages through a cloud check when no sign-in is required or a CI check when access is restricted. It uses deterministic checks grounded in the maintained Front-End Checklist corpus, then offers optional AI explanations without allowing AI to edit a website or resolve a finding.
+CodeRocket monitors selected website pages through a cloud check when no sign-in is required or a secure customer-controlled runner when access is restricted. It uses deterministic checks grounded in the maintained Front-End Checklist corpus, then offers optional AI explanations without allowing AI to edit a website or resolve a finding.
 
 ## Product
 
@@ -20,7 +20,7 @@ CodeRocket monitors selected website pages through a cloud check when no sign-in
 - [Documentation home](${SITE_URL}/docs): Start here
 - [How checks work](${SITE_URL}/docs/audits): Access modes, evidence, comparison, and incomplete pages
 - [AI fix assistant](${SITE_URL}/docs/ai): Grounding, safety boundaries, and fresh verification
-- [CI checks](${SITE_URL}/docs/cli): Restricted pages and preview deployments with GitHub, GitLab, Bitbucket, or another CI
+- [Protected site access](${SITE_URL}/docs/cli): Restricted pages checked from GitHub, GitLab, Bitbucket, or another environment that already has access
 - [Security model](${SITE_URL}/docs/security): Safe fetching, tenant isolation, tokens, and retention
 - [Rules reference](${SITE_URL}/docs/rules): Searchable synchronized rule corpus
 - [Complete rule index](${SITE_URL}/llms-full.txt): ${DOCUMENTATION_RULES.length} rules from ruleset ${DOCUMENTATION_RULESET_VERSION}

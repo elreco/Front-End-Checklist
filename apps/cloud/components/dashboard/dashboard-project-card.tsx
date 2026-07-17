@@ -58,7 +58,7 @@ export function DashboardProjectCard({ project }: { project: DashboardProject })
         </div>
         <p className="mt-4 text-muted text-xs">
           {project.accessMode === 'private' && !project.hasCompletedCheck
-            ? 'Set up the CI check to start the first result.'
+            ? 'Connect secure access to start the first result.'
             : `Next check ${project.nextCheck}`}
         </p>
       </div>
@@ -71,7 +71,7 @@ export function ProjectStatusBadge({ project }: { project: DashboardProject }) {
   if (!project.hasCompletedCheck)
     return (
       <span className="inline-flex shrink-0 border border-accent bg-accent/10 px-2.5 py-1 font-mono font-semibold text-[10px] text-accent uppercase tracking-[.08em]">
-        {project.accessMode === 'private' ? 'CI setup needed' : 'First check pending'}
+        {project.accessMode === 'private' ? 'Secure access needed' : 'First check pending'}
       </span>
     )
   return <WebsiteLevelBadge level={project.level.level} />

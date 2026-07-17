@@ -105,7 +105,7 @@ export function ProjectSiteEditor({
           : (payload.checkWarning ??
             (checkAfterSave
               ? 'The changes are saved. Start a fresh check when you are ready.'
-              : 'The changes are saved. Run the next check from your CI environment.'))
+              : 'The changes are saved. Run the next check from your secure environment.'))
       })
       router.refresh()
     } catch (caught) {

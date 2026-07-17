@@ -57,7 +57,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
                 <div className="flex flex-wrap items-center gap-3">
                   {waitingForCi ? (
                     <span className="inline-flex border border-accent bg-accent/10 px-2.5 py-1 font-mono font-semibold text-[10px] text-accent uppercase tracking-[.08em]">
-                      CI setup required
+                      Secure access required
                     </span>
                   ) : (
                     <GateBadge status={latest?.gate ?? 'needs_baseline'} />
@@ -72,12 +72,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
                 </div>
                 <h2 className="mt-4 font-heading font-semibold text-2xl">
                   {waitingForCi
-                    ? 'Set up the CI check to start'
+                    ? 'Connect secure access to start'
                     : getHeadline(latest?.gate, latest?.persistentCount ?? 0, project.checking)}
                 </h2>
                 <p className="mt-2 max-w-3xl text-muted leading-7">
                   {waitingForCi
-                    ? 'These pages need sign-in or private access. Run the HTML check from GitHub, GitLab, Bitbucket, or another environment that can already open them.'
+                    ? 'These pages need sign-in or private access. Send the setup to a developer, or run the check from an environment that can already open them.'
                     : getExplanation(
                         latest?.gate,
                         latest?.blockingCount ?? 0,
@@ -141,7 +141,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
           </p>
           <p className="mt-1 text-muted text-xs">
             {waitingForCi
-              ? 'Waiting for CI setup'
+              ? 'Waiting for secure access'
               : firstCheckRunning
                 ? 'Checking now'
                 : `Next check ${project.nextCheck}`}
