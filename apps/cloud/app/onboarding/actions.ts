@@ -13,9 +13,6 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 export async function createProject(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim()
   const url = String(formData.get('url') ?? '').trim()
-  const rawAudience = formData.get('audience')
-  const audience =
-    rawAudience === 'freelancer' || rawAudience === 'agency' ? rawAudience : 'site_owner'
   const accessMode = resolveAccessMode(formData.get('accessMode'))
   const rawPagePaths = String(formData.get('pages') ?? '/')
     .split('\n')
@@ -37,7 +34,6 @@ export async function createProject(formData: FormData) {
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) redirect('/login?next=/onboarding')
-  await supabase.from('cr_profiles').update({ audience }).eq('id', auth.user.id)
   const { data: subscription } = await supabase
     .from('cr_subscriptions')
     .select('plan_id')

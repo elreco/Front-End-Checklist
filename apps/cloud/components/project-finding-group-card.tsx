@@ -1,6 +1,6 @@
 'use client'
 
-import { EyeOff, FileSearch2, RotateCcw } from '@repo/design-system/icons'
+import { ExternalLink, EyeOff, FileSearch2, RotateCcw } from '@repo/design-system/icons'
 import { Badge } from '@repo/design-system/ui/badge'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
@@ -103,7 +103,14 @@ export function ProjectFindingGroupCard({
             />
           ) : null}
           <CodeRocketButton asChild size="sm" variant="outline">
-            <Link href={documentationUrl}>How to fix →</Link>
+            <Link
+              aria-label="How to fix (opens in a new tab)"
+              href={documentationUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              How to fix <ExternalLink aria-hidden />
+            </Link>
           </CodeRocketButton>
           <form action={updateWorkflow}>
             <input name="status" type="hidden" value={nextWorkflowStatus(group.workflowStatus)} />

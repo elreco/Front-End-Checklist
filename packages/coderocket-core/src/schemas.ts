@@ -38,6 +38,10 @@ export const auditSubmissionSchema = z.object({
         httpStatus: z.number().int().min(100).max(599).optional(),
         durationMs: z.number().int().min(0).max(120_000).optional(),
         finalUrl: z.url({ protocol: /^https$/ }).optional(),
+        socialImageUrl: z
+          .url({ protocol: /^https$/ })
+          .max(2048)
+          .optional(),
         error: z.string().max(2000).optional()
       })
     )

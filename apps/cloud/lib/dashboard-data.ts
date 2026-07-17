@@ -8,6 +8,7 @@ import {
 } from '@coderocket/core'
 import { calculateWebsiteLevel, type WebsiteLevelResult } from '@coderocket/core/website-level'
 import { formatRelativeTime } from './format'
+import { getSupabaseServerConfig } from './supabase/config'
 import { firstRelation, normalizeRelation } from './supabase/relations'
 import { createSupabaseServerClient } from './supabase/server'
 
@@ -15,6 +16,7 @@ export interface DashboardProject {
   id: string
   name: string
   url: string
+  socialImageUrl?: string
   createdAt: string
   accessMode: SiteAccessMode
   hasCompletedCheck: boolean
@@ -82,6 +84,7 @@ const demoData: DashboardData = {
       id: 'demo-acme',
       name: 'Acme Storefront',
       url: 'https://acme.example',
+      socialImageUrl: '/social-card.png',
       createdAt: '2026-07-16T08:00:00.000Z',
       accessMode: 'public',
       hasCompletedCheck: true,
@@ -125,8 +128,7 @@ const demoData: DashboardData = {
 /** Load the real workspace overview used by the authenticated dashboard. */
 export async function getDashboardData(): Promise<DashboardData> {
   if (process.env.CODEROCKET_DEMO_MODE === 'true') return demoData
-  if (!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY))
-    return emptyDashboard()
+  if (!getSupabaseServerConfig()) return emptyDashboard()
 
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
@@ -148,7 +150,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     supabase
       .from('cr_projects')
       .select(
-        'id,name,production_url,page_paths,access_mode,next_audit_at,schedule_enabled,created_at'
+        'id,name,production_url,social_image_url,page_paths,access_mode,next_audit_at,schedule_enabled,created_at'
       )
       .eq('owner_id', auth.user.id)
       .is('archived_at', null)
@@ -235,6 +237,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       id: project.id,
       name: project.name,
       url: project.production_url,
+      socialImageUrl: project.social_image_url ?? undefined,
       createdAt: project.created_at,
       accessMode: resolveAccessMode(project.access_mode),
       hasCompletedCheck: Boolean(latest),

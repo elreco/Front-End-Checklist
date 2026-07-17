@@ -1,7 +1,7 @@
 'use client'
 
 import type { SiteAccessMode } from '@coderocket/core'
-import { ArrowLeft, ArrowRight, Check, Globe2, Radar, UserRound } from '@repo/design-system/icons'
+import { ArrowLeft, ArrowRight, Check, Globe2, Radar } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
 import type { FormEvent, MouseEvent } from 'react'
@@ -12,29 +12,12 @@ import type { PlanId } from '@/lib/upgrade'
 import { createProject } from './actions'
 import { OnboardingPagesStep } from './onboarding-pages-step'
 
-const audienceOptions = [
-  {
-    value: 'site_owner',
-    title: 'My own website',
-    description: 'A portfolio, shop, newsletter, association, or company website.'
-  },
-  {
-    value: 'freelancer',
-    title: 'Client websites',
-    description: 'Websites you deliver or maintain for your clients.'
-  },
-  {
-    value: 'agency',
-    title: 'An agency portfolio',
-    description: 'Several client websites monitored from one place.'
-  }
+const steps = [
+  { number: 1, label: 'The website', icon: Globe2 },
+  { number: 2, label: 'Pages to watch', icon: Radar }
 ] as const
 
-const steps = [
-  { number: 1, label: 'Your use', icon: UserRound },
-  { number: 2, label: 'The website', icon: Globe2 },
-  { number: 3, label: 'Pages to watch', icon: Radar }
-] as const
+const lastStep = steps.length
 
 /** A short, keyboard-friendly setup wizard for the first monitored website. */
 export function OnboardingForm({
@@ -76,7 +59,7 @@ export function OnboardingForm({
         return
       }
     }
-    setStep(current => Math.min(3, current + 1))
+    setStep(current => Math.min(lastStep, current + 1))
   }
 
   /** Prevent the advancing button from becoming a submit button during the same browser click. */
@@ -87,7 +70,7 @@ export function OnboardingForm({
 
   /** Turn implicit submissions into navigation until the final setup step is visible. */
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (step < 3) {
+    if (step < lastStep) {
       event.preventDefault()
       advanceStep()
       return
@@ -104,15 +87,17 @@ export function OnboardingForm({
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="font-mono text-[10px] text-signal uppercase tracking-[.16em]">
-              {step} of 3
+              {step} of {lastStep}
             </p>
             <p className="mt-1 text-muted text-sm">A first check takes only a few minutes.</p>
           </div>
-          <span className="font-mono text-muted text-xs">{Math.round((step / 3) * 100)}%</span>
+          <span className="font-mono text-muted text-xs">
+            {Math.round((step / lastStep) * 100)}%
+          </span>
         </div>
         <div
           aria-label="Website setup progress"
-          aria-valuemax={3}
+          aria-valuemax={lastStep}
           aria-valuemin={1}
           aria-valuenow={step}
           className="mt-4 h-1 overflow-hidden bg-surface-raised"
@@ -120,10 +105,10 @@ export function OnboardingForm({
         >
           <span
             className="block h-full bg-signal transition-[width] duration-500 motion-reduce:transition-none"
-            style={{ width: `${(step / 3) * 100}%` }}
+            style={{ width: `${(step / lastStep) * 100}%` }}
           />
         </div>
-        <ol className="mt-5 grid grid-cols-3 gap-2">
+        <ol className="mt-5 grid grid-cols-2 gap-2">
           {steps.map(({ icon: Icon, label, number }) => {
             const complete = number < step
             const current = number === step
@@ -153,56 +138,18 @@ export function OnboardingForm({
 
       <div className="p-5 sm:p-7">
         <fieldset className="cr-step-enter space-y-5" data-setup-step="1" hidden={step !== 1}>
-          <legend className="sr-only">How you will use CodeRocket</legend>
+          <legend className="sr-only">Website address and access</legend>
           <h2
             className="font-heading font-semibold text-2xl outline-none"
             id="setup-step-1-title"
             tabIndex={-1}
           >
-            What are you keeping an eye on?
+            Which website should CodeRocket watch?
           </h2>
           <p className="max-w-2xl text-muted leading-7">
-            This only adapts the help shown in your dashboard. Every website gets the same checks.
+            Add the name and public HTTPS address, then tell us how the selected pages can be
+            reached.
           </p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {audienceOptions.map((option, index) => (
-              <label
-                className="cursor-pointer border border-border bg-background p-4 transition-colors hover:border-accent has-checked:border-accent has-checked:bg-accent/10"
-                key={option.value}
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    className="accent-accent"
-                    defaultChecked={index === 0}
-                    name="audience"
-                    required
-                    type="radio"
-                    value={option.value}
-                  />
-                  <span className="font-semibold text-sm">{option.title}</span>
-                </span>
-                <span className="mt-2 block text-muted text-xs leading-5">
-                  {option.description}
-                </span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset className="cr-step-enter space-y-5" data-setup-step="2" hidden={step !== 2}>
-          <legend className="sr-only">Website address and access</legend>
-          <h2
-            className="font-heading font-semibold text-2xl outline-none"
-            id="setup-step-2-title"
-            tabIndex={-1}
-          >
-            Can these pages open without signing in?
-          </h2>
-          <p className="max-w-2xl text-muted leading-7">
-            Cloudflare or another CDN does not make a page private by itself. Choose based on
-            whether the selected pages need credentials or access from a specific network.
-          </p>
-          <SiteAccessPicker onChange={setAccessMode} value={accessMode} />
           <label className="block max-w-2xl font-semibold text-sm" htmlFor="project-name">
             Website name
             <CodeRocketInput
@@ -231,7 +178,19 @@ export function OnboardingForm({
               network.
             </span>
           </label>
-          <SiteAccessExplanation mode={accessMode} />
+          <div className="space-y-4 border-border border-t pt-5">
+            <div>
+              <h3 className="font-heading font-semibold text-lg">
+                Can these pages open without signing in?
+              </h3>
+              <p className="mt-2 max-w-2xl text-muted text-sm leading-6">
+                Cloudflare or another CDN does not make a page private by itself. Choose based on
+                whether the selected pages need credentials or access from a specific network.
+              </p>
+            </div>
+            <SiteAccessPicker onChange={setAccessMode} value={accessMode} />
+            <SiteAccessExplanation mode={accessMode} />
+          </div>
         </fieldset>
 
         <OnboardingPagesStep
@@ -247,7 +206,7 @@ export function OnboardingForm({
           pagesValue={pagesValue}
           plan={plan}
           planName={planName}
-          visible={step === 3}
+          visible={step === lastStep}
         />
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-border border-t pt-5">
@@ -262,7 +221,7 @@ export function OnboardingForm({
           ) : (
             <span className="text-muted text-xs">No code or payment card required.</span>
           )}
-          {step < 3 ? (
+          {step < lastStep ? (
             <CodeRocketButton key="continue" onClick={handleContinue} type="button">
               Continue <ArrowRight aria-hidden />
             </CodeRocketButton>

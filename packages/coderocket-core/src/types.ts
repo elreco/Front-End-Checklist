@@ -81,6 +81,7 @@ export interface AuditSubmission {
     httpStatus?: number
     durationMs?: number
     finalUrl?: string
+    socialImageUrl?: string
     error?: string
   }>
 }

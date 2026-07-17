@@ -1,5 +1,6 @@
 import type { AuditEnvironment, AuditStatus, AuditTrigger, GateStatus } from '@coderocket/core'
 import { formatAuditDate } from './format'
+import { getSupabaseServerConfig } from './supabase/config'
 import { createSupabaseServerClient } from './supabase/server'
 
 export interface AuditHistoryItem {
@@ -33,8 +34,7 @@ const demoHistory: AuditHistoryItem[] = [
 /** Load owner-scoped checks for the product history screen. */
 export async function getAuditHistory(): Promise<AuditHistoryItem[]> {
   if (process.env.CODEROCKET_DEMO_MODE === 'true') return demoHistory
-  if (!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY))
-    return []
+  if (!getSupabaseServerConfig()) return []
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return []
@@ -60,6 +60,7 @@ export async function getAuditHistory(): Promise<AuditHistoryItem[]> {
   }))
 }
 
+/** Normalize a stored gate value before exposing it to the history UI. */
 function resolveGate(value: unknown): GateStatus {
   return value === 'passed' || value === 'failed' || value === 'inconclusive'
     ? value

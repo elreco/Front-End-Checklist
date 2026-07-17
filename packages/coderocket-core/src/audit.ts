@@ -4,6 +4,7 @@ import { executeReviewCode } from '@repo/mcp/tools/review-code'
 import { PRODUCTION_HTML_RULE_SLUGS, selectProductionHtmlRules } from './automation-profile'
 import { normalizeAuditPath } from './diff'
 import { fetchPublicHtml } from './safe-fetch'
+import { extractSocialImageUrl } from './social-metadata'
 import type { AuditFindingInput, FindingCategory } from './types'
 
 const AUDIT_ENGINE_VERSION = 'coderocket-engine-4'
@@ -28,6 +29,7 @@ export interface PageAuditResult {
   httpStatus?: number
   durationMs?: number
   finalUrl?: string
+  socialImageUrl?: string
   error?: string
 }
 
@@ -167,6 +169,7 @@ export async function auditPage(
       reachable: true,
       httpStatus: source.status,
       durationMs: source.durationMs,
+      socialImageUrl: extractSocialImageUrl(source.html, source.url),
       findings: [
         ...result.issues.map(issue => ({
           pagePath: requestedPath,

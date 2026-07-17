@@ -1,5 +1,6 @@
 import { getPlanEntitlements, type PlanEntitlements, type PlanId } from '@coderocket/core'
 import { getInitials } from './format'
+import { getSupabaseServerConfig } from './supabase/config'
 import { createSupabaseServerClient } from './supabase/server'
 
 export interface AppShellContext {
@@ -10,7 +11,6 @@ export interface AppShellContext {
   limits: PlanEntitlements
   projectCount: number
   hasBillingAccount: boolean
-  audience: 'site_owner' | 'freelancer' | 'agency'
 }
 
 const demoContext: AppShellContext = {
@@ -20,14 +20,13 @@ const demoContext: AppShellContext = {
   plan: 'free',
   limits: getPlanEntitlements('free'),
   projectCount: 1,
-  hasBillingAccount: false,
-  audience: 'freelancer'
+  hasBillingAccount: false
 }
 
 /** Load the authenticated identity and plan shown throughout the product shell. */
 export async function getAppShellContext(): Promise<AppShellContext> {
   if (process.env.CODEROCKET_DEMO_MODE === 'true') return demoContext
-  if (!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY))
+  if (!getSupabaseServerConfig())
     return {
       ...demoContext,
       displayName: 'CodeRocket user',
@@ -48,11 +47,7 @@ export async function getAppShellContext(): Promise<AppShellContext> {
     }
 
   const [{ data: profile }, { data: subscription }, { count: projectCount }] = await Promise.all([
-    supabase
-      .from('cr_profiles')
-      .select('display_name,audience')
-      .eq('id', auth.user.id)
-      .maybeSingle(),
+    supabase.from('cr_profiles').select('display_name').eq('id', auth.user.id).maybeSingle(),
     supabase
       .from('cr_subscriptions')
       .select('plan_id,stripe_customer_id')
@@ -83,10 +78,6 @@ export async function getAppShellContext(): Promise<AppShellContext> {
     plan,
     limits: getPlanEntitlements(plan),
     projectCount: projectCount ?? 0,
-    hasBillingAccount: Boolean(subscription?.stripe_customer_id),
-    audience:
-      profile?.audience === 'freelancer' || profile?.audience === 'agency'
-        ? profile.audience
-        : 'site_owner'
+    hasBillingAccount: Boolean(subscription?.stripe_customer_id)
   }
 }

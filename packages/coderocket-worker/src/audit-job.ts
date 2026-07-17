@@ -6,7 +6,8 @@ import {
   type CheckProgressStage,
   compareFindings,
   getRulesetVersion,
-  type PageAuditResult
+  type PageAuditResult,
+  resolveProjectSocialImage
 } from '@coderocket/core'
 import { createServiceClient, persistAudit } from '@coderocket/db'
 
@@ -121,6 +122,13 @@ export async function processAuditJob(
     message: 'Preparing a safe connection to your website'
   })
   const pages = await auditProjectPages(job, pageUrls)
+  const socialImageUrl = await resolveProjectSocialImage(pages)
+  if (socialImageUrl !== undefined)
+    await db
+      .from('cr_projects')
+      .update({ social_image_url: socialImageUrl })
+      .eq('id', project.id)
+      .eq('owner_id', project.owner_id)
   await updateProgress(job, {
     stage: 'checking_pages',
     current: pages.length,

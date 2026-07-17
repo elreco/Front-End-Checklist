@@ -74,12 +74,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
   )
   if (changed) {
     const changedAt = new Date().toISOString()
+    const siteUrlChanged = project.production_url !== normalized.url
     const { error } = await supabase
       .from('cr_projects')
       .update({
         baseline_reset_at: changedAt,
         page_paths: normalized.pages,
         production_url: normalized.url,
+        ...(siteUrlChanged ? { social_image_url: null } : {}),
         updated_at: changedAt
       })
       .eq('id', projectId)

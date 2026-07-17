@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
+import { isAuthenticatedProductRoute } from './lib/product-routes'
+import { getSupabaseServerConfig } from './lib/supabase/config'
 
-const protectedPrefixes = ['/dashboard', '/projects', '/audits', '/settings', '/onboarding']
 const legacyGonePrefixes = [
   '/ai-website-builder',
   '/components',
@@ -13,6 +14,7 @@ const legacyGonePrefixes = [
   '/users'
 ]
 
+/** Apply canonical-host, legacy-route, and authenticated-route behavior at the request boundary. */
 export async function proxy(request: NextRequest) {
   const hostname =
     request.headers.get('host')?.toLowerCase().split(':')[0] ??
@@ -47,10 +49,9 @@ export async function proxy(request: NextRequest) {
   }
   let response = NextResponse.next({ request })
   if (process.env.CODEROCKET_DEMO_MODE === 'true') return response
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  if (!(url && key)) return response
-  const supabase = createServerClient(url, key, {
+  const config = getSupabaseServerConfig()
+  if (!config) return response
+  const supabase = createServerClient(config.url, config.publishableKey, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: cookiesToSet => {
@@ -62,9 +63,7 @@ export async function proxy(request: NextRequest) {
     }
   })
   const { data } = await supabase.auth.getUser()
-  const protectedRoute = protectedPrefixes.some(prefix =>
-    request.nextUrl.pathname.startsWith(prefix)
-  )
+  const protectedRoute = isAuthenticatedProductRoute(request.nextUrl.pathname)
   if (protectedRoute && !data.user) {
     const login = request.nextUrl.clone()
     login.pathname = '/login'

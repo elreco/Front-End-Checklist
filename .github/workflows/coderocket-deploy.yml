@@ -2,14 +2,6 @@ name: Deploy CodeRocket
 
 on:
   workflow_dispatch:
-  push:
-    branches: [coderocket/main]
-    paths:
-      - 'apps/cloud/**'
-      - 'packages/coderocket-*/**'
-      - 'packages/design-system/src/coderocket-logo.tsx'
-      - 'Dockerfile.coderocket'
-      - 'fly.coderocket.toml'
 
 concurrency:
   group: coderocket-production

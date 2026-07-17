@@ -20,11 +20,9 @@ import { DashboardProjectCard } from './dashboard-project-card'
 import { OnboardingChecklist } from './onboarding-checklist'
 /** The action-oriented workspace overview. */
 export function DashboardOverview({
-  audience,
   data,
   displayName
 }: {
-  audience: 'site_owner' | 'freelancer' | 'agency'
   data: DashboardData
   displayName: string
 }) {
@@ -151,7 +149,7 @@ export function DashboardOverview({
 
       <div className="grid gap-7 xl:grid-cols-[1.35fr_.65fr]">
         <RecentActivity activity={data.activity} />
-        <PlanCard audience={audience} data={data} />
+        <PlanCard data={data} />
       </div>
     </div>
   )
@@ -241,13 +239,7 @@ function ActivityItem({ item }: { item: DashboardActivity }) {
   )
 }
 /** Explain the current plan and the most relevant upgrade path. */
-function PlanCard({
-  audience,
-  data
-}: {
-  audience: 'site_owner' | 'freelancer' | 'agency'
-  data: DashboardData
-}) {
+function PlanCard({ data }: { data: DashboardData }) {
   const paid = data.plan !== 'free'
   const minimumPlansLeft = Math.floor(data.aiCreditsRemaining / 1000)
   const nextPlan = getNextPlan(data.plan)
@@ -264,9 +256,7 @@ function PlanCard({
           ? 'You have 50 sites, a full year of history, and client reports without secondary branding.'
           : data.plan === 'solo'
             ? 'Agency adds 50 client sites, a year of history, and fully unbranded reports.'
-            : audience === 'site_owner'
-              ? 'Personal checks up to three websites every day and keeps 90 days of history.'
-              : 'Personal gives freelancers three daily-monitored websites; Agency scales to a 50-site client portfolio.'}
+            : 'Personal checks up to three websites every day and keeps 90 days of history.'}
       </p>
       <div className="mt-5 border border-border bg-background p-4">
         <p className="font-mono text-[10px] text-signal uppercase tracking-[.12em]">

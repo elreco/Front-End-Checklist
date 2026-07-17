@@ -9,6 +9,7 @@ import { ProjectHeaderActions } from '@/components/project-header-actions'
 import { ProjectHealthOverview } from '@/components/project-health-overview'
 import { ProjectLevelPanel } from '@/components/project-level-panel'
 import { ProjectPrimaryAction } from '@/components/project-primary-action'
+import { SiteVisual } from '@/components/site-visual'
 import { WebsiteCheckProgress } from '@/components/website-check-progress'
 import { getProjectDetail } from '@/lib/project-data'
 import { createPrivateMetadata } from '@/lib/seo'
@@ -38,45 +39,53 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
     >
       <section className="border border-border bg-surface p-5 sm:p-6">
         {project.activeCheck ? (
-          <WebsiteCheckProgress
-            initial={project.activeCheck}
-            projectId={project.id}
-            siteUrl={project.url}
-          />
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <SiteVisual imageUrl={project.socialImageUrl} name={project.name} size="detail" />
+            <div className="min-w-0 flex-1">
+              <WebsiteCheckProgress
+                initial={project.activeCheck}
+                projectId={project.id}
+                siteUrl={project.url}
+              />
+            </div>
+          </div>
         ) : (
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                {waitingForCi ? (
-                  <span className="inline-flex border border-accent bg-accent/10 px-2.5 py-1 font-mono font-semibold text-[10px] text-accent uppercase tracking-[.08em]">
-                    CI setup required
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
+            <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row">
+              <SiteVisual imageUrl={project.socialImageUrl} name={project.name} size="detail" />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-3">
+                  {waitingForCi ? (
+                    <span className="inline-flex border border-accent bg-accent/10 px-2.5 py-1 font-mono font-semibold text-[10px] text-accent uppercase tracking-[.08em]">
+                      CI setup required
+                    </span>
+                  ) : (
+                    <GateBadge status={latest?.gate ?? 'needs_baseline'} />
+                  )}
+                  <span className="text-muted text-xs">
+                    {latest
+                      ? `Last checked ${latest.when}`
+                      : waitingForCi
+                        ? 'Cloud checks are off for this site'
+                        : 'Waiting for the first check'}
                   </span>
-                ) : (
-                  <GateBadge status={latest?.gate ?? 'needs_baseline'} />
-                )}
-                <span className="text-muted text-xs">
-                  {latest
-                    ? `Last checked ${latest.when}`
-                    : waitingForCi
-                      ? 'Cloud checks are off for this site'
-                      : 'Waiting for the first check'}
-                </span>
+                </div>
+                <h2 className="mt-4 font-heading font-semibold text-2xl">
+                  {waitingForCi
+                    ? 'Set up the CI check to start'
+                    : getHeadline(latest?.gate, latest?.persistentCount ?? 0, project.checking)}
+                </h2>
+                <p className="mt-2 max-w-3xl text-muted leading-7">
+                  {waitingForCi
+                    ? 'These pages need sign-in or private access. Run the HTML check from GitHub, GitLab, Bitbucket, or another environment that can already open them.'
+                    : getExplanation(
+                        latest?.gate,
+                        latest?.blockingCount ?? 0,
+                        latest?.persistentCount ?? 0,
+                        project.checking
+                      )}
+                </p>
               </div>
-              <h2 className="mt-4 font-heading font-semibold text-2xl">
-                {waitingForCi
-                  ? 'Set up the CI check to start'
-                  : getHeadline(latest?.gate, latest?.persistentCount ?? 0, project.checking)}
-              </h2>
-              <p className="mt-2 max-w-3xl text-muted leading-7">
-                {waitingForCi
-                  ? 'These pages need sign-in or private access. Run the HTML check from GitHub, GitLab, Bitbucket, or another environment that can already open them.'
-                  : getExplanation(
-                      latest?.gate,
-                      latest?.blockingCount ?? 0,
-                      latest?.persistentCount ?? 0,
-                      project.checking
-                    )}
-              </p>
             </div>
             <ProjectHeaderActions project={project} showCiSetup={waitingForCi} />
           </div>

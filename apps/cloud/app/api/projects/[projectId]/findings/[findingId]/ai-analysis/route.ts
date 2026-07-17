@@ -145,10 +145,12 @@ export async function POST(request: Request, context: RouteContext) {
     p_model: model
   })
   if (error) {
-    const limited = error.message.includes('AI credit limit reached')
+    const limited =
+      error.message.includes('AI credit limit reached') ||
+      error.message.includes('AI credit or spending limit reached')
     return errorResponse(
       limited
-        ? 'Your included AI usage is reserved or used for this month.'
+        ? 'Your included AI credits or monthly spending budget have been reached. Review AI usage & spending in billing settings.'
         : 'The explanation could not be queued.',
       limited ? 429 : 500
     )

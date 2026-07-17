@@ -13,6 +13,17 @@ type ToastMessage = {
 }
 
 const notices: Record<string, ToastMessage> = {
+  'ai-budget-saved': {
+    description: 'New AI analyses will respect the monthly spending limit you selected.',
+    kind: 'success',
+    title: 'AI budget updated'
+  },
+  'ai-budget-save-failed': {
+    description:
+      'Nothing changed. Check that this paid account is connected to Stripe and try again.',
+    kind: 'error',
+    title: 'AI budget could not be updated'
+  },
   'already-running': {
     description: 'Results will appear on the site page when the current check finishes.',
     kind: 'info',
@@ -27,6 +38,11 @@ const notices: Record<string, ToastMessage> = {
     description: 'Enter a display name between 1 and 80 characters.',
     kind: 'error',
     title: 'Check the display name'
+  },
+  'invalid-ai-budget': {
+    description: 'Choose Off, €10, €20, or a whole-euro monthly budget up to €500.',
+    kind: 'error',
+    title: 'Check the AI budget'
   },
   'invalid-project-name': {
     description: 'Enter a site name between 1 and 120 characters.',

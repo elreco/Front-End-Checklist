@@ -33,11 +33,11 @@ export function OnboardingPagesStep({
   visible
 }: OnboardingPagesStepProps) {
   return (
-    <fieldset className="cr-step-enter space-y-5" data-setup-step="3" hidden={!visible}>
+    <fieldset className="cr-step-enter space-y-5" data-setup-step="2" hidden={!visible}>
       <legend className="sr-only">Pages to watch</legend>
       <h2
         className="font-heading font-semibold text-2xl outline-none"
-        id="setup-step-3-title"
+        id="setup-step-2-title"
         tabIndex={-1}
       >
         Which pages matter most?

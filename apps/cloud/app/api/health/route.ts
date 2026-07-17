@@ -2,6 +2,7 @@ import { createServiceClient } from '@coderocket/db'
 
 export const dynamic = 'force-dynamic'
 
+/** Report web/database readiness while exposing worker degradation without taking the site offline. */
 export async function GET() {
   const startedAt = Date.now()
   try {
@@ -24,7 +25,8 @@ export async function GET() {
         worker: workerHealthy ? 'ok' : 'stale',
         latencyMs: Date.now() - startedAt
       },
-      { status: workerHealthy ? 200 : 503 }
+      // A delayed worker must remain visible without removing the healthy web process from traffic.
+      { status: 200 }
     )
   } catch (error) {
     return Response.json(

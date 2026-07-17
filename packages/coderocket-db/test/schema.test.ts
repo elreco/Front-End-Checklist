@@ -158,6 +158,17 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('stores only bounded HTTPS social preview image URLs on monitored sites', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607170003_project_social_images.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /add column if not exists social_image_url text/)
+    assert.match(sql, /char_length\(social_image_url\) between 1 and 2048/)
+    assert.match(sql, /social_image_url like 'https:\/\/%'/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
   it('bills only paid AI overage through an idempotent Stripe outbox job', async () => {
     const sql = await readFile(
       new URL('../supabase/migrations/202607170001_ai_usage_billing.sql', import.meta.url),
@@ -168,6 +179,18 @@ describe('CodeRocket database migration', () => {
     assert.match(sql, /billable_overage_microeur/)
     assert.match(sql, /create or replace function public\.cr_prepare_ai_usage_billing/)
     assert.match(sql, /'ai_usage'/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('keeps paid AI overage opt-in and bounded by the account budget', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607170004_ai_spending_controls.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /overage_enabled boolean not null default false/)
+    assert.match(sql, /create or replace function public\.cr_update_ai_spending_settings/)
+    assert.match(sql, /and overage_enabled/)
+    assert.match(sql, /billed_overage_microeur < overage_cap_microeur/)
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 })

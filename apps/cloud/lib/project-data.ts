@@ -25,6 +25,7 @@ import {
   resolveGate,
   resolveWorkflowStatus
 } from './project-data-normalizers'
+import { getSupabaseServerConfig } from './supabase/config'
 import { createSupabaseServerClient } from './supabase/server'
 
 export interface ProjectAudit {
@@ -87,6 +88,7 @@ export interface ProjectDetail {
   id: string
   name: string
   url: string
+  socialImageUrl?: string
   accessMode: SiteAccessMode
   pages: string[]
   scheduleEnabled: boolean
@@ -125,6 +127,7 @@ const demoProject: ProjectDetail = {
   id: 'demo-acme',
   name: 'Acme Storefront',
   url: 'https://acme.example',
+  socialImageUrl: '/social-card.png',
   accessMode: 'public',
   pages: ['/', '/pricing', '/contact', '/products', '/checkout'],
   scheduleEnabled: true,
@@ -226,6 +229,7 @@ const demoUrlErrorProject: ProjectDetail = {
   id: 'demo-url-error',
   name: 'Watch Peak',
   url: 'https://watchpeak.example',
+  socialImageUrl: undefined,
   pages: ['/', '/contact', '/pricing'],
   latestAudit: demoUrlErrorAudit,
   latestPages: [
@@ -269,8 +273,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
       : projectId === demoUrlErrorProject.id
         ? demoUrlErrorProject
         : null
-  if (!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY))
-    return null
+  if (!getSupabaseServerConfig()) return null
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return null
@@ -285,7 +288,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     supabase
       .from('cr_projects')
       .select(
-        'id,name,production_url,page_paths,access_mode,schedule_enabled,next_audit_at,baseline_reset_at'
+        'id,name,production_url,social_image_url,page_paths,access_mode,schedule_enabled,next_audit_at,baseline_reset_at'
       )
       .eq('id', projectId)
       .eq('owner_id', auth.user.id)
@@ -452,6 +455,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     id: project.id,
     name: project.name,
     url: project.production_url,
+    socialImageUrl: project.social_image_url ?? undefined,
     accessMode: resolveAccessMode(project.access_mode),
     pages: project.page_paths,
     scheduleEnabled: project.schedule_enabled,

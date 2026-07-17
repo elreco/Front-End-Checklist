@@ -4,7 +4,8 @@ import {
   auditSubmissionSchema,
   compareFindings,
   getPlanEntitlements,
-  type PlanId
+  type PlanId,
+  resolveProjectSocialImage
 } from '@coderocket/core'
 import { createServiceClient, persistAudit } from '@coderocket/db'
 import { filterBaselineForSubmittedPages, normalizeSubmittedPages } from '@/lib/audit-submission'
@@ -239,6 +240,13 @@ export async function POST(request: Request) {
       .eq('key', idempotencyKey)
     return Response.json({ error: 'Could not persist the complete audit' }, { status: 500 })
   }
+  const socialImageUrl = await resolveProjectSocialImage(normalizedPages)
+  if (socialImageUrl !== undefined)
+    await db
+      .from('cr_projects')
+      .update({ social_image_url: socialImageUrl })
+      .eq('id', tokenRow.project_id)
+      .eq('owner_id', tokenRow.owner_id)
   await db
     .from('cr_api_tokens')
     .update({ last_used_at: new Date().toISOString() })

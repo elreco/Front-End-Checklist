@@ -10,11 +10,7 @@ export default async function DashboardPage() {
   const [data, context] = await Promise.all([getDashboardData(), getAppShellContext()])
   return (
     <ProductShell eyebrow="Your workspace" title="Overview">
-      <DashboardOverview
-        audience={context.audience}
-        data={data}
-        displayName={context.displayName}
-      />
+      <DashboardOverview data={data} displayName={context.displayName} />
     </ProductShell>
   )
 }

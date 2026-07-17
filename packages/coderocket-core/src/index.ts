@@ -20,6 +20,7 @@ export {
 } from './safe-fetch'
 export { auditSubmissionSchema, type ValidAuditSubmission } from './schemas'
 export { auditSiteInfrastructure } from './site-infrastructure'
+export { extractSocialImageUrl, resolveProjectSocialImage } from './social-metadata'
 export type {
   AuditComparison,
   AuditEnvironment,

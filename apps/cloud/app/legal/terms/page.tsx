@@ -52,10 +52,10 @@ export default function TermsPage() {
       <p>
         Current features and prices are shown on the pricing page. Paid subscriptions renew until
         canceled and are processed by Stripe. Paid plans include a monthly AI allowance. Token-based
-        AI usage above that allowance is added to the same invoice up to the spending cap shown for
-        the selected plan. Applicable taxes may be added at checkout. Canceling keeps paid access
-        until the end of the current billing period unless the product states otherwise. Statutory
-        refund rights remain unaffected.
+        AI usage above that allowance is added to the same invoice only when you enable a monthly
+        spending budget in billing settings. Applicable taxes may be added at checkout. Canceling
+        keeps paid access until the end of the current billing period unless the product states
+        otherwise. Statutory refund rights remain unaffected.
       </p>
 
       <h2>6. AI and technical guidance</h2>
