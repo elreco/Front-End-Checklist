@@ -2,11 +2,7 @@ import { getRulesetVersion } from '@coderocket/core'
 import { calculateWebsiteLevel, calculateWebsiteStability } from '@coderocket/core/website-level'
 import { getRuleDocumentationUrlBySlug } from './docs'
 import { formatAuditDate, formatRelativeTime } from './format'
-import type {
-  ManagedAccessKind,
-  ManagedAccessScope,
-  ManagedAccessStatus
-} from './managed-access'
+import type { ManagedAccessKind, ManagedAccessScope, ManagedAccessStatus } from './managed-access'
 import {
   resolveAccessMode,
   resolveCheckStage,
@@ -214,7 +210,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     { data: subscription },
     { count: apiTokenCount },
     { count: ciRuns },
-    { data: managedAccess }
+    { data: managedAccessConnections }
   ] = await Promise.all([
     supabase
       .from('cr_projects')
@@ -264,7 +260,6 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
       .select('kind,scope,status,display_label,last_verified_at,last_error')
       .eq('project_id', projectId)
       .eq('owner_id', auth.user.id)
-      .maybeSingle()
   ])
   if (!project) return null
   const storedAudits = audits ?? []
@@ -426,25 +421,54 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
         : 'free',
     apiTokenConfigured: (apiTokenCount ?? 0) > 0,
     ciRuns: ciRuns ?? 0,
-    managedAccess:
-      managedAccess &&
-      isManagedAccessKind(managedAccess.kind) &&
-      isManagedAccessScope(managedAccess.scope) &&
-      isManagedAccessStatus(managedAccess.status)
-        ? {
-            displayLabel: managedAccess.display_label,
-            kind: managedAccess.kind,
-            lastError: managedAccess.last_error ?? undefined,
-            lastVerifiedAt: managedAccess.last_verified_at ?? undefined,
-            scope: managedAccess.scope,
-            status: managedAccess.status
-          }
-        : undefined,
+    managedAccess: resolveManagedAccess(managedAccessConnections ?? []),
     level,
     stability
   }
 }
 
+/** Collapse stored origin and page access layers into one secret-free project status. */
+function resolveManagedAccess(
+  connections: Array<{
+    display_label: string
+    kind: string
+    last_error: string | null
+    last_verified_at: string | null
+    scope: string
+    status: string
+  }>
+) {
+  const valid = connections.filter(
+    connection =>
+      isManagedAccessKind(connection.kind) &&
+      isManagedAccessScope(connection.scope) &&
+      isManagedAccessStatus(connection.status)
+  )
+  const first = valid[0]
+  if (!first || !isManagedAccessKind(first.kind) || !isManagedAccessScope(first.scope)) return
+  const status: ManagedAccessStatus = valid.some(connection => connection.status === 'failed')
+    ? 'failed'
+    : valid.some(connection => connection.status === 'configured')
+      ? 'configured'
+      : 'verified'
+  const labels = [...new Set(valid.flatMap(connection => connection.display_label.split(' + ')))]
+  const verifiedDates = valid
+    .flatMap(connection => (connection.last_verified_at ? [connection.last_verified_at] : []))
+    .sort()
+  return {
+    connectionCount: valid.length,
+    displayLabel: labels.join(' + '),
+    kind: valid.every(connection => connection.kind === first.kind) ? first.kind : 'custom_headers',
+    lastError: valid.find(connection => connection.last_error)?.last_error ?? undefined,
+    lastVerifiedAt: verifiedDates.at(-1),
+    scope: valid.every(connection => connection.scope === 'authenticated')
+      ? 'authenticated'
+      : 'all',
+    status
+  } satisfies ProjectDetail['managedAccess']
+}
+
+/** Narrow an untrusted database value to a supported managed-access kind. */
 function isManagedAccessKind(value: unknown): value is ManagedAccessKind {
   return [
     'vercel',
@@ -456,10 +480,12 @@ function isManagedAccessKind(value: unknown): value is ManagedAccessKind {
   ].includes(String(value))
 }
 
+/** Narrow an untrusted database value to a supported access scope. */
 function isManagedAccessScope(value: unknown): value is ManagedAccessScope {
   return value === 'all' || value === 'authenticated'
 }
 
+/** Narrow an untrusted database value to a public managed-connection status. */
 function isManagedAccessStatus(value: unknown): value is ManagedAccessStatus {
   return value === 'configured' || value === 'verified' || value === 'failed'
 }

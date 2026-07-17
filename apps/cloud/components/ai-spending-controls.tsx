@@ -66,23 +66,18 @@ export function AiSpendingControls({
         {selection === 'custom' ? (
           <label className="mt-4 block max-w-xs font-semibold text-sm" htmlFor="custom-ai-budget">
             Custom monthly maximum
-            <span className="relative block">
-              <span className="pointer-events-none absolute top-1/2 left-4 z-10 -translate-y-1/2 text-muted">
-                €
-              </span>
-              <CodeRocketInput
-                className="pl-8"
-                id="custom-ai-budget"
-                max={MAX_AI_OVERAGE_BUDGET_EUR}
-                min={1}
-                name="customBudgetEuros"
-                onChange={event => setCustomBudget(Number(event.currentTarget.value))}
-                required
-                step={1}
-                type="number"
-                value={customBudget}
-              />
-            </span>
+            <CodeRocketInput
+              id="custom-ai-budget"
+              leadingContent="€"
+              max={MAX_AI_OVERAGE_BUDGET_EUR}
+              min={1}
+              name="customBudgetEuros"
+              onChange={event => setCustomBudget(Number(event.currentTarget.value))}
+              required
+              step={1}
+              type="number"
+              value={customBudget}
+            />
             <span className="mt-2 block font-normal text-muted text-xs">
               Between €1 and €{MAX_AI_OVERAGE_BUDGET_EUR}. You can change or disable it at any time.
             </span>

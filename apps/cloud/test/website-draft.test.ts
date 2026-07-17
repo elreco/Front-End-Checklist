@@ -15,6 +15,8 @@ describe('CodeRocket landing-page website drafts', () => {
     assert.equal(normalizeWebsiteDraft('http://example.com'), undefined)
     assert.equal(normalizeWebsiteDraft('https://user:secret@example.com'), undefined)
     assert.equal(normalizeWebsiteDraft('not a website'), undefined)
+    assert.equal(normalizeWebsiteDraft('https://not%20a%20website'), undefined)
+    assert.equal(normalizeWebsiteDraft('https://invalid_host.example'), undefined)
   })
 
   it('derives an editable website name from the hostname', () => {

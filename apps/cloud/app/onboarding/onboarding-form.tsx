@@ -8,6 +8,7 @@ import type { FormEvent, MouseEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { countEnteredPages, getEnteredPages } from '@/lib/onboarding-pages'
 import type { PlanId } from '@/lib/upgrade'
+import { deriveWebsiteName } from '@/lib/website-draft'
 import { createProject } from './actions'
 import { OnboardingAccessOptions } from './onboarding-access-options'
 import { OnboardingPagesStep } from './onboarding-pages-step'
@@ -35,6 +36,7 @@ export function OnboardingForm({
 }) {
   const [step, setStep] = useState(1)
   const [siteUrl, setSiteUrl] = useState(initialSiteUrl)
+  const [siteName, setSiteName] = useState(initialSiteName)
   const [accessMode, setAccessMode] = useState<SiteAccessMode>('public')
   const [pagesValue, setPagesValue] = useState('/')
   const [authenticatedPages, setAuthenticatedPages] = useState<string[]>([])
@@ -168,30 +170,19 @@ export function OnboardingForm({
             Which website should CodeRocket watch?
           </h2>
           <p className="max-w-2xl text-muted leading-7">
-            Add the name and HTTPS address. CodeRocket will test how the selected pages can be
+            Start with the normal HTTPS address. CodeRocket will test how the selected pages can be
             reached automatically.
           </p>
-          <label className="block max-w-2xl font-semibold text-sm" htmlFor="project-name">
-            Website name
-            <CodeRocketInput
-              defaultValue={initialSiteName}
-              id="project-name"
-              maxLength={120}
-              name="name"
-              placeholder="Example: Acme online store"
-              required
-            />
-            <span className="mt-2 block font-normal text-muted text-xs">
-              A company, client, or project name that you will recognize.
-            </span>
-          </label>
           <label className="block max-w-2xl font-semibold text-sm" htmlFor="production-url">
             Website address
             <CodeRocketInput
               autoComplete="url"
               id="production-url"
               name="url"
-              onChange={event => setSiteUrl(event.target.value)}
+              onChange={event => {
+                setSiteUrl(event.target.value)
+                setSiteName(deriveWebsiteName(event.target.value))
+              }}
               placeholder="https://www.example.com"
               required
               type="url"
@@ -201,6 +192,28 @@ export function OnboardingForm({
               It must start with https://. No access configuration is required to continue.
             </span>
           </label>
+          <details className="max-w-2xl border border-border bg-background">
+            <summary className="cursor-pointer p-4 font-semibold text-sm transition-colors hover:bg-surface-raised">
+              Change the display name — optional
+            </summary>
+            <div className="border-border border-t p-4">
+              <label className="block font-semibold text-sm" htmlFor="project-name">
+                Website name
+                <CodeRocketInput
+                  id="project-name"
+                  maxLength={120}
+                  name="name"
+                  onChange={event => setSiteName(event.target.value)}
+                  placeholder="Example: Acme online store"
+                  required
+                  value={siteName}
+                />
+                <span className="mt-2 block font-normal text-muted text-xs">
+                  CodeRocket creates this automatically from the address.
+                </span>
+              </label>
+            </div>
+          </details>
           <div className="max-w-2xl border border-signal bg-signal/10 p-4">
             <div className="flex items-start gap-3">
               <ShieldCheck aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-signal" />

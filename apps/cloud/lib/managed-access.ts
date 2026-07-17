@@ -10,6 +10,7 @@ export type ManagedAccessScope = 'all' | 'authenticated'
 export type ManagedAccessStatus = 'configured' | 'verified' | 'failed'
 
 export interface ProjectManagedAccess {
+  connectionCount?: number
   displayLabel: string
   kind: ManagedAccessKind
   lastError?: string

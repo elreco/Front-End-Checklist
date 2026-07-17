@@ -20,7 +20,8 @@ export function ProjectAccessRecovery({
   const content = getRecoveryContent(recoveryKind, project.accessMode !== 'public')
   const shouldEditFirst = recoveryKind === 'address' || recoveryKind === 'pages'
   const shouldUseCi = recoveryKind === 'access' || project.accessMode !== 'public'
-  const canRetryCloud = project.accessMode === 'public'
+  const canRetryCloud =
+    project.accessMode === 'public' || project.managedAccess?.status === 'verified'
 
   return (
     <div className="mt-5 border border-danger bg-background p-4">
@@ -53,6 +54,7 @@ export function ProjectAccessRecovery({
             {shouldEditFirst ? (
               <ProjectSiteEditor
                 authenticatedPages={project.authenticatedPages}
+                managedAccessConnected={project.managedAccess?.status === 'verified'}
                 maxPages={getPlanEntitlements(project.plan).pagesPerProject}
                 pages={project.pages}
                 plan={project.plan}
@@ -70,6 +72,8 @@ export function ProjectAccessRecovery({
               <ProjectCliSetup
                 configured={project.apiTokenConfigured}
                 authenticatedPages={project.authenticatedPages}
+                latestPages={project.latestPages}
+                managedAccess={project.managedAccess}
                 pages={project.pages}
                 plan={project.plan}
                 projectId={project.id}
@@ -92,6 +96,7 @@ export function ProjectAccessRecovery({
             {!shouldEditFirst ? (
               <ProjectSiteEditor
                 authenticatedPages={project.authenticatedPages}
+                managedAccessConnected={project.managedAccess?.status === 'verified'}
                 maxPages={getPlanEntitlements(project.plan).pagesPerProject}
                 pages={project.pages}
                 plan={project.plan}

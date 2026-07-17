@@ -50,7 +50,7 @@ export function BillingAiUsage({ account, plan }: { account: BillingAccountData;
         </span>
       </div>
 
-      <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-px border-border border-b bg-border sm:grid-cols-2 xl:grid-cols-4">
         <UsageFact
           icon={BrainCircuit}
           label="Included credits"

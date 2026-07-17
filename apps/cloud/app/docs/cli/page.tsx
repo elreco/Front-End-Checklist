@@ -3,7 +3,14 @@ import {
   GitHubBrandIcon,
   GitLabBrandIcon
 } from '@repo/design-system/brand-icons'
-import { CheckCircle2, GitBranch, KeyRound, LockKeyhole, Terminal } from '@repo/design-system/icons'
+import {
+  CheckCircle2,
+  GitBranch,
+  KeyRound,
+  LockKeyhole,
+  ShieldCheck,
+  Terminal
+} from '@repo/design-system/icons'
 import type { Metadata } from 'next'
 import { DocsInlineCode } from '@/components/docs-inline-code'
 import { DocsCodeBlock, DocsHeader } from '@/components/docs-shell'
@@ -12,7 +19,7 @@ import { createPublicMetadata } from '@/lib/seo'
 export const metadata: Metadata = createPublicMetadata({
   title: 'Protected site access',
   description:
-    'Let CodeRocket check protected pages from GitHub, GitLab, Bitbucket, or another environment that already has access.',
+    'Connect protected pages with a guided cloud connection, or use a secure runner for private infrastructure.',
   path: '/docs/cli',
   image: '/docs/opengraph-image'
 })
@@ -70,18 +77,66 @@ export default function CliDocumentationPage() {
   return (
     <>
       <DocsHeader
-        description="Run the same website check from an environment that can already open protected pages. CodeRocket receives the result, never the private access headers."
+        description="Add the website URL normally. If a page is blocked, CodeRocket identifies the likely protection and recommends the simplest safe connection."
         eyebrow="Protected website access"
-        title="Check restricted pages without weakening their protection."
+        title="Open protected pages without making setup the user’s problem."
       />
 
       <section className="py-10">
-        <Terminal aria-hidden className="h-6 w-6 text-signal" />
-        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">Command contract</h2>
+        <ShieldCheck aria-hidden className="h-6 w-6 text-signal" />
+        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">
+          Start with the website link. Nothing else.
+        </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
-          Generate a token from the CodeRocket project, store it as a CI secret, and audit the HTTPS
-          URL from an environment that can already reach it. Public websites normally use the
-          automatic cloud checker and do not need this setup.
+          CodeRocket always tries the public cloud check first. If every selected page opens, setup
+          is finished. If a sign-in screen, Vercel, Cloudflare, a preview password, or another
+          protection blocks a page, choose{' '}
+          <strong className="text-foreground">Fix page access</strong> on the project.
+        </p>
+        <ol className="mt-7 grid gap-px border border-border bg-border md:grid-cols-3">
+          {[
+            [
+              '01',
+              'Automatic diagnosis',
+              'The saved response identifies the likely protection instead of asking you to understand infrastructure.'
+            ],
+            [
+              '02',
+              'Guided connection',
+              'Paste one dedicated Vercel, Cloudflare, preview, token, or test-session value. CodeRocket tests it before saving.'
+            ],
+            [
+              '03',
+              'Automatic checks',
+              'The value is encrypted, limited to this site, revocable, and reused for future scheduled checks.'
+            ]
+          ].map(([number, title, description]) => (
+            <li className="bg-surface p-5" key={number}>
+              <p className="font-mono text-signal text-xs">{number}</p>
+              <h3 className="mt-3 font-heading font-semibold">{title}</h3>
+              <p className="mt-2 text-muted text-sm leading-6">{description}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
+          Use a dedicated, revocable credential rather than a personal password or normal browser
+          session. Changing the monitored domain revokes the connection automatically.
+        </p>
+      </section>
+
+      <section className="border-border border-y py-10">
+        <Terminal aria-hidden className="h-6 w-6 text-signal" />
+        <p className="mt-5 font-mono text-muted text-xs uppercase tracking-[.14em]">
+          Developer option
+        </p>
+        <h2 className="mt-3 font-editorial text-4xl tracking-[-.025em]">
+          Use the secure runner only when the cloud cannot reach the site.
+        </h2>
+        <p className="mt-4 max-w-3xl text-muted leading-7">
+          A VPN, private network, client certificate, CAPTCHA, MFA, or multi-step browser session
+          must remain inside an environment that already has access. Generate a project token, store
+          it as a CI secret, and run the check there. Public sites and supported hosting protections
+          do not need this setup.
         </p>
         <div className="mt-6">
           <DocsCodeBlock language="bash">{`coderocket audit https://preview.example.com \\
@@ -101,7 +156,7 @@ export default function CliDocumentationPage() {
         </p>
       </section>
 
-      <section className="border-border border-y py-10">
+      <section className="py-10">
         <LockKeyhole aria-hidden className="h-6 w-6 text-signal" />
         <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">
           Access protected server-rendered pages
@@ -144,9 +199,9 @@ export default function CliDocumentationPage() {
         </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
           Open a protected project and choose{' '}
-          <strong className="text-foreground">Connect secure access</strong>. You can copy a safe
-          handoff for a developer or hosting provider, or open the advanced configuration yourself.
-          Shared instructions never include the revocable{' '}
+          <strong className="text-foreground">Fix page access</strong>. The guided cloud connection
+          appears first. Open the developer options only when CodeRocket says the site needs a
+          runner. Shared instructions never include the revocable{' '}
           <DocsInlineCode>CODEROCKET_TOKEN</DocsInlineCode>.
         </p>
         <div className="mt-7 grid gap-px border border-border bg-border sm:grid-cols-2">

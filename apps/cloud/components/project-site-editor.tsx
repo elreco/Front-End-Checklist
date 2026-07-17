@@ -31,6 +31,7 @@ export function ProjectSiteEditor({
   authenticatedPages: initialAuthenticatedPages,
   checking = false,
   maxPages,
+  managedAccessConnected = false,
   pages: initialPages,
   plan,
   problemPaths = [],
@@ -53,8 +54,8 @@ export function ProjectSiteEditor({
   const currentOrigin = safeHttpsOrigin(siteUrl)
   const nextOrigin = safeHttpsOrigin(url)
   const originChanged = Boolean(nextOrigin && currentOrigin && nextOrigin !== currentOrigin)
-  const effectiveSecureRunnerRequired = secureRunnerRequired || authenticatedPages.length > 0
-  const checkAfterSave = !effectiveSecureRunnerRequired
+  const checkAfterSave =
+    !secureRunnerRequired && (authenticatedPages.length === 0 || managedAccessConnected)
 
   /** Reset draft values whenever the dialog starts a new editing session. */
   function changeOpen(nextOpen: boolean) {
@@ -120,7 +121,7 @@ export function ProjectSiteEditor({
           url,
           pages,
           authenticatedPages,
-          secureRunnerRequired: effectiveSecureRunnerRequired,
+          secureRunnerRequired,
           checkNow: checkAfterSave
         })
       })
@@ -134,7 +135,7 @@ export function ProjectSiteEditor({
           : (payload.checkWarning ??
             (checkAfterSave
               ? 'The changes are saved. Start a fresh check when you are ready.'
-              : 'The changes are saved. Run the next check from your secure environment.'))
+              : 'The changes are saved. Connect page access once to start complete checks.'))
       })
       router.refresh()
     } catch (caught) {
@@ -236,18 +237,19 @@ export function ProjectSiteEditor({
 
           <label className="flex cursor-pointer items-start gap-3 border border-border bg-background p-4 text-sm">
             <input
-              checked={effectiveSecureRunnerRequired}
+              checked={secureRunnerRequired}
               className="mt-0.5 h-4 w-4 accent-signal"
-              disabled={authenticatedPages.length > 0}
               onChange={event => setSecureRunnerRequired(event.target.checked)}
               type="checkbox"
             />
             <span>
-              <span className="block font-semibold">Run checks from my secure environment</span>
+              <span className="block font-semibold">
+                This site needs a private network or secure runner
+              </span>
               <span className="mt-1 block text-muted text-xs leading-5">
-                Keep this enabled for Cloudflare Access, preview passwords, IP allowlists, private
-                networks, client certificates, or any protection the public cloud checker cannot
-                cross. It is automatically required while a page needs sign-in.
+                Enable this only for a VPN, private network, client certificate, CAPTCHA, or
+                browser-only login. Vercel, Cloudflare, preview passwords, tokens, and simple test
+                sessions can use the guided cloud connection instead.
               </span>
             </span>
           </label>

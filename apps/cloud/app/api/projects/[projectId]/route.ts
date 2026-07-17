@@ -57,26 +57,27 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
   )
   if (!normalized.success) return Response.json({ error: normalized.error }, { status: 422 })
 
-  const [
-    { data: subscription },
-    { count: activeChecks },
-    { data: managedAccess }
-  ] = await Promise.all([
-    supabase.from('cr_subscriptions').select('plan_id').eq('owner_id', auth.user.id).maybeSingle(),
-    supabase
-      .from('cr_jobs')
-      .select('id', { count: 'exact', head: true })
-      .eq('owner_id', auth.user.id)
-      .eq('project_id', projectId)
-      .eq('kind', 'audit')
-      .in('status', ['queued', 'leased']),
-    supabase
-      .from('cr_project_access_connections')
-      .select('id,status')
-      .eq('project_id', projectId)
-      .eq('owner_id', auth.user.id)
-      .maybeSingle()
-  ])
+  const [{ data: subscription }, { count: activeChecks }, { data: managedAccess }] =
+    await Promise.all([
+      supabase
+        .from('cr_subscriptions')
+        .select('plan_id')
+        .eq('owner_id', auth.user.id)
+        .maybeSingle(),
+      supabase
+        .from('cr_jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('owner_id', auth.user.id)
+        .eq('project_id', projectId)
+        .eq('kind', 'audit')
+        .in('status', ['queued', 'leased']),
+      supabase
+        .from('cr_project_access_connections')
+        .select('id,status')
+        .eq('project_id', projectId)
+        .eq('owner_id', auth.user.id)
+        .maybeSingle()
+    ])
   const plan = resolvePlan(subscription?.plan_id)
   const limits = getPlanEntitlements(plan)
   if (normalized.pages.length > limits.pagesPerProject)
@@ -94,8 +95,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
 
   const siteUrlChanged = project.production_url !== normalized.url
   const hasUsableManagedAccess = managedAccess?.status === 'verified' && !siteUrlChanged
-  const secureRunnerRequired =
-    normalized.accessMode !== 'public' && !hasUsableManagedAccess
+  const secureRunnerRequired = normalized.accessMode !== 'public' && !hasUsableManagedAccess
   const changed = projectConfigurationChanged(
     {
       authenticatedPages: project.authenticated_page_paths ?? [],

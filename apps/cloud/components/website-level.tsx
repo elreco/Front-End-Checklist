@@ -28,24 +28,33 @@ export function WebsiteLevelBadge({ level }: { level: WebsiteLevel }) {
   )
 }
 
-/** Render a ranked medal or a deliberately neutral unranked status mark. */
+/** Render a branded health emblem, keeping only unverified results deliberately neutral. */
 export function WebsiteLevelMark({
   animate = false,
+  animationDelayMs = 0,
   level,
   size = 'lg'
 }: {
   animate?: boolean
+  animationDelayMs?: number
   level: WebsiteLevel
-  size?: 'lg' | 'sm'
+  size?: 'lg' | 'md' | 'sm'
 }) {
+  if (level !== 'unverified')
+    return (
+      <WebsiteLevelMedal
+        animate={animate}
+        animationDelayMs={animationDelayMs}
+        level={level}
+        size={size}
+      />
+    )
   const presentation = getWebsiteLevelPresentation(level)
-  const compact = size === 'sm'
-  if (level === 'bronze' || level === 'silver' || level === 'gold' || level === 'platinum')
-    return <WebsiteLevelMedal animate={animate} level={level} size={size} />
+  const sizeClassName = size === 'sm' ? 'h-14 w-12' : size === 'md' ? 'h-28 w-24' : 'h-32 w-28'
   return (
     <div
       aria-label={`${presentation.label} website health level`}
-      className={`relative flex shrink-0 items-center justify-center border ${compact ? 'h-12 w-12' : 'h-28 w-28'} ${presentation.borderClassName} ${presentation.backgroundClassName} ${presentation.textClassName} ${animate ? 'cr-level-arrive' : ''}`}
+      className={`relative flex shrink-0 items-center justify-center border ${sizeClassName} ${presentation.borderClassName} ${presentation.backgroundClassName} ${presentation.textClassName} ${animate ? 'cr-level-arrive' : ''}`}
       role="img"
     >
       <svg aria-hidden className="absolute inset-1" viewBox="0 0 100 100">
@@ -67,9 +76,7 @@ export function WebsiteLevelMark({
           strokeWidth="1.5"
         />
       </svg>
-      <span className={`font-mono font-semibold ${compact ? 'text-sm' : 'text-xl'}`}>
-        {level === 'unverified' ? '—' : '!'}
-      </span>
+      <span className={`font-mono font-semibold ${size === 'sm' ? 'text-sm' : 'text-xl'}`}>—</span>
     </div>
   )
 }

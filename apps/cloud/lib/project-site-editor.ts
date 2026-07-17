@@ -4,6 +4,7 @@ export interface ProjectSiteEditorProps {
   authenticatedPages: string[]
   checking?: boolean
   maxPages: number
+  managedAccessConnected?: boolean
   pages: string[]
   plan: PlanId
   problemPaths?: string[]

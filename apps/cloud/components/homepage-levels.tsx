@@ -62,10 +62,12 @@ export function HomepageLevels() {
         </div>
 
         <div className="mt-14 grid gap-px border border-border bg-border md:grid-cols-5">
-          {PUBLIC_LEVELS.map(({ level, meaning, requirement }) => (
-            <article className="bg-surface p-5" key={level}>
-              <WebsiteLevelMark level={level} size="sm" />
-              <div className="mt-5">
+          {PUBLIC_LEVELS.map(({ level, meaning, requirement }, index) => (
+            <article className="flex min-h-full flex-col bg-surface p-5" key={level}>
+              <div className="flex h-28 items-start">
+                <WebsiteLevelMark animate animationDelayMs={index * 180} level={level} size="md" />
+              </div>
+              <div className="mt-6">
                 <WebsiteLevelBadge level={level} />
               </div>
               <p className="mt-4 font-semibold text-sm leading-6">{meaning}</p>

@@ -28,10 +28,9 @@ describe('managed access credential encryption', () => {
 
   it('rejects modified ciphertext', () => {
     const encrypted = encryptAccessHeaders({ authorization: 'Bearer test-token' })
-    assert.throws(
-      () => decryptAccessHeaders(`${encrypted.slice(0, -1)}x`),
-      /authenticate data|invalid/i
-    )
+    const [version, iv, tag, ciphertext] = encrypted.split('.')
+    const modifiedTag = `${tag?.startsWith('A') ? 'B' : 'A'}${tag?.slice(1)}`
+    assert.throws(() => decryptAccessHeaders(`${version}.${iv}.${modifiedTag}.${ciphertext}`))
   })
 
   it('requires a dedicated encryption key', () => {

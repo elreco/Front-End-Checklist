@@ -15,7 +15,6 @@ import { UpgradeLink } from './plan-limit-upsell'
 import { ProjectActionStep, ProjectCoverageMetric } from './project-action-center-parts'
 import { ProjectCliSetup } from './project-cli-setup'
 import { ProjectPreviewProtectionCard } from './project-preview-protection-card'
-
 /** Shows next actions, monitoring coverage, integrations, and contextual plan value. */
 export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
   const openFindings = project.findings.filter(
@@ -61,6 +60,8 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
             <ProjectCliSetup
               configured={project.apiTokenConfigured}
               authenticatedPages={project.authenticatedPages}
+              latestPages={project.latestPages}
+              managedAccess={project.managedAccess}
               pages={project.pages}
               plan={project.plan}
               projectId={project.id}
@@ -70,7 +71,6 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
           </div>
         ) : null}
       </section>
-
       <section className="h-full border border-border bg-surface p-5 md:col-span-2 xl:col-span-2">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -115,13 +115,17 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
           />
           <ProjectActionStep
             complete={
-              project.accessMode !== 'public' ? project.ciRuns > 0 : project.scheduleEnabled
+              project.accessMode !== 'public'
+                ? project.managedAccess?.status === 'verified' || project.ciRuns > 0
+                : project.scheduleEnabled
             }
             description={
               project.accessMode !== 'public'
-                ? project.ciRuns > 0
-                  ? `${project.ciRuns} secure ${project.ciRuns === 1 ? 'check has' : 'checks have'} reached CodeRocket.`
-                  : 'Required: connect an environment that can already open the protected pages.'
+                ? project.managedAccess?.status === 'verified'
+                  ? `${project.managedAccess.displayLabel} is connected for automatic checks.`
+                  : project.ciRuns > 0
+                    ? `${project.ciRuns} secure ${project.ciRuns === 1 ? 'check has' : 'checks have'} reached CodeRocket.`
+                    : 'Connect page access once. CodeRocket will recommend the simplest available method.'
                 : project.scheduleEnabled
                   ? `Automatic monitoring is active. Next check ${project.nextCheck}.`
                   : 'Turn on automatic checks so changes to the live site are not missed.'
@@ -134,7 +138,6 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
           />
         </ol>
       </section>
-
       <section className="h-full border border-border bg-surface p-5">
         <BrainCircuit aria-hidden className="h-5 w-5 text-accent" />
         <p className="mt-4 font-mono text-[10px] text-accent uppercase tracking-[.12em]">
@@ -146,7 +149,6 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
           a client summary or a structured task for a developer or coding assistant.
         </p>
       </section>
-
       <section className="h-full border border-border bg-surface p-5">
         {project.accessMode !== 'public' ? (
           <LockKeyhole aria-hidden className="h-5 w-5 text-signal" />
@@ -158,12 +160,12 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
         </p>
         <h2 className="mt-2 font-heading font-semibold text-lg">
           {project.accessMode !== 'public'
-            ? 'Secure access from your own environment'
+            ? 'Open protected pages safely'
             : 'Monitor the published website'}
         </h2>
         <p className="mt-2 text-muted text-sm leading-6">
           {project.accessMode !== 'public'
-            ? `${project.pages.length - project.authenticatedPages.length} public ${project.pages.length - project.authenticatedPages.length === 1 ? 'page stays' : 'pages stay'} anonymous, while ${project.authenticatedPages.length} ${project.authenticatedPages.length === 1 ? 'page receives' : 'pages receive'} the dedicated test session. The runner keeps every secret in your environment.`
+            ? `${project.pages.length - project.authenticatedPages.length} public ${project.pages.length - project.authenticatedPages.length === 1 ? 'page stays' : 'pages stay'} anonymous, while ${project.authenticatedPages.length} protected ${project.authenticatedPages.length === 1 ? 'page receives' : 'pages receive'} only the access configured for them. CodeRocket tries a guided cloud connection first and keeps the secure runner for private infrastructure.`
             : `CodeRocket checks the live pages from the cloud. Next automatic check ${project.nextCheck}. No repository setup is needed.`}
         </p>
         {project.accessMode !== 'public' ? (
@@ -171,6 +173,8 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
             <ProjectCliSetup
               configured={project.apiTokenConfigured}
               authenticatedPages={project.authenticatedPages}
+              latestPages={project.latestPages}
+              managedAccess={project.managedAccess}
               pages={project.pages}
               plan={project.plan}
               projectId={project.id}
@@ -178,8 +182,8 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
               siteUrl={project.url}
             />
             <span className="font-mono text-[10px] text-muted uppercase tracking-[.1em]">
-              {project.ciRuns > 0
-                ? 'Secure access connected'
+              {project.managedAccess?.status === 'verified' || project.ciRuns > 0
+                ? 'Page access connected'
                 : project.apiTokenConfigured
                   ? 'Waiting for first check'
                   : 'Not connected'}
@@ -188,7 +192,6 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
         ) : null}
       </section>
       <ProjectPreviewProtectionCard />
-
       <section className="h-full border border-border bg-background p-5">
         <div className="flex items-center gap-2">
           <ShieldCheck aria-hidden className="h-5 w-5 text-success" />
@@ -265,25 +268,27 @@ function accessContent(
   if (recoveryKind === 'access')
     return {
       icon: LockKeyhole,
-      title: 'Protected pages need secure access',
+      title: 'Some pages need access',
       description:
-        'Sign-in, a firewall, or a challenge blocked the cloud check. Run it from an environment that can already open these pages.'
+        'Sign-in, a hosting protection, or a firewall blocked the public check. CodeRocket will recommend the simplest guided connection before showing developer options.'
     }
   if (project.accessMode !== 'public')
     return {
       icon: LockKeyhole,
       title:
-        project.ciRuns > 0
-          ? 'Secure access connected'
+        project.managedAccess?.status === 'verified' || project.ciRuns > 0
+          ? 'Page access connected'
           : project.apiTokenConfigured
             ? 'Waiting for the first secure check'
             : 'Secure access required',
       description:
-        project.ciRuns > 0
-          ? 'The secure runner sends one complete result while keeping public pages anonymous and signed-in pages authenticated.'
-          : project.apiTokenConfigured
-            ? 'A project key exists. Run the generated job once to confirm every public and protected page in one complete result.'
-            : 'Some or all pages need controlled access. CodeRocket will not bypass protection or store your normal account password.'
+        project.managedAccess?.status === 'verified'
+          ? `${project.managedAccess.displayLabel} is verified. Automatic checks can open the protected pages without changing the public-page visitor state.`
+          : project.ciRuns > 0
+            ? 'The secure runner sends one complete result while keeping public pages anonymous and signed-in pages authenticated.'
+            : project.apiTokenConfigured
+              ? 'A project key exists. Run the generated job once to confirm every public and protected page in one complete result.'
+              : 'Some or all pages need controlled access. CodeRocket starts with a guided connection and never asks for your normal personal password.'
     }
   return {
     icon: Cloud,

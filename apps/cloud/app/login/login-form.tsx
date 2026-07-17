@@ -106,7 +106,7 @@ export function LoginForm() {
             <label className="font-semibold text-sm" htmlFor="login-password">
               Password
             </label>
-            <CodeRocketButton asChild variant="link">
+            <CodeRocketButton asChild className="text-muted text-xs" variant="link">
               <Link href="/recover">Forgot password?</Link>
             </CodeRocketButton>
           </div>

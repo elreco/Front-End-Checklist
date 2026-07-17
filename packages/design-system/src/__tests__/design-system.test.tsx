@@ -14,6 +14,7 @@ import {
   CardTitle
 } from '@repo/design-system/ui/card'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
+import { CodeRocketInput, CodeRocketTextarea } from '@repo/design-system/ui/coderocket-field'
 import { CodeRocketOAuthButton } from '@repo/design-system/ui/coderocket-oauth-button'
 import { Input } from '@repo/design-system/ui/input'
 import { Progress } from '@repo/design-system/ui/progress'
@@ -87,6 +88,24 @@ describe('@repo/design-system', () => {
     const action = screen.getByRole('button', { name: 'Run audit' })
     expect(action.className).toContain('cursor-pointer')
     expect(screen.getByRole('link', { name: 'View pricing' }).getAttribute('href')).toBe('/pricing')
+  })
+
+  it('centers shared CodeRocket inputs and supports leading content', () => {
+    render(
+      <>
+        <label htmlFor="budget">Budget</label>
+        <CodeRocketInput id="budget" leadingContent="€" type="number" />
+        <label htmlFor="notes">Notes</label>
+        <CodeRocketTextarea id="notes" />
+      </>
+    )
+
+    const input = screen.getByRole('spinbutton', { name: 'Budget' })
+    expect(input.className).toContain('h-12')
+    expect(input.className).toContain('py-0')
+    expect(input.parentElement?.textContent).toContain('€')
+    expect(input.parentElement?.querySelector('[aria-hidden="true"]')).toBeTruthy()
+    expect(screen.getByRole('textbox', { name: 'Notes' }).className).toContain('py-3')
   })
 
   it('keeps tooltip hints optional without replacing their accessible trigger', () => {

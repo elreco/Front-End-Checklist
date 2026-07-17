@@ -1,11 +1,7 @@
 import { buildProjectPageUrl, fetchPublicHtml } from '@coderocket/core'
-import { encryptAccessHeaders } from '@coderocket/db'
+import { decryptAccessHeaders, encryptAccessHeaders } from '@coderocket/db'
 import { z } from 'zod'
-import {
-  getManagedAccessLabel,
-  type ManagedAccessKind,
-  type ManagedAccessScope
-} from '@/lib/managed-access'
+import { getManagedAccessLabel, type ManagedAccessScope } from '@/lib/managed-access'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 const scopeSchema = z.enum(['all', 'authenticated'])
@@ -29,12 +25,14 @@ const accessInputSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('bearer_token'),
+    paths: z.array(z.string().trim().min(1).max(2048)).max(50).default([]),
     scope: scopeSchema.default('authenticated'),
     token: z.string().trim().min(1).max(4096)
   }),
   z.object({
     cookie: z.string().trim().min(1).max(4096),
     kind: z.literal('session_cookie'),
+    paths: z.array(z.string().trim().min(1).max(2048)).max(50).default([]),
     scope: scopeSchema.default('authenticated')
   }),
   z.object({
@@ -74,15 +72,61 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     return Response.json({ error: 'The monitored site could not be loaded.' }, { status: 500 })
   if (!project) return Response.json({ error: 'Monitored site not found.' }, { status: 404 })
 
-  const headers = buildAccessHeaders(input.data)
-  const paths = selectVerificationPaths(
-    input.data.scope,
+  const newHeaders = buildAccessHeaders(input.data)
+  const { data: storedConnections, error: existingConnectionError } = await supabase
+    .from('cr_project_access_connections')
+    .select('display_label,encrypted_headers,kind,scope')
+    .eq('project_id', projectId)
+    .eq('owner_id', auth.user.id)
+  if (existingConnectionError)
+    return Response.json({ error: 'Existing page access could not be loaded.' }, { status: 500 })
+  const existingConnection = storedConnections?.find(
+    connection => connection.scope === input.data.scope
+  )
+  let existingHeaders: Record<string, string> = {}
+  let allPageHeaders: Record<string, string> = {}
+  let authenticatedPageHeaders: Record<string, string> = {}
+  try {
+    if (existingConnection)
+      existingHeaders = decryptAccessHeaders(existingConnection.encrypted_headers)
+    for (const connection of storedConnections ?? [])
+      if (connection.scope === 'all')
+        allPageHeaders = {
+          ...allPageHeaders,
+          ...decryptAccessHeaders(connection.encrypted_headers)
+        }
+      else
+        authenticatedPageHeaders = {
+          ...authenticatedPageHeaders,
+          ...decryptAccessHeaders(connection.encrypted_headers)
+        }
+  } catch {
+    return Response.json({ error: 'Existing page access could not be decrypted.' }, { status: 500 })
+  }
+  const scopedHeaders = { ...existingHeaders, ...newHeaders }
+  const effectiveAuthenticatedPages = resolveAuthenticatedPages(
+    input.data,
     project.page_paths,
     project.authenticated_page_paths ?? []
   )
+  const paths = selectVerificationPaths(
+    input.data.scope,
+    project.page_paths,
+    effectiveAuthenticatedPages
+  )
   try {
-    for (const path of paths)
-      await fetchPublicHtml(buildProjectPageUrl(project.production_url, path), { headers })
+    for (const path of paths) {
+      const pathIsAuthenticated = effectiveAuthenticatedPages.includes(path)
+      const verificationHeaders =
+        input.data.scope === 'authenticated'
+          ? { ...allPageHeaders, ...scopedHeaders }
+          : pathIsAuthenticated
+            ? { ...scopedHeaders, ...authenticatedPageHeaders }
+            : scopedHeaders
+      await fetchPublicHtml(buildProjectPageUrl(project.production_url, path), {
+        headers: verificationHeaders
+      })
+    }
   } catch (error) {
     return Response.json(
       {
@@ -95,7 +139,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
   let encryptedHeaders: string
   try {
-    encryptedHeaders = encryptAccessHeaders(headers)
+    encryptedHeaders = encryptAccessHeaders(scopedHeaders)
   } catch {
     return Response.json(
       { error: 'Secure access storage is not configured on this CodeRocket installation.' },
@@ -103,32 +147,39 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     )
   }
   const verifiedAt = new Date().toISOString()
-  const displayLabel = getManagedAccessLabel(input.data.kind)
-  const { error: connectionError } = await supabase
-    .from('cr_project_access_connections')
-    .upsert(
-      {
-        display_label: displayLabel,
-        encrypted_headers: encryptedHeaders,
-        kind: input.data.kind,
-        last_error: null,
-        last_verified_at: verifiedAt,
-        owner_id: auth.user.id,
-        project_id: projectId,
-        scope: input.data.scope,
-        status: 'verified',
-        updated_at: verifiedAt
-      },
-      { onConflict: 'project_id' }
-    )
+  const newLabel = getManagedAccessLabel(input.data.kind)
+  const displayLabel =
+    existingConnection && !existingConnection.display_label.split(' + ').includes(newLabel)
+      ? `${existingConnection.display_label} + ${newLabel}`
+      : (existingConnection?.display_label ?? newLabel)
+  const storedKind =
+    existingConnection && existingConnection.kind !== input.data.kind
+      ? 'custom_headers'
+      : input.data.kind
+  const { error: connectionError } = await supabase.from('cr_project_access_connections').upsert(
+    {
+      display_label: displayLabel,
+      encrypted_headers: encryptedHeaders,
+      kind: storedKind,
+      last_error: null,
+      last_verified_at: verifiedAt,
+      owner_id: auth.user.id,
+      project_id: projectId,
+      scope: input.data.scope,
+      status: 'verified',
+      updated_at: verifiedAt
+    },
+    { onConflict: 'project_id,scope' }
+  )
   if (connectionError)
     return Response.json({ error: 'The secure connection could not be saved.' }, { status: 500 })
 
-  const accessMode = resolveAccessMode(project.page_paths, project.authenticated_page_paths ?? [])
+  const accessMode = resolveAccessMode(project.page_paths, effectiveAuthenticatedPages)
   const { error: projectUpdateError } = await supabase
     .from('cr_projects')
     .update({
       access_mode: accessMode,
+      authenticated_page_paths: effectiveAuthenticatedPages,
       schedule_enabled: true,
       secure_runner_required: false,
       updated_at: verifiedAt
@@ -136,7 +187,10 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     .eq('id', projectId)
     .eq('owner_id', auth.user.id)
   if (projectUpdateError)
-    return Response.json({ error: 'The secure connection could not be activated.' }, { status: 500 })
+    return Response.json(
+      { error: 'The secure connection could not be activated.' },
+      { status: 500 }
+    )
 
   const { count: activeChecks } = await supabase
     .from('cr_jobs')
@@ -163,7 +217,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
   return Response.json({
     displayLabel,
-    kind: input.data.kind,
+    kind: storedKind,
     lastVerifiedAt: verifiedAt,
     queued,
     scope: input.data.scope,
@@ -194,7 +248,8 @@ export async function DELETE(
     .delete()
     .eq('project_id', projectId)
     .eq('owner_id', auth.user.id)
-  if (error) return Response.json({ error: 'The connection could not be revoked.' }, { status: 500 })
+  if (error)
+    return Response.json({ error: 'The connection could not be revoked.' }, { status: 500 })
   await supabase
     .from('cr_projects')
     .update({
@@ -207,6 +262,7 @@ export async function DELETE(
   return new Response(null, { status: 204 })
 }
 
+/** Convert one validated provider payload into the request headers stored for the worker. */
 function buildAccessHeaders(input: z.infer<typeof accessInputSchema>): Record<string, string> {
   if (input.kind === 'vercel')
     return {
@@ -227,6 +283,7 @@ function buildAccessHeaders(input: z.infer<typeof accessInputSchema>): Record<st
   return input.headers
 }
 
+/** Limit connection verification to a small representative set of configured pages. */
 function selectVerificationPaths(
   scope: ManagedAccessScope,
   pages: string[],
@@ -236,6 +293,7 @@ function selectVerificationPaths(
   return (candidates.length > 0 ? candidates : pages).slice(0, 3)
 }
 
+/** Derive the project access summary after authenticated page inference. */
 function resolveAccessMode(
   pages: string[],
   authenticatedPages: string[]
@@ -244,11 +302,28 @@ function resolveAccessMode(
   return authenticatedPages.length === pages.length ? 'private' : 'protected'
 }
 
+/** Keep inferred protected paths ordered, owner-configured, and inside the monitored selection. */
+function resolveAuthenticatedPages(
+  input: z.infer<typeof accessInputSchema>,
+  pages: string[],
+  storedAuthenticatedPages: string[]
+): string[] {
+  if (input.scope !== 'authenticated') return storedAuthenticatedPages
+  const requestedPaths =
+    'paths' in input && input.paths.length > 0
+      ? input.paths.filter(path => pages.includes(path))
+      : storedAuthenticatedPages
+  const paths = requestedPaths.length > 0 ? requestedPaths : pages
+  return pages.filter(path => storedAuthenticatedPages.includes(path) || paths.includes(path))
+}
+
+/** Translate a safe-fetch failure into a concise guided-connection error. */
 function explainVerificationFailure(error: unknown): string {
   const detail = error instanceof Error ? error.message : 'The page still could not be opened.'
   return `CodeRocket tested the connection, but the protected page still could not be opened. ${detail}`
 }
 
+/** Parse request JSON without trusting its shape or provider discriminator. */
 async function readAccessInput(request: Request) {
   let value: unknown
   try {

@@ -71,22 +71,27 @@ export function ManagedAccessFields({ kind }: { kind: ManagedAccessKind }) {
       />
     )
   return (
-    <label className="block font-semibold text-sm">
+    <label className="block font-semibold text-sm" htmlFor="managed-access-headers">
       Request headers
       <CodeRocketTextarea
         aria-describedby="custom-headers-help"
         className="min-h-28 font-mono text-xs"
+        id="managed-access-headers"
         name="headers"
         placeholder={'X-Preview-Token: …\nX-Custom-Access: …'}
         required
       />
-      <span className="mt-2 block font-normal text-muted text-xs leading-5" id="custom-headers-help">
+      <span
+        className="mt-2 block font-normal text-muted text-xs leading-5"
+        id="custom-headers-help"
+      >
         One header per line. Host, User-Agent, and other unsafe transport overrides are rejected.
       </span>
     </label>
   )
 }
 
+/** Render one consistently labelled secret or identifier field with inline guidance. */
 function AccessField({
   help,
   label,
@@ -101,12 +106,14 @@ function AccessField({
   type?: 'password' | 'text'
 }) {
   const helpId = `${name}-access-help`
+  const fieldId = `${name}-managed-access-field`
   return (
-    <label className="block font-semibold text-sm">
+    <label className="block font-semibold text-sm" htmlFor={fieldId}>
       {label}
       <CodeRocketInput
         aria-describedby={helpId}
         autoComplete={autoComplete}
+        id={fieldId}
         name={name}
         required
         type={type}

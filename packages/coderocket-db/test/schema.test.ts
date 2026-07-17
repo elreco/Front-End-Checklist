@@ -205,6 +205,16 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('combines origin-wide and signed-in access without exposing either bundle', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607170008_managed_access_layers.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /unique \(project_id, scope\)/)
+    assert.match(sql, /project_access_connections_project_id_key/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
   it('stores only bounded HTTPS social preview image URLs on monitored sites', async () => {
     const sql = await readFile(
       new URL('../supabase/migrations/202607170003_project_social_images.sql', import.meta.url),

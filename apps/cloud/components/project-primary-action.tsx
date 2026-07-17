@@ -19,12 +19,16 @@ export function ProjectPrimaryAction({
     project.latestAudit?.gate === 'inconclusive'
       ? getProjectRecoveryKind(unavailablePages)
       : undefined
-  const requiresCi = project.accessMode !== 'public' || recoveryKind === 'access'
-  if (requiresCi)
+  const requiresAccessConnection =
+    (project.accessMode !== 'public' || recoveryKind === 'access') &&
+    project.managedAccess?.status !== 'verified'
+  if (requiresAccessConnection)
     return (
       <ProjectCliSetup
         configured={project.apiTokenConfigured}
         authenticatedPages={project.authenticatedPages}
+        latestPages={project.latestPages}
+        managedAccess={project.managedAccess}
         pages={project.pages}
         plan={project.plan}
         projectId={project.id}
@@ -38,6 +42,7 @@ export function ProjectPrimaryAction({
       <ProjectSiteEditor
         authenticatedPages={project.authenticatedPages}
         checking={project.checking}
+        managedAccessConnected={project.managedAccess?.status === 'verified'}
         maxPages={getPlanEntitlements(project.plan).pagesPerProject}
         pages={project.pages}
         plan={project.plan}

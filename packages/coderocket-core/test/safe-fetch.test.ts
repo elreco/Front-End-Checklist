@@ -123,10 +123,10 @@ describe('safe HTML fetch', () => {
 
   it('does not treat a rendered sign-in screen as the requested private page', async () => {
     const fakeFetch = async () =>
-      new Response(
-        '<!doctype html><title>Sign in</title><form><input type="password"></form>',
-        { status: 200, headers: { 'content-type': 'text/html' } }
-      )
+      new Response('<!doctype html><title>Sign in</title><form><input type="password"></form>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' }
+      })
     await assert.rejects(
       () =>
         fetchPublicHtml('https://93.184.216.34/dashboard', {
@@ -138,10 +138,10 @@ describe('safe HTML fetch', () => {
 
   it('allows a monitored sign-in page to contain a password field', async () => {
     const fakeFetch = async () =>
-      new Response(
-        '<!doctype html><title>Sign in</title><form><input type="password"></form>',
-        { status: 200, headers: { 'content-type': 'text/html' } }
-      )
+      new Response('<!doctype html><title>Sign in</title><form><input type="password"></form>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' }
+      })
     const response = await fetchPublicHtml('https://93.184.216.34/login', {
       fetchImplementation: fakeFetch
     })

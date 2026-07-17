@@ -17,7 +17,7 @@ const outcomes = [
     icon: Radar,
     title: 'The right access method is used',
     description:
-      'Pages without sign-in use the cloud check. Restricted pages use a secure runner that already has access.'
+      'CodeRocket tries the public cloud first, then recommends a guided connection only if a page is blocked.'
   },
   {
     icon: ShieldCheck,

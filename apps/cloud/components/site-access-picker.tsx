@@ -104,21 +104,21 @@ function getAccessExplanation(mode: SiteAccessMode, secureRunnerRequired: boolea
       icon: Layers3,
       title: 'Public and signed-in pages stay separate',
       description:
-        'The secure runner checks the complete selection, but it adds the dedicated application session only to pages you mark as requiring sign-in.'
+        'CodeRocket keeps public pages anonymous and applies a dedicated test session only to pages you mark as requiring sign-in. The guided connection appears after setup.'
     }
   if (mode === 'private')
     return {
       icon: LockKeyhole,
       title: 'We will guide you through secure access',
       description:
-        'Every selected page receives the dedicated application session from your secure environment. Infrastructure restrictions are configured separately.'
+        'Every selected page will receive only the dedicated test access you connect. CodeRocket tries a guided cloud connection before suggesting a secure runner.'
     }
   if (secureRunnerRequired)
     return {
       icon: LockKeyhole,
-      title: 'Pages stay anonymous inside your secure runner',
+      title: 'The site needs private infrastructure access',
       description:
-        'CodeRocket will not request this site from the public cloud. The runner uses your network or infrastructure access without adding an application login session.'
+        'Use this only for a VPN, private network, client certificate, CAPTCHA, or browser-only login. CodeRocket will guide a developer through the secure runner after setup.'
     }
   return {
     icon: Cloud,

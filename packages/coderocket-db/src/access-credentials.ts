@@ -7,10 +7,7 @@ const IV_BYTES = 12
 export function encryptAccessHeaders(headers: Record<string, string>): string {
   const iv = randomBytes(IV_BYTES)
   const cipher = createCipheriv('aes-256-gcm', readEncryptionKey(), iv)
-  const ciphertext = Buffer.concat([
-    cipher.update(JSON.stringify(headers), 'utf8'),
-    cipher.final()
-  ])
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(headers), 'utf8'), cipher.final()])
   return [
     ENCRYPTION_VERSION,
     iv.toString('base64url'),
@@ -41,13 +38,14 @@ export function decryptAccessHeaders(payload: string): Record<string, string> {
   return parsed
 }
 
+/** Derive a fixed-width process key without storing the operator secret in database rows. */
 function readEncryptionKey(): Buffer {
   const secret = process.env.CODEROCKET_ACCESS_ENCRYPTION_KEY
-  if (!secret || secret.length < 32)
-    throw new Error('Managed access encryption is not configured')
+  if (!secret || secret.length < 32) throw new Error('Managed access encryption is not configured')
   return createHash('sha256').update(secret).digest()
 }
 
+/** Validate decrypted JSON before it can become an outbound request header bundle. */
 function isHeaderRecord(value: unknown): value is Record<string, string> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
   const entries = Object.entries(value)

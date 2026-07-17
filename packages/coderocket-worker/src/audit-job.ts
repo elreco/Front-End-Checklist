@@ -125,23 +125,29 @@ export async function processAuditJob(
     .is('archived_at', null)
     .single()
   if (error || !project) throw new Error('Project is unavailable')
-  const { data: accessConnection, error: accessConnectionError } = await db
+  const { data: accessConnections, error: accessConnectionError } = await db
     .from('cr_project_access_connections')
     .select('id,encrypted_headers,scope')
     .eq('project_id', project.id)
     .eq('owner_id', project.owner_id)
-    .maybeSingle()
   if (accessConnectionError) throw new Error(accessConnectionError.message)
-  const accessHeaders = accessConnection
-    ? decryptAccessHeaders(accessConnection.encrypted_headers)
-    : undefined
+  const allPageHeaders: Record<string, string> = {}
+  const authenticatedPageHeaders: Record<string, string> = {}
+  for (const connection of accessConnections ?? []) {
+    const headers = decryptAccessHeaders(connection.encrypted_headers)
+    Object.assign(
+      connection.scope === 'authenticated' ? authenticatedPageHeaders : allPageHeaders,
+      headers
+    )
+  }
   const authenticatedPaths = new Set<string>(project.authenticated_page_paths ?? [])
   const resolveHeaders: AccessHeaderResolver = url => {
-    if (!accessHeaders) return undefined
-    if (accessConnection?.scope === 'all') return accessHeaders
-    return authenticatedPaths.has(new URL(url).pathname) ? accessHeaders : undefined
+    const headers = authenticatedPaths.has(new URL(url).pathname)
+      ? { ...allPageHeaders, ...authenticatedPageHeaders }
+      : allPageHeaders
+    return Object.keys(headers).length > 0 ? headers : undefined
   }
-  const pageUrls = project.page_paths.map((path: string) =>
+  const pageUrls: string[] = project.page_paths.map((path: string) =>
     buildProjectPageUrl(project.production_url, path)
   )
   await updateProgress(job, {
@@ -171,9 +177,9 @@ export async function processAuditJob(
     fetchText: url => fetchPublicText(url, { headers: resolveHeaders(url) })
   })
   if (pages[0]) pages[0].findings.push(...infrastructureFindings)
-  if (accessConnection) {
+  for (const connection of accessConnections ?? []) {
     const applicablePages =
-      accessConnection.scope === 'all'
+      connection.scope === 'all'
         ? pages
         : pages.filter(page => authenticatedPaths.has(new URL(page.url).pathname))
     const failedPage = applicablePages.find(page => !page.reachable)
@@ -185,7 +191,7 @@ export async function processAuditJob(
         status: failedPage ? 'failed' : 'verified',
         updated_at: new Date().toISOString()
       })
-      .eq('id', accessConnection.id)
+      .eq('id', connection.id)
       .eq('owner_id', project.owner_id)
   }
   await updateProgress(job, {

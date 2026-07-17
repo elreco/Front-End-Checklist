@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  Check,
-  Copy,
-  LoaderCircle,
-  Network,
-  ShieldCheck,
-  Trash2
-} from '@repo/design-system/icons'
+import { Check, Copy, LoaderCircle, Network, ShieldCheck, Trash2 } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { toast } from '@repo/design-system/ui/coderocket-toast'
 import { useRouter } from 'next/navigation'
@@ -46,18 +39,23 @@ export function ManagedAccessConnection({
   const recommendedKind = getRecommendedManagedAccessKind(barrier)
   const [kind, setKind] = useState<ManagedAccessKind | null>(recommendedKind)
   const [busy, setBusy] = useState(false)
+  const [addingLayer, setAddingLayer] = useState(false)
   const [showMethods, setShowMethods] = useState(!recommendedKind)
-  const scope =
-    authenticatedPages.length > 0 && managedAccessKindIsPageSession(kind)
-      ? 'authenticated'
-      : 'all'
+  const scope = managedAccessKindIsPageSession(kind) ? 'authenticated' : 'all'
+  const protectedPaths = useMemo(
+    () =>
+      authenticatedPages.length > 0
+        ? authenticatedPages
+        : latestPages.filter(page => !page.reachable).map(page => page.path),
+    [authenticatedPages, latestPages]
+  )
   const requestText = useMemo(
     () =>
       `Could you help connect protected-page access for ${siteUrl} in CodeRocket? Please create a dedicated, revocable automation credential or install the secure runner. Do not send a personal password or normal browser session.`,
     [siteUrl]
   )
 
-  if (connection)
+  if (connection && !addingLayer)
     return (
       <section className="border border-success bg-success/10 p-5">
         <div className="flex items-start gap-3">
@@ -76,6 +74,14 @@ export function ManagedAccessConnection({
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
+          <CodeRocketButton
+            disabled={busy}
+            onClick={() => setAddingLayer(true)}
+            size="sm"
+            type="button"
+          >
+            Add another access layer
+          </CodeRocketButton>
           <CodeRocketButton
             disabled={busy}
             onClick={() => router.refresh()}
@@ -104,11 +110,7 @@ export function ManagedAccessConnection({
             type="button"
             variant="ghost"
           >
-            {busy ? (
-              <LoaderCircle aria-hidden className="animate-spin" />
-            ) : (
-              <Trash2 aria-hidden />
-            )}
+            {busy ? <LoaderCircle aria-hidden className="animate-spin" /> : <Trash2 aria-hidden />}
             Revoke access
           </CodeRocketButton>
         </div>
@@ -133,12 +135,13 @@ export function ManagedAccessConnection({
       </section>
     )
 
+  /** Verify and persist the selected connection without retaining form secrets in client state. */
   async function submitConnection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!kind) return
     setBusy(true)
     const formData = new FormData(event.currentTarget)
-    const payload = buildManagedAccessPayload(kind, scope, formData)
+    const payload = buildManagedAccessPayload(kind, scope, formData, protectedPaths)
     const response = await fetch(`/api/projects/${projectId}/managed-access`, {
       body: JSON.stringify(payload),
       headers: { 'content-type': 'application/json' },
@@ -245,6 +248,7 @@ export function ManagedAccessConnection({
   )
 }
 
+/** Offer a secret-free handoff when the current user does not manage website access. */
 function CopyHelpRequest({
   busy,
   requestText,

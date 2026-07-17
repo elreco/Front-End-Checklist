@@ -29,7 +29,7 @@ No historical CodeRocket project, credit, generation, or subscription table is r
 3. Run `pnpm --filter @coderocket/cloud dev`.
 4. Run the worker separately with `pnpm --filter @coderocket/worker start` after applying migrations.
 
-Set `OPENAI_API_KEY` on the web and worker deployments to enable the optional AI fix assistant. `CODEROCKET_AI_MODEL` defaults to `gpt-5.6-terra` and can be overridden without changing the stored prompt or rule snapshot version.
+Set the same random 32+ character `CODEROCKET_ACCESS_ENCRYPTION_KEY` on the web and worker deployments so guided protected-page connections can be encrypted and used by scheduled checks. Set `OPENAI_API_KEY` to enable the optional AI fix assistant. `CODEROCKET_AI_MODEL` defaults to `gpt-5.6-terra` and can be overridden without changing the stored prompt or rule snapshot version.
 
 Without secrets, set `CODEROCKET_DEMO_MODE=true` to review the public marketing and dashboard surfaces.
 

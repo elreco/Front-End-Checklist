@@ -19,6 +19,8 @@ export function ProjectHeaderActions({
         <ProjectCliSetup
           configured={project.apiTokenConfigured}
           authenticatedPages={project.authenticatedPages}
+          latestPages={project.latestPages}
+          managedAccess={project.managedAccess}
           pages={project.pages}
           plan={project.plan}
           projectId={project.id}
@@ -30,6 +32,7 @@ export function ProjectHeaderActions({
       <ProjectSiteEditor
         authenticatedPages={project.authenticatedPages}
         checking={project.checking}
+        managedAccessConnected={project.managedAccess?.status === 'verified'}
         maxPages={getPlanEntitlements(project.plan).pagesPerProject}
         pages={project.pages}
         plan={project.plan}

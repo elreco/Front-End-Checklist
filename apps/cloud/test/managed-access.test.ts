@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import {
-  diagnoseAccessBarrier,
-  getManagedAccessLabel
-} from '../lib/managed-access'
+import { diagnoseAccessBarrier, getManagedAccessLabel } from '../lib/managed-access'
 
 describe('managed access diagnosis', () => {
   it('recognizes hosting and identity protections from saved evidence', () => {

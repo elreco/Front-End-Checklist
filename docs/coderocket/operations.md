@@ -23,7 +23,16 @@ Only the worker and server routes receive `SUPABASE_SERVICE_ROLE_KEY`. It must n
 
 `fly.coderocket.toml` defines `web` and `worker` process groups in `cdg`. The release command only runs the CodeRocket migrations. The migration runner rejects any pending SQL file that references a `public` database object outside the `cr_*` namespace, so historical application tables remain outside the product boundary.
 
-Required secrets: Supabase public URL/key, service role key, `DATABASE_URL`, Stripe secrets, Resend key, and `OPENAI_API_KEY` for the optional AI fix assistant. Set `CODEROCKET_AI_MODEL` only when overriding the default `gpt-5.6-terra` model.
+Required secrets: Supabase public URL/key, service role key, `DATABASE_URL`, Stripe secrets, Resend key, and a random 32+ character `CODEROCKET_ACCESS_ENCRYPTION_KEY` shared by the web and worker processes. `OPENAI_API_KEY` is required only for the optional AI fix assistant. Set `CODEROCKET_AI_MODEL` only when overriding the default `gpt-5.6-terra` model.
+
+## Managed protected-page access
+
+- The public cloud check remains the default and requires only the website URL.
+- When a page is blocked, the web process verifies a dedicated Vercel, Cloudflare, Basic Auth, token, session-cookie, or custom-header connection before saving it.
+- Access headers are encrypted with AES-256-GCM in `cr_project_access_connections`. Plaintext values are never returned to the browser after submission and must never be logged.
+- The worker decrypts values only while checking that owner’s project. Page-session credentials are sent only to paths explicitly marked as authenticated; origin-wide hosting credentials apply to the monitored origin.
+- Changing the monitored website origin revokes the stored connection. Cross-origin redirects never receive managed headers.
+- Private networks, VPNs, mTLS, CAPTCHA, MFA, and multi-step browser sign-in remain secure-runner cases; the UI must not describe them as connected to the cloud checker.
 
 ## AI fix assistant
 
