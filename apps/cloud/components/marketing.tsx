@@ -4,6 +4,7 @@ import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
 import { FaqAccordion } from '@/components/faq-accordion'
 import { AuditDemo } from '@/components/homepage-audit-demo'
+import { HomepageLevels } from '@/components/homepage-levels'
 import { DecisionRules, UseCases } from '@/components/homepage-use-cases'
 
 const ruleCount = loadRules().length
@@ -169,6 +170,7 @@ export function Benefits() {
         </div>
       </section>
       <AuditDemo />
+      <HomepageLevels />
       <UseCases />
       <DecisionRules />
       <HomepageFaq />

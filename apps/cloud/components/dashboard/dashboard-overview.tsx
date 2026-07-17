@@ -15,9 +15,9 @@ import { getPlanLabel } from '@/lib/product-language'
 import { getNextPlan } from '@/lib/upgrade'
 import { UpgradeLink } from '../plan-limit-upsell'
 import { EmptyState } from '../product-shell'
+import { DashboardLevelOverview } from './dashboard-level-overview'
 import { DashboardProjectCard } from './dashboard-project-card'
 import { OnboardingChecklist } from './onboarding-checklist'
-
 /** The action-oriented workspace overview. */
 export function DashboardOverview({
   audience,
@@ -73,7 +73,6 @@ export function DashboardOverview({
           </Link>
         </CodeRocketButton>
       </section>
-
       <OnboardingChecklist data={data} />
 
       <section
@@ -105,6 +104,8 @@ export function DashboardOverview({
           value={data.nextCheck}
         />
       </section>
+
+      <DashboardLevelOverview projects={data.projects} />
 
       <section aria-labelledby="sites-title" id="sites">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
@@ -239,7 +240,6 @@ function ActivityItem({ item }: { item: DashboardActivity }) {
     </li>
   )
 }
-
 /** Explain the current plan and the most relevant upgrade path. */
 function PlanCard({
   audience,

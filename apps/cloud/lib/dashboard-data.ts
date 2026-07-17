@@ -1,11 +1,14 @@
 import {
+  type FindingStatus,
   type GateStatus,
   getPlanEntitlements,
+  getRulesetVersion,
   type PlanId,
   type SiteAccessMode
 } from '@coderocket/core'
+import { calculateWebsiteLevel, type WebsiteLevelResult } from '@coderocket/core/website-level'
 import { formatRelativeTime } from './format'
-import { firstRelation } from './supabase/relations'
+import { firstRelation, normalizeRelation } from './supabase/relations'
 import { createSupabaseServerClient } from './supabase/server'
 
 export interface DashboardProject {
@@ -22,6 +25,7 @@ export interface DashboardProject {
   requestedPageCount: number
   checkedPageCount: number
   lastRun: string
+  level: WebsiteLevelResult
   nextCheck: string
   isChecking: boolean
 }
@@ -88,6 +92,16 @@ const demoData: DashboardData = {
       requestedPageCount: 5,
       checkedPageCount: 5,
       lastRun: '12 minutes ago',
+      level: calculateWebsiteLevel({
+        auditStatus: 'succeeded',
+        checkedPages: 5,
+        requestedPages: 5,
+        gate: 'failed',
+        findings: [
+          { identity: 'demo-a11y', priority: 'high', status: 'new' },
+          { identity: 'demo-security', priority: 'medium', status: 'persistent' }
+        ]
+      }),
       nextCheck: 'tomorrow',
       isChecking: false
     }
@@ -142,7 +156,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     supabase
       .from('cr_audits')
       .select(
-        'id,project_id,environment,trigger,status,gate_status,new_count,blocking_count,requested_page_count,checked_page_count,created_at,completed_at,cr_projects(name)'
+        'id,project_id,environment,trigger,status,gate_status,new_count,blocking_count,requested_page_count,checked_page_count,ruleset_version,created_at,completed_at,cr_projects(name)'
       )
       .eq('owner_id', auth.user.id)
       .order('created_at', { ascending: false })
@@ -185,8 +199,38 @@ export async function getDashboardData(): Promise<DashboardData> {
     (activeJobsResult.data ?? []).flatMap(job => (job.project_id ? [job.project_id] : []))
   )
   const connectedProjectIds = new Set((tokensResult.data ?? []).map(token => token.project_id))
+  const latestAuditIds = projects.flatMap(project => {
+    const auditId = audits.find(audit => audit.project_id === project.id)?.id
+    return auditId ? [auditId] : []
+  })
+  const latestOccurrences =
+    latestAuditIds.length === 0
+      ? []
+      : ((
+          await supabase
+            .from('cr_occurrences')
+            .select('audit_id,status,cr_findings(id,priority)')
+            .eq('owner_id', auth.user.id)
+            .in('audit_id', latestAuditIds)
+        ).data ?? [])
   const summaries = projects.map(project => {
     const latest = audits.find(audit => audit.project_id === project.id)
+    const level = calculateWebsiteLevel({
+      auditStatus: latest?.status,
+      checkedPages: latest?.checked_page_count ?? 0,
+      requestedPages: latest?.requested_page_count ?? project.page_paths.length,
+      gate: resolveGate(latest?.gate_status),
+      rulesetCurrent: latest?.ruleset_version === getRulesetVersion(),
+      findings: latestOccurrences
+        .filter(occurrence => occurrence.audit_id === latest?.id)
+        .flatMap(occurrence =>
+          normalizeRelation(occurrence.cr_findings).map(finding => ({
+            identity: finding.id,
+            priority: finding.priority,
+            status: resolveFindingStatus(occurrence.status)
+          }))
+        )
+    })
     return {
       id: project.id,
       name: project.name,
@@ -201,6 +245,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       requestedPageCount: latest?.requested_page_count ?? project.page_paths.length,
       checkedPageCount: latest?.checked_page_count ?? 0,
       lastRun: formatRelativeTime(latest?.completed_at ?? latest?.created_at),
+      level,
       nextCheck: project.schedule_enabled
         ? formatRelativeTime(project.next_audit_at)
         : 'Automatic checks paused',
@@ -256,6 +301,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 }
 
+/** Return a safe empty workspace when configuration or authentication is unavailable. */
 function emptyDashboard(): DashboardData {
   const limits = getPlanEntitlements('free')
   return {
@@ -277,16 +323,24 @@ function emptyDashboard(): DashboardData {
   }
 }
 
+/** Normalize the stored site access mode. */
 function resolveAccessMode(value: unknown): SiteAccessMode {
   return value === 'protected' || value === 'private' ? value : 'public'
 }
 
+/** Normalize a subscription plan with the free tier as a safe fallback. */
 function resolvePlan(value: unknown): PlanId {
   return value === 'solo' || value === 'agency' ? value : 'free'
 }
 
+/** Normalize a stored quality gate with a first-check fallback. */
 function resolveGate(value: unknown): GateStatus {
   return value === 'passed' || value === 'failed' || value === 'inconclusive'
     ? value
     : 'needs_baseline'
+}
+
+/** Normalize the occurrence state used by the level calculator. */
+function resolveFindingStatus(value: unknown): FindingStatus {
+  return value === 'persistent' || value === 'resolved' ? value : 'new'
 }

@@ -1,16 +1,30 @@
-import type {
-  AuditStatus,
-  CheckProgressStage,
-  FindingCategory,
-  FindingEvidence,
-  FindingPriority,
-  FindingSource,
-  FindingStatus,
-  GateStatus,
-  SiteAccessMode
+import {
+  type AuditStatus,
+  type CheckProgressStage,
+  type FindingCategory,
+  type FindingEvidence,
+  type FindingPriority,
+  type FindingSource,
+  type FindingStatus,
+  type GateStatus,
+  getRulesetVersion,
+  type SiteAccessMode
 } from '@coderocket/core'
+import {
+  calculateWebsiteLevel,
+  calculateWebsiteStability,
+  type WebsiteLevelResult,
+  type WebsiteStabilityResult
+} from '@coderocket/core/website-level'
 import { getRuleDocumentationUrlBySlug } from './docs'
 import { formatAuditDate, formatRelativeTime } from './format'
+import {
+  resolveAccessMode,
+  resolveCheckStage,
+  resolveEvidence,
+  resolveGate,
+  resolveWorkflowStatus
+} from './project-data-normalizers'
 import { createSupabaseServerClient } from './supabase/server'
 
 export interface ProjectAudit {
@@ -27,6 +41,7 @@ export interface ProjectAudit {
   date: string
   trigger: 'manual' | 'scheduled' | 'ci'
   environment: 'production' | 'preview'
+  rulesetVersion: string
 }
 
 export interface ProjectFinding {
@@ -85,6 +100,8 @@ export interface ProjectDetail {
   plan: 'free' | 'solo' | 'agency'
   apiTokenConfigured: boolean
   ciRuns: number
+  level: WebsiteLevelResult
+  stability: WebsiteStabilityResult
 }
 
 const demoAudit: ProjectAudit = {
@@ -100,7 +117,8 @@ const demoAudit: ProjectAudit = {
   when: '12 minutes ago',
   date: 'Jul 16, 2026, 10:42 AM',
   trigger: 'ci',
-  environment: 'preview'
+  environment: 'preview',
+  rulesetVersion: getRulesetVersion()
 }
 
 const demoProject: ProjectDetail = {
@@ -163,7 +181,29 @@ const demoProject: ProjectDetail = {
   ],
   plan: 'free',
   apiTokenConfigured: false,
-  ciRuns: 0
+  ciRuns: 0,
+  level: calculateWebsiteLevel({
+    auditStatus: 'succeeded',
+    checkedPages: 5,
+    requestedPages: 5,
+    gate: 'failed',
+    findings: [
+      { identity: 'demo-finding-1', priority: 'high', status: 'new' },
+      { identity: 'demo-finding-2', priority: 'high', status: 'new' }
+    ]
+  }),
+  stability: calculateWebsiteStability(
+    [
+      {
+        status: 'succeeded',
+        checkedPages: 5,
+        requestedPages: 5,
+        blockingCount: 2,
+        rulesetVersion: getRulesetVersion()
+      }
+    ],
+    getRulesetVersion()
+  )
 }
 
 const demoUrlErrorAudit: ProjectAudit = {
@@ -210,7 +250,15 @@ const demoUrlErrorProject: ProjectDetail = {
     }
   ],
   audits: [demoUrlErrorAudit],
-  findings: []
+  findings: [],
+  level: calculateWebsiteLevel({
+    auditStatus: 'succeeded',
+    checkedPages: 1,
+    requestedPages: 3,
+    gate: 'inconclusive',
+    findings: []
+  }),
+  stability: calculateWebsiteStability([], getRulesetVersion())
 }
 
 /** Load one owner-scoped project with its latest real findings and check history. */
@@ -246,12 +294,12 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     supabase
       .from('cr_audits')
       .select(
-        'id,status,gate_status,new_count,persistent_count,resolved_count,blocking_count,requested_page_count,checked_page_count,created_at,completed_at,trigger,environment'
+        'id,status,gate_status,new_count,persistent_count,resolved_count,blocking_count,requested_page_count,checked_page_count,created_at,completed_at,trigger,environment,ruleset_version'
       )
       .eq('project_id', projectId)
       .eq('owner_id', auth.user.id)
       .order('created_at', { ascending: false })
-      .limit(12),
+      .limit(30),
     supabase
       .from('cr_jobs')
       .select(
@@ -293,7 +341,8 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     when: formatRelativeTime(audit.completed_at ?? audit.created_at),
     date: formatAuditDate(audit.completed_at ?? audit.created_at),
     trigger: audit.trigger,
-    environment: audit.environment
+    environment: audit.environment,
+    rulesetVersion: audit.ruleset_version
   }))
   const baselineResetAt = project.baseline_reset_at
     ? new Date(project.baseline_reset_at).getTime()
@@ -376,6 +425,29 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
       }
     : undefined
 
+  const level = calculateWebsiteLevel({
+    auditStatus: latestAudit?.status,
+    checkedPages: latestAudit?.checkedPageCount ?? 0,
+    requestedPages: latestAudit?.requestedPageCount ?? project.page_paths.length,
+    gate: latestAudit?.gate,
+    rulesetCurrent: latestAudit?.rulesetVersion === getRulesetVersion(),
+    findings: findings.map(finding => ({
+      identity: finding.findingId,
+      priority: finding.priority,
+      status: finding.status
+    }))
+  })
+  const stability = calculateWebsiteStability(
+    auditHistory.map(audit => ({
+      status: audit.status,
+      checkedPages: audit.checkedPageCount,
+      requestedPages: audit.requestedPageCount,
+      blockingCount: audit.blockingCount,
+      rulesetVersion: audit.rulesetVersion
+    })),
+    getRulesetVersion()
+  )
+
   return {
     id: project.id,
     name: project.name,
@@ -395,53 +467,8 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
         ? subscription.plan_id
         : 'free',
     apiTokenConfigured: (apiTokenCount ?? 0) > 0,
-    ciRuns: ciRuns ?? 0
+    ciRuns: ciRuns ?? 0,
+    level,
+    stability
   }
-}
-
-/** Normalize stored reachability modes while preserving legacy protected projects. */
-function resolveAccessMode(value: unknown): SiteAccessMode {
-  return value === 'protected' || value === 'private' ? value : 'public'
-}
-
-/** Narrow an unknown database JSON value to an object with string keys. */
-function isUnknownRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
-/** Normalize optional evidence JSON without relying on a type assertion. */
-function resolveEvidence(value: unknown): FindingEvidence | undefined {
-  if (!isUnknownRecord(value)) return undefined
-  if (value.kind !== 'html' && value.kind !== 'header' && value.kind !== 'network') return undefined
-  if (typeof value.summary !== 'string') return undefined
-  return {
-    kind: value.kind,
-    summary: value.summary,
-    observed: typeof value.observed === 'string' ? value.observed : undefined,
-    expected: typeof value.expected === 'string' ? value.expected : undefined
-  }
-}
-
-/** Normalize the owner-controlled workflow state stored for a finding. */
-function resolveWorkflowStatus(value: unknown): 'open' | 'acknowledged' | 'muted' {
-  return value === 'acknowledged' || value === 'muted' ? value : 'open'
-}
-
-/** Normalize worker progress into the stages understood by the product UI. */
-function resolveCheckStage(value: unknown): CheckProgressStage {
-  return value === 'starting' ||
-    value === 'checking_pages' ||
-    value === 'comparing' ||
-    value === 'saving' ||
-    value === 'retrying' ||
-    value === 'completed'
-    ? value
-    : 'queued'
-}
-
-/** Normalize persisted gate values with a safe first-result fallback. */
-function resolveGate(value: unknown): GateStatus {
-  return value === 'passed' || value === 'failed' || value === 'inconclusive'
-    ? value
-    : 'needs_baseline'
 }

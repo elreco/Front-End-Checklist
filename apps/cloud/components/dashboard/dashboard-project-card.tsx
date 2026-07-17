@@ -2,7 +2,7 @@ import { ExternalLink } from '@repo/design-system/icons'
 import Link from 'next/link'
 import type { DashboardProject } from '@/lib/dashboard-data'
 import { getAccessModeLabel } from '@/lib/product-language'
-import { GateBadge } from '../product-ui'
+import { WebsiteLevelBadge } from '../website-level'
 
 /** Render one monitored website with its latest check summary. */
 export function DashboardProjectCard({ project }: { project: DashboardProject }) {
@@ -70,7 +70,7 @@ export function ProjectStatusBadge({ project }: { project: DashboardProject }) {
         {project.accessMode === 'private' ? 'CI setup needed' : 'First check pending'}
       </span>
     )
-  return <GateBadge status={project.gate} />
+  return <WebsiteLevelBadge level={project.level.level} />
 }
 
 /** Render a compact metric inside a monitored website card. */

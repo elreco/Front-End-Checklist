@@ -4,16 +4,13 @@ import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import type { ProjectDetail } from '@/lib/project-data'
 import { ProjectCliSetup } from './project-cli-setup'
 import { ProjectSiteEditor } from './project-site-editor'
-import { ShareReportButton } from './share-report-button'
 
 /** Keep persistent website actions available independently from the latest check state. */
 export function ProjectHeaderActions({
   project,
-  shareAuditId,
   showCiSetup = false
 }: {
   project: ProjectDetail
-  shareAuditId?: string
   showCiSetup?: boolean
 }) {
   return (
@@ -42,7 +39,6 @@ export function ProjectHeaderActions({
           Visit site <ExternalLink aria-hidden />
         </a>
       </CodeRocketButton>
-      {shareAuditId ? <ShareReportButton auditId={shareAuditId} /> : null}
     </div>
   )
 }

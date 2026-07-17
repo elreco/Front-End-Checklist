@@ -1,15 +1,15 @@
 import { AlertTriangle, CheckCircle2, Clock3 } from '@repo/design-system/icons'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { GateBadge, ProductShell } from '@/components/product-shell'
 import { ProjectAccessRecovery } from '@/components/project-access-recovery'
 import { ProjectActionCenter } from '@/components/project-action-center'
+import { ProjectCheckHistory } from '@/components/project-check-history'
 import { ProjectFindingsPanel } from '@/components/project-findings-panel'
 import { ProjectHeaderActions } from '@/components/project-header-actions'
 import { ProjectHealthOverview } from '@/components/project-health-overview'
+import { ProjectLevelPanel } from '@/components/project-level-panel'
 import { ProjectPrimaryAction } from '@/components/project-primary-action'
 import { WebsiteCheckProgress } from '@/components/website-check-progress'
-import { getEnvironmentLabel, getTriggerLabel } from '@/lib/product-language'
 import { getProjectDetail } from '@/lib/project-data'
 import { createPrivateMetadata } from '@/lib/seo'
 import { queueProjectAudit, updateFindingWorkflow } from './actions'
@@ -78,11 +78,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
                     )}
               </p>
             </div>
-            <ProjectHeaderActions
-              project={project}
-              shareAuditId={latest?.status === 'succeeded' ? latest.id : undefined}
-              showCiSetup={waitingForCi}
-            />
+            <ProjectHeaderActions project={project} showCiSetup={waitingForCi} />
           </div>
         )}
         {latest?.gate === 'inconclusive' && !project.activeCheck ? (
@@ -92,6 +88,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
           />
         ) : null}
       </section>
+
+      <ProjectLevelPanel project={project} />
 
       <ProjectHealthOverview
         checkedPages={latest?.checkedPageCount ?? project.activeCheck?.current ?? 0}
@@ -153,41 +151,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
         <ProjectActionCenter project={project} />
       </div>
 
-      <section aria-labelledby="history-title" className="mt-7 border border-border bg-surface">
-        <div className="flex items-center justify-between border-border border-b p-5">
-          <div>
-            <h2 className="font-heading font-semibold text-xl" id="history-title">
-              Recent checks
-            </h2>
-            <p className="mt-1 text-muted text-xs">The latest activity for this site.</p>
-          </div>
-          <Link className="font-mono text-accent text-xs hover:text-signal" href="/audits">
-            All history
-          </Link>
-        </div>
-        {project.audits.length === 0 ? (
-          <p className="p-5 text-muted text-sm">No completed checks yet.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {project.audits.slice(0, 5).map(audit => (
-              <li className="flex flex-wrap items-center justify-between gap-4 p-5" key={audit.id}>
-                <div>
-                  <p className="font-semibold text-sm">
-                    {getEnvironmentLabel(audit.environment)} · {getTriggerLabel(audit.trigger)}
-                  </p>
-                  <p className="mt-1 text-muted text-xs">{audit.date}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-muted text-xs">
-                    {audit.blockingCount} new {audit.blockingCount === 1 ? 'problem' : 'problems'}
-                  </span>
-                  <GateBadge status={audit.gate} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <ProjectCheckHistory audits={project.audits} />
     </ProductShell>
   )
 }

@@ -10,6 +10,7 @@ import {
 } from '@repo/design-system/icons'
 import type { Metadata } from 'next'
 import { DocsCodeBlock, DocsHeader } from '@/components/docs-shell'
+import { WebsiteLevelBadge } from '@/components/website-level'
 import { createPublicMetadata } from '@/lib/seo'
 
 export const metadata: Metadata = createPublicMetadata({
@@ -124,6 +125,46 @@ export default function AuditDocumentationPage() {
             tone="signal"
           />
         </div>
+      </section>
+
+      <section className="border-border border-t py-10" id="website-levels">
+        <p className="font-mono text-accent text-xs uppercase tracking-[.16em]">Website levels</p>
+        <h2 className="mt-4 font-editorial text-4xl tracking-[-.025em]">
+          One readable level, calculated from open findings.
+        </h2>
+        <p className="mt-4 max-w-3xl text-muted leading-7">
+          The level is not a weighted score. The most serious unresolved finding sets the boundary.
+          Every selected page must finish with the saved rule set; otherwise the result stays Not
+          verified. Ignoring a finding in your work list does not improve the level.
+        </p>
+        <div className="mt-7 divide-y divide-border border border-border bg-surface">
+          {[
+            ['needs_attention', 'At least one urgent finding is open.'],
+            ['bronze', 'No urgent finding is open; important findings can remain.'],
+            ['silver', 'No urgent or important finding is open; recommended work can remain.'],
+            ['gold', 'Only optional improvements remain.'],
+            ['platinum', 'No applicable automated finding is open in the verified scope.']
+          ].map(([level, description]) => (
+            <div className="grid gap-3 p-4 sm:grid-cols-[160px_1fr] sm:items-center" key={level}>
+              <WebsiteLevelBadge
+                level={
+                  level === 'needs_attention' ||
+                  level === 'bronze' ||
+                  level === 'silver' ||
+                  level === 'gold'
+                    ? level
+                    : 'platinum'
+                }
+              />
+              <p className="text-muted text-sm">{description}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-5 text-muted text-sm leading-6">
+          Platinum is the highest quality level. Stability is tracked separately after 3, 10, and 30
+          consecutive complete checks without a new important problem. A shared level is a dated
+          technical snapshot, not a certification.
+        </p>
       </section>
 
       <section className="border border-border bg-surface p-6 sm:p-8" id="http-checks">
