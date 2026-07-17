@@ -2,7 +2,10 @@
 
 import {
   assertPublicHttpsUrl,
+  deriveSiteAccessMode,
   getPlanEntitlements,
+  normalizeAuthenticatedPagePaths,
+  normalizeHttpsOrigin,
   normalizeProjectPagePaths,
   type PlanId,
   type SiteAccessMode
@@ -10,10 +13,12 @@ import {
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
+/** Create one monitored project with page-level visitor-state settings. */
 export async function createProject(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim()
   const url = String(formData.get('url') ?? '').trim()
-  const accessMode = resolveAccessMode(formData.get('accessMode'))
+  const requestedAccessMode = resolveAccessMode(formData.get('accessMode'))
+  const requestedSecureRunner = formData.get('secureRunnerRequired') === 'true'
   const rawPagePaths = String(formData.get('pages') ?? '/')
     .split('\n')
     .map(path => path.trim())
@@ -21,7 +26,10 @@ export async function createProject(formData: FormData) {
   if (name.length < 1 || name.length > 120) redirect('/onboarding?notice=invalid-project-name')
   let productionUrl: string
   try {
-    productionUrl = (await assertPublicHttpsUrl(url)).origin
+    productionUrl =
+      requestedSecureRunner || requestedAccessMode !== 'public'
+        ? normalizeHttpsOrigin(url)
+        : (await assertPublicHttpsUrl(url)).origin
   } catch {
     redirect('/onboarding?notice=invalid-url')
   }
@@ -31,6 +39,23 @@ export async function createProject(formData: FormData) {
   } catch {
     redirect('/onboarding?notice=invalid-pages')
   }
+  let authenticatedPagePaths: string[]
+  try {
+    const requestedAuthenticatedPages = formData
+      .getAll('authenticatedPage')
+      .filter((value): value is string => typeof value === 'string')
+    authenticatedPagePaths = normalizeAuthenticatedPagePaths(
+      requestedAccessMode === 'private' ? pagePaths : requestedAuthenticatedPages,
+      pagePaths
+    )
+  } catch {
+    redirect('/onboarding?notice=invalid-pages')
+  }
+  const accessMode = deriveSiteAccessMode(
+    pagePaths,
+    authenticatedPagePaths,
+    requestedSecureRunner || authenticatedPagePaths.length > 0
+  )
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) redirect('/login?next=/onboarding')
@@ -63,13 +88,15 @@ export async function createProject(formData: FormData) {
       production_url: productionUrl,
       page_paths: pagePaths,
       access_mode: accessMode,
-      schedule_enabled: accessMode !== 'private',
+      authenticated_page_paths: authenticatedPagePaths,
+      secure_runner_required: accessMode !== 'public',
+      schedule_enabled: accessMode === 'public',
       next_audit_at: nextAuditAt
     })
     .select('id')
     .single()
   if (error) redirect('/onboarding?notice=create-failed')
-  if (accessMode === 'private') redirect(`/projects/${data.id}?notice=private-site-created`)
+  if (accessMode !== 'public') redirect(`/projects/${data.id}?notice=private-site-created`)
   const { error: queueError } = await supabase.from('cr_jobs').insert({
     owner_id: auth.user.id,
     project_id: data.id,
@@ -81,10 +108,10 @@ export async function createProject(formData: FormData) {
     progress_message: 'Waiting for the website checking service',
     progress_updated_at: new Date().toISOString()
   })
-  const successNotice = accessMode === 'protected' ? 'protected-site-created' : 'site-created'
-  redirect(`/projects/${data.id}?notice=${queueError ? 'queue-failed' : successNotice}`)
+  redirect(`/projects/${data.id}?notice=${queueError ? 'queue-failed' : 'site-created'}`)
 }
 
+/** Accept only the access modes exposed by the onboarding form. */
 function resolveAccessMode(value: FormDataEntryValue | null): SiteAccessMode {
   return value === 'protected' || value === 'private' ? value : 'public'
 }

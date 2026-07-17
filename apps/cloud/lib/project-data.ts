@@ -1,21 +1,5 @@
-import {
-  type AuditStatus,
-  type CheckProgressStage,
-  type FindingCategory,
-  type FindingEvidence,
-  type FindingPriority,
-  type FindingSource,
-  type FindingStatus,
-  type GateStatus,
-  getRulesetVersion,
-  type SiteAccessMode
-} from '@coderocket/core'
-import {
-  calculateWebsiteLevel,
-  calculateWebsiteStability,
-  type WebsiteLevelResult,
-  type WebsiteStabilityResult
-} from '@coderocket/core/website-level'
+import { getRulesetVersion } from '@coderocket/core'
+import { calculateWebsiteLevel, calculateWebsiteStability } from '@coderocket/core/website-level'
 import { getRuleDocumentationUrlBySlug } from './docs'
 import { formatAuditDate, formatRelativeTime } from './format'
 import {
@@ -25,88 +9,25 @@ import {
   resolveGate,
   resolveWorkflowStatus
 } from './project-data-normalizers'
+import type {
+  ProjectAudit,
+  ProjectCheckProgress,
+  ProjectDetail,
+  ProjectFinding,
+  ProjectPageCheck
+} from './project-data-types'
 import { getSupabaseServerConfig } from './supabase/config'
 import { createSupabaseServerClient } from './supabase/server'
 
+export type {
+  ProjectAudit,
+  ProjectCheckProgress,
+  ProjectDetail,
+  ProjectFinding,
+  ProjectPageCheck
+} from './project-data-types'
+
 const OCCURRENCE_BATCH_SIZE = 500
-
-export interface ProjectAudit {
-  id: string
-  status: AuditStatus
-  gate: GateStatus
-  newCount: number
-  persistentCount: number
-  resolvedCount: number
-  blockingCount: number
-  requestedPageCount: number
-  checkedPageCount: number
-  when: string
-  date: string
-  trigger: 'manual' | 'scheduled' | 'ci'
-  environment: 'production' | 'preview'
-  rulesetVersion: string
-}
-
-export interface ProjectFinding {
-  id: string
-  findingId: string
-  projectId: string
-  status: FindingStatus
-  priority: FindingPriority
-  title: string
-  path: string
-  rule: string
-  message: string
-  category: FindingCategory
-  source: FindingSource
-  documentationUrl: string
-  evidence?: FindingEvidence
-  workflowStatus: 'open' | 'acknowledged' | 'muted'
-  workflowNote?: string
-}
-
-export interface ProjectCheckProgress {
-  id: string
-  status: 'queued' | 'leased' | 'succeeded' | 'failed' | 'cancelled'
-  stage: CheckProgressStage
-  current: number
-  total: number
-  message: string
-  attempts: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ProjectPageCheck {
-  durationMs?: number
-  error?: string
-  httpStatus?: number
-  path: string
-  reachable: boolean
-  url: string
-}
-
-export interface ProjectDetail {
-  id: string
-  name: string
-  url: string
-  socialImageUrl?: string
-  accessMode: SiteAccessMode
-  pages: string[]
-  scheduleEnabled: boolean
-  nextCheck: string
-  checking: boolean
-  activeCheck?: ProjectCheckProgress
-  latestAudit?: ProjectAudit
-  latestPages: ProjectPageCheck[]
-  audits: ProjectAudit[]
-  findings: ProjectFinding[]
-  plan: 'free' | 'solo' | 'agency'
-  apiTokenConfigured: boolean
-  ciRuns: number
-  level: WebsiteLevelResult
-  stability: WebsiteStabilityResult
-}
 
 const demoAudit: ProjectAudit = {
   id: 'demo-audit-1',
@@ -131,7 +52,9 @@ const demoProject: ProjectDetail = {
   url: 'https://acme.example',
   socialImageUrl: '/social-card.png',
   accessMode: 'public',
+  authenticatedPages: [],
   pages: ['/', '/pricing', '/contact', '/products', '/checkout'],
+  secureRunnerRequired: false,
   scheduleEnabled: true,
   nextCheck: 'tomorrow',
   checking: false,
@@ -290,7 +213,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     supabase
       .from('cr_projects')
       .select(
-        'id,name,production_url,social_image_url,page_paths,access_mode,schedule_enabled,next_audit_at,baseline_reset_at'
+        'id,name,production_url,social_image_url,page_paths,authenticated_page_paths,secure_runner_required,access_mode,schedule_enabled,next_audit_at,baseline_reset_at'
       )
       .eq('id', projectId)
       .eq('owner_id', auth.user.id)
@@ -359,6 +282,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
   let findings: ProjectFinding[] = []
   let latestPages: ProjectPageCheck[] = []
   if (latestAudit) {
+    /** Fetch one bounded occurrence page so large audits remain complete. */
     const fetchOccurrenceBatch = (from: number) =>
       supabase
         .from('cr_occurrences')
@@ -473,7 +397,9 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     url: project.production_url,
     socialImageUrl: project.social_image_url ?? undefined,
     accessMode: resolveAccessMode(project.access_mode),
+    authenticatedPages: project.authenticated_page_paths ?? [],
     pages: project.page_paths,
+    secureRunnerRequired: project.secure_runner_required ?? false,
     scheduleEnabled: project.schedule_enabled,
     nextCheck: formatRelativeTime(project.next_audit_at),
     checking: Boolean(activeCheck),

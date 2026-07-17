@@ -1,23 +1,27 @@
 import type { PlanId } from '@/lib/upgrade'
 
 export interface ProjectSiteEditorProps {
-  accessMode: 'public' | 'protected' | 'private'
+  authenticatedPages: string[]
   checking?: boolean
   maxPages: number
   pages: string[]
   plan: PlanId
   problemPaths?: string[]
   projectId: string
+  secureRunnerRequired: boolean
   siteUrl: string
   triggerLabel?: string
   variant?: 'primary' | 'outline'
 }
 
 export interface ProjectConfigurationSaveResponse {
+  accessMode: 'public' | 'protected' | 'private'
+  authenticatedPages: string[]
   changed: boolean
   checkWarning?: string
   pages: string[]
   queued: boolean
+  secureRunnerRequired: boolean
   url: string
 }
 
@@ -50,10 +54,16 @@ export function isProjectConfigurationSaveResponse(
   if (!isUnknownRecord(value)) return false
   return (
     typeof value.changed === 'boolean' &&
+    (value.accessMode === 'public' ||
+      value.accessMode === 'protected' ||
+      value.accessMode === 'private') &&
     typeof value.queued === 'boolean' &&
+    typeof value.secureRunnerRequired === 'boolean' &&
     typeof value.url === 'string' &&
     Array.isArray(value.pages) &&
     value.pages.every(page => typeof page === 'string') &&
+    Array.isArray(value.authenticatedPages) &&
+    value.authenticatedPages.every(page => typeof page === 'string') &&
     (value.checkWarning === undefined || typeof value.checkWarning === 'string')
   )
 }

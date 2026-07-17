@@ -3,7 +3,8 @@ import type { SecureAccessMethod } from './secure-access-copy'
 export type CiPlatform = 'github' | 'gitlab' | 'bitbucket' | 'other'
 
 interface CiConfigOptions {
-  accessMethod?: SecureAccessMethod
+  accessMethods?: readonly SecureAccessMethod[]
+  authenticatedPages?: readonly string[]
   pages: string[]
   plan: 'free' | 'solo' | 'agency'
   siteUrl: string
@@ -46,19 +47,34 @@ export function getCiSecretLocation(platform: CiPlatform): string {
 }
 
 /** Build the production audit command shared by every CI provider template. */
-export function buildCiAuditCommand(options: Pick<CiConfigOptions, 'pages' | 'siteUrl'>): string {
+export function buildCiAuditCommand(
+  options: Pick<CiConfigOptions, 'authenticatedPages' | 'pages' | 'siteUrl'>
+): string {
   const paths = options.pages.length > 0 ? options.pages : ['/']
-  const [firstPath = '/', ...remainingPaths] = paths
-  const firstUrl = new URL(firstPath, options.siteUrl).toString()
-  const pageArguments = remainingPaths.map(path => ` --page ${quoteShell(path)}`).join('')
-  return `npx @coderocketapp/cli@latest audit ${quoteShell(firstUrl)}${pageArguments} --environment production`
+  const authenticated = new Set(options.authenticatedPages ?? [])
+  const origin = new URL(options.siteUrl).origin
+  const pageArguments = paths
+    .map(path =>
+      authenticated.has(path)
+        ? ` --authenticated-page ${quoteShell(path)}`
+        : ` --page ${quoteShell(path)}`
+    )
+    .join('')
+  return `npx @coderocketapp/cli@latest audit ${quoteShell(`${origin}/`)} --explicit-pages${pageArguments} --environment production`
 }
 
 /** Build a copy-ready provider configuration around the shared CodeRocket CLI. */
 export function buildCiConfiguration(platform: CiPlatform, options: CiConfigOptions): string {
   const command = buildCiAuditCommand(options)
   if (platform === 'github')
-    return buildGitHubWorkflow(command, options.plan, options.accessMethod === 'network')
+    return buildGitHubWorkflow(
+      command,
+      options.plan,
+      options.accessMethods?.some(
+        method =>
+          method === 'network' || method === 'ip_allowlist' || method === 'client_certificate'
+      ) ?? false
+    )
   if (platform === 'gitlab') return buildGitLabJob(command)
   if (platform === 'bitbucket') return buildBitbucketPipeline(command)
   return buildGenericJob(command)
@@ -89,6 +105,7 @@ jobs:
         env:
           CODEROCKET_TOKEN: \${{ secrets.CODEROCKET_TOKEN }}
           CODEROCKET_SITE_HEADERS_JSON: \${{ secrets.CODEROCKET_SITE_HEADERS_JSON }}
+          CODEROCKET_AUTH_HEADERS_JSON: \${{ secrets.CODEROCKET_AUTH_HEADERS_JSON }}
         run: >-
           ${command}
 `
@@ -123,7 +140,8 @@ pipelines:
 /** Add provider-neutral secret guidance to the raw audit command. */
 function buildGenericJob(command: string): string {
   return `# Store CODEROCKET_TOKEN in your CI platform's protected secret store.
-# Add CODEROCKET_SITE_HEADERS_JSON only when the website needs access headers.
+# Add CODEROCKET_SITE_HEADERS_JSON for edge or infrastructure headers sent to every page.
+# Add CODEROCKET_AUTH_HEADERS_JSON for the dedicated session sent only to authenticated pages.
 ${command}
 `
 }

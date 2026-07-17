@@ -1,13 +1,13 @@
 'use client'
 
 import type { SiteAccessMode } from '@coderocket/core'
-import { ArrowLeft, ArrowRight, Check, Globe2, Radar } from '@repo/design-system/icons'
+import { ArrowLeft, ArrowRight, Check, Globe2, Radar, ShieldCheck } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
 import type { FormEvent, MouseEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { SiteAccessExplanation, SiteAccessPicker } from '@/components/site-access-picker'
-import { countEnteredPages } from '@/lib/onboarding-pages'
+import { countEnteredPages, getEnteredPages } from '@/lib/onboarding-pages'
 import type { PlanId } from '@/lib/upgrade'
 import { createProject } from './actions'
 import { OnboardingPagesStep } from './onboarding-pages-step'
@@ -32,10 +32,21 @@ export function OnboardingForm({
   const [step, setStep] = useState(1)
   const [accessMode, setAccessMode] = useState<SiteAccessMode>('public')
   const [pagesValue, setPagesValue] = useState('/\n/pricing\n/contact')
+  const [authenticatedPages, setAuthenticatedPages] = useState<string[]>([])
+  const [secureRunnerRequired, setSecureRunnerRequired] = useState(false)
   const [pageLimitAttempted, setPageLimitAttempted] = useState(false)
   const mounted = useRef(false)
   const pageCount = countEnteredPages(pagesValue)
   const extraPages = Math.max(0, pageCount - pagesPerProject)
+  const enteredPages = getEnteredPages(pagesValue)
+  const submittedAuthenticatedPages =
+    accessMode === 'private'
+      ? enteredPages
+      : accessMode === 'protected'
+        ? authenticatedPages.filter(page => enteredPages.includes(page))
+        : []
+  const effectiveSecureRunnerRequired =
+    secureRunnerRequired || submittedAuthenticatedPages.length > 0
 
   useEffect(() => {
     if (!mounted.current) {
@@ -78,6 +89,11 @@ export function OnboardingForm({
     if (extraPages > 0) {
       event.preventDefault()
       setPageLimitAttempted(true)
+      return
+    }
+    if (accessMode === 'protected' && submittedAuthenticatedPages.length === 0) {
+      event.preventDefault()
+      return
     }
   }
 
@@ -147,8 +163,7 @@ export function OnboardingForm({
             Which website should CodeRocket watch?
           </h2>
           <p className="max-w-2xl text-muted leading-7">
-            Add the name and public HTTPS address, then tell us how the selected pages can be
-            reached.
+            Add the name and HTTPS address, then tell us how the selected pages can be reached.
           </p>
           <label className="block max-w-2xl font-semibold text-sm" htmlFor="project-name">
             Website name
@@ -174,30 +189,61 @@ export function OnboardingForm({
               type="url"
             />
             <span className="mt-2 block font-normal text-muted text-xs">
-              It must start with https://. CodeRocket never follows this address into a private
-              network.
+              It must start with https://. Mark protected infrastructure below when only your own
+              runner can reach it.
             </span>
           </label>
           <div className="space-y-4 border-border border-t pt-5">
             <div>
               <h3 className="font-heading font-semibold text-lg">
-                Can these pages open without signing in?
+                Which visitor state should CodeRocket check?
               </h3>
               <p className="mt-2 max-w-2xl text-muted text-sm leading-6">
-                Cloudflare or another CDN does not make a page private by itself. Choose based on
-                whether the selected pages need credentials or access from a specific network.
+                Choose whether the application itself requires a signed-in session. Cloudflare,
+                preview passwords, firewalls, VPNs, and other infrastructure layers are described
+                separately below.
               </p>
             </div>
-            <SiteAccessPicker onChange={setAccessMode} value={accessMode} />
-            <SiteAccessExplanation mode={accessMode} />
+            <SiteAccessPicker
+              onChange={mode => {
+                setAccessMode(mode)
+                if (mode === 'public') setAuthenticatedPages([])
+              }}
+              value={accessMode}
+            />
+            <SiteAccessExplanation mode={accessMode} secureRunnerRequired={secureRunnerRequired} />
+            <label className="flex max-w-2xl cursor-pointer items-start gap-3 border border-border bg-background p-4">
+              <input
+                checked={secureRunnerRequired}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-signal"
+                name="secureRunnerRequired"
+                onChange={event => setSecureRunnerRequired(event.target.checked)}
+                type="checkbox"
+                value="true"
+              />
+              <ShieldCheck aria-hidden className="h-4 w-4 shrink-0 text-signal" />
+              <span>
+                <span className="block font-semibold text-sm">
+                  The cloud cannot open this site directly
+                </span>
+                <span className="mt-1 block text-muted text-xs leading-5">
+                  Select this for Cloudflare Access, a preview password, custom headers, an IP
+                  allowlist, client certificate, VPN, private network, or another infrastructure
+                  restriction. Several can apply together.
+                </span>
+              </span>
+            </label>
           </div>
         </fieldset>
 
         <OnboardingPagesStep
           accessMode={accessMode}
+          authenticatedPages={submittedAuthenticatedPages}
           extraPages={extraPages}
           onPagesChange={value => {
             setPagesValue(value)
+            const nextPages = getEnteredPages(value)
+            setAuthenticatedPages(current => current.filter(page => nextPages.includes(page)))
             if (countEnteredPages(value) <= pagesPerProject) setPageLimitAttempted(false)
           }}
           pageCount={pageCount}
@@ -206,8 +252,14 @@ export function OnboardingForm({
           pagesValue={pagesValue}
           plan={plan}
           planName={planName}
+          secureRunnerRequired={effectiveSecureRunnerRequired}
           visible={step === lastStep}
+          onAuthenticatedPagesChange={setAuthenticatedPages}
         />
+
+        {submittedAuthenticatedPages.map(page => (
+          <input key={page} name="authenticatedPage" type="hidden" value={page} />
+        ))}
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-border border-t pt-5">
           {step > 1 ? (
@@ -227,7 +279,7 @@ export function OnboardingForm({
             </CodeRocketButton>
           ) : (
             <CodeRocketButton key="submit" size="lg" type="submit">
-              {accessMode === 'private'
+              {effectiveSecureRunnerRequired
                 ? 'Add site and connect secure access'
                 : 'Add site and check access'}{' '}
               <ArrowRight aria-hidden />

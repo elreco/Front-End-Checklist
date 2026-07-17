@@ -40,3 +40,10 @@ export function filterBaselineForSubmittedPages(
   const submittedPaths = new Set(pages.map(page => normalizeAuditPath(new URL(page.url).pathname)))
   return findings.filter(finding => submittedPaths.has(normalizeAuditPath(finding.pagePath)))
 }
+
+/** Refuse partial CI results so a website level can never hide an omitted protected page. */
+export function hasExactPageCoverage(configuredPaths: string[], submittedPaths: string[]): boolean {
+  if (configuredPaths.length !== submittedPaths.length) return false
+  const submitted = new Set(submittedPaths.map(normalizeAuditPath))
+  return configuredPaths.every(path => submitted.has(normalizeAuditPath(path)))
+}

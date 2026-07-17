@@ -19,11 +19,12 @@ export function ProjectPrimaryAction({
     project.latestAudit?.gate === 'inconclusive'
       ? getProjectRecoveryKind(unavailablePages)
       : undefined
-  const requiresCi = project.accessMode === 'private' || recoveryKind === 'access'
+  const requiresCi = project.accessMode !== 'public' || recoveryKind === 'access'
   if (requiresCi)
     return (
       <ProjectCliSetup
         configured={project.apiTokenConfigured}
+        authenticatedPages={project.authenticatedPages}
         pages={project.pages}
         plan={project.plan}
         projectId={project.id}
@@ -35,13 +36,14 @@ export function ProjectPrimaryAction({
   if (recoveryKind === 'address' || recoveryKind === 'pages')
     return (
       <ProjectSiteEditor
-        accessMode={project.accessMode}
+        authenticatedPages={project.authenticatedPages}
         checking={project.checking}
         maxPages={getPlanEntitlements(project.plan).pagesPerProject}
         pages={project.pages}
         plan={project.plan}
         problemPaths={unavailablePages.map(page => page.path)}
         projectId={project.id}
+        secureRunnerRequired={project.secureRunnerRequired}
         siteUrl={project.url}
         triggerLabel={recoveryKind === 'address' ? 'Edit website address' : 'Fix monitored URLs'}
         variant="primary"

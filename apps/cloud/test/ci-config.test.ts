@@ -16,10 +16,10 @@ const project = {
 
 describe('secure runner configuration', () => {
   it('audits each configured page exactly once', () => {
-    const command = buildCiAuditCommand(project)
+    const command = buildCiAuditCommand({ ...project, authenticatedPages: ['/account'] })
     assert.equal(
       command,
-      "npx @coderocketapp/cli@latest audit 'https://example.com/' --page '/pricing' --page '/account' --environment production"
+      "npx @coderocketapp/cli@latest audit 'https://example.com/' --explicit-pages --page '/' --page '/pricing' --authenticated-page '/account' --environment production"
     )
   })
 
@@ -30,12 +30,13 @@ describe('secure runner configuration', () => {
     assert.match(workflow, /cron: '17 7 \* \* 1'/)
     assert.match(workflow, /secrets\.CODEROCKET_TOKEN/)
     assert.match(workflow, /secrets\.CODEROCKET_SITE_HEADERS_JSON/)
+    assert.match(workflow, /secrets\.CODEROCKET_AUTH_HEADERS_JSON/)
   })
 
   it('uses a self-hosted GitHub runner for private networks', () => {
     const workflow = buildCiConfiguration('github', {
       ...project,
-      accessMethod: 'network'
+      accessMethods: ['cloudflare', 'account', 'network']
     })
     assert.match(workflow, /runs-on: self-hosted/)
   })

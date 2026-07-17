@@ -17,10 +17,10 @@ export function ProjectAccessRecovery({
   const unavailablePages = project.latestPages.filter(page => !page.reachable)
   if (project.latestAudit?.gate !== 'inconclusive') return null
   const recoveryKind = getProjectRecoveryKind(unavailablePages)
-  const content = getRecoveryContent(recoveryKind, project.accessMode === 'private')
+  const content = getRecoveryContent(recoveryKind, project.accessMode !== 'public')
   const shouldEditFirst = recoveryKind === 'address' || recoveryKind === 'pages'
-  const shouldUseCi = recoveryKind === 'access' || project.accessMode === 'private'
-  const canRetryCloud = project.accessMode !== 'private'
+  const shouldUseCi = recoveryKind === 'access' || project.accessMode !== 'public'
+  const canRetryCloud = project.accessMode === 'public'
 
   return (
     <div className="mt-5 border border-danger bg-background p-4">
@@ -52,12 +52,13 @@ export function ProjectAccessRecovery({
           <div className="mt-4 flex flex-wrap gap-2">
             {shouldEditFirst ? (
               <ProjectSiteEditor
-                accessMode={project.accessMode}
+                authenticatedPages={project.authenticatedPages}
                 maxPages={getPlanEntitlements(project.plan).pagesPerProject}
                 pages={project.pages}
                 plan={project.plan}
                 problemPaths={unavailablePages.map(page => page.path)}
                 projectId={project.id}
+                secureRunnerRequired={project.secureRunnerRequired}
                 siteUrl={project.url}
                 triggerLabel={
                   recoveryKind === 'address' ? 'Edit website address' : 'Fix monitored URLs'
@@ -68,6 +69,7 @@ export function ProjectAccessRecovery({
             {shouldUseCi ? (
               <ProjectCliSetup
                 configured={project.apiTokenConfigured}
+                authenticatedPages={project.authenticatedPages}
                 pages={project.pages}
                 plan={project.plan}
                 projectId={project.id}
@@ -89,12 +91,13 @@ export function ProjectAccessRecovery({
             ) : null}
             {!shouldEditFirst ? (
               <ProjectSiteEditor
-                accessMode={project.accessMode}
+                authenticatedPages={project.authenticatedPages}
                 maxPages={getPlanEntitlements(project.plan).pagesPerProject}
                 pages={project.pages}
                 plan={project.plan}
                 problemPaths={unavailablePages.map(page => page.path)}
                 projectId={project.id}
+                secureRunnerRequired={project.secureRunnerRequired}
                 siteUrl={project.url}
                 triggerLabel="Edit URLs"
               />

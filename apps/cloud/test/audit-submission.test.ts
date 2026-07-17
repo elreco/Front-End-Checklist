@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { filterBaselineForSubmittedPages, normalizeSubmittedPages } from '../lib/audit-submission'
+import {
+  filterBaselineForSubmittedPages,
+  hasExactPageCoverage,
+  normalizeSubmittedPages
+} from '../lib/audit-submission'
 
 const finding = {
   pagePath: '/pricing',
@@ -74,5 +78,14 @@ describe('CLI audit submission consistency', () => {
       baseline.map(item => item.pagePath),
       ['/pricing']
     )
+  })
+
+  it('requires the runner to submit every configured page exactly once', () => {
+    assert.equal(hasExactPageCoverage(['/', '/pricing', '/account'], ['/', '/account']), false)
+    assert.equal(
+      hasExactPageCoverage(['/', '/pricing', '/account'], ['/account', '/', '/pricing/']),
+      true
+    )
+    assert.equal(hasExactPageCoverage(['/', '/pricing'], ['/', '/pricing', '/unexpected']), false)
   })
 })

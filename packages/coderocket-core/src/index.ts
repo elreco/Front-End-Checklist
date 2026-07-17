@@ -7,6 +7,9 @@ export { compareFindings, fingerprintFinding, normalizeAuditPath } from './diff'
 export { getPlanEntitlements, PLAN_ENTITLEMENTS } from './plans'
 export {
   buildProjectPageUrl,
+  deriveSiteAccessMode,
+  normalizeAuthenticatedPagePaths,
+  normalizeHttpsOrigin,
   normalizeProjectPagePath,
   normalizeProjectPagePaths
 } from './project-pages'
@@ -38,6 +41,7 @@ export type {
   FindingSource,
   FindingStatus,
   GateStatus,
+  PageAccessMode,
   PlanEntitlements,
   PlanId,
   SiteAccessMode

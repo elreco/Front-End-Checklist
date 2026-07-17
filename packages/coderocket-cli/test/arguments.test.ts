@@ -47,6 +47,33 @@ describe('CodeRocket CLI arguments', () => {
     })
   })
 
+  it('keeps public and signed-in pages separate in an explicit complete check', () => {
+    const options = parseArguments(
+      [
+        'audit',
+        'https://app.example.com',
+        '--explicit-pages',
+        '--page',
+        '/',
+        '--authenticated-page',
+        '/dashboard',
+        '--token',
+        'secret'
+      ],
+      {
+        CODEROCKET_SITE_HEADERS_JSON: JSON.stringify({ 'cf-access-client-id': 'edge' }),
+        CODEROCKET_AUTH_HEADERS_JSON: JSON.stringify({ cookie: 'session=test' })
+      }
+    )
+    assert.deepEqual(options.urls, [
+      'https://app.example.com/',
+      'https://app.example.com/dashboard'
+    ])
+    assert.deepEqual(options.authenticatedUrls, ['https://app.example.com/dashboard'])
+    assert.deepEqual(options.requestHeaders, { 'cf-access-client-id': 'edge' })
+    assert.deepEqual(options.authenticatedRequestHeaders, { cookie: 'session=test' })
+  })
+
   it('rejects malformed private page headers', () => {
     assert.throws(
       () =>

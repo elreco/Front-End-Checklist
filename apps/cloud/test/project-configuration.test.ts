@@ -39,6 +39,38 @@ test('detects configuration changes including page ordering', () => {
     ),
     true
   )
+  assert.equal(
+    projectConfigurationChanged(
+      {
+        url: 'https://example.com',
+        pages: ['/', '/pricing'],
+        authenticatedPages: []
+      },
+      {
+        url: 'https://example.com',
+        pages: ['/', '/pricing'],
+        authenticatedPages: ['/pricing']
+      }
+    ),
+    true
+  )
+  assert.equal(
+    projectConfigurationChanged(
+      {
+        url: 'https://example.com',
+        pages: ['/', '/pricing'],
+        authenticatedPages: [],
+        secureRunnerRequired: false
+      },
+      {
+        url: 'https://example.com',
+        pages: ['/', '/pricing'],
+        authenticatedPages: [],
+        secureRunnerRequired: true
+      }
+    ),
+    true
+  )
 })
 
 test('routes 404 failures toward URL correction rather than CI', () => {

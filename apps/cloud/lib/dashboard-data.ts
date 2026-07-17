@@ -281,7 +281,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     ),
     incompleteCount: summaries.filter(project => project.gate === 'inconclusive').length,
     setupRequiredCount: summaries.filter(
-      project => project.accessMode === 'private' && !connectedProjectIds.has(project.id)
+      project => project.accessMode !== 'public' && !connectedProjectIds.has(project.id)
     ).length,
     nextCheck: earliestNextCheck ? formatRelativeTime(earliestNextCheck) : 'Not scheduled',
     projects: summaries,

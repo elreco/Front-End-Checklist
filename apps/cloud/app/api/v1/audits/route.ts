@@ -4,11 +4,16 @@ import {
   auditSubmissionSchema,
   compareFindings,
   getPlanEntitlements,
+  normalizeAuditPath,
   type PlanId,
   resolveProjectSocialImage
 } from '@coderocket/core'
 import { createServiceClient, persistAudit } from '@coderocket/db'
-import { filterBaselineForSubmittedPages, normalizeSubmittedPages } from '@/lib/audit-submission'
+import {
+  filterBaselineForSubmittedPages,
+  hasExactPageCoverage,
+  normalizeSubmittedPages
+} from '@/lib/audit-submission'
 
 export const runtime = 'nodejs'
 const MAX_BODY_BYTES = 5 * 1024 * 1024
@@ -124,7 +129,7 @@ export async function POST(request: Request) {
 
   const { data: project, error: projectError } = await db
     .from('cr_projects')
-    .select('baseline_reset_at')
+    .select('baseline_reset_at,page_paths')
     .eq('id', tokenRow.project_id)
     .eq('owner_id', tokenRow.owner_id)
     .is('archived_at', null)
@@ -132,6 +137,15 @@ export async function POST(request: Request) {
   if (projectError)
     return Response.json({ error: 'Could not load the monitored site' }, { status: 500 })
   if (!project) return Response.json({ error: 'Monitored site not found' }, { status: 404 })
+  const submittedPaths = normalizedPages.map(page => normalizeAuditPath(new URL(page.url).pathname))
+  if (!hasExactPageCoverage(project.page_paths, submittedPaths))
+    return Response.json(
+      {
+        error:
+          'This check must include every configured page exactly once. Refresh the generated secure-runner configuration and try again.'
+      },
+      { status: 422 }
+    )
 
   let baselineQuery = db
     .from('cr_audits')

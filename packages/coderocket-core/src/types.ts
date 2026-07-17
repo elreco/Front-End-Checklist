@@ -2,6 +2,7 @@ export type PlanId = 'free' | 'solo' | 'agency'
 export type AuditEnvironment = 'production' | 'preview'
 export type AuditTrigger = 'manual' | 'scheduled' | 'ci'
 export type SiteAccessMode = 'public' | 'protected' | 'private'
+export type PageAccessMode = 'anonymous' | 'authenticated'
 export type AuditStatus = 'queued' | 'running' | 'succeeded' | 'failed'
 export type CheckProgressStage =
   | 'queued'

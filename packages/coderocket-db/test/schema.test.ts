@@ -177,6 +177,18 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('stores page-level authentication without replacing the monitored page list', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607170006_page_access_modes.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /add column if not exists authenticated_page_paths text\[\]/)
+    assert.match(sql, /authenticated_page_paths <@ page_paths/)
+    assert.match(sql, /when access_mode = 'private'/)
+    assert.match(sql, /secure_runner_required = access_mode <> 'public'/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
   it('stores only bounded HTTPS social preview image URLs on monitored sites', async () => {
     const sql = await readFile(
       new URL('../supabase/migrations/202607170003_project_social_images.sql', import.meta.url),

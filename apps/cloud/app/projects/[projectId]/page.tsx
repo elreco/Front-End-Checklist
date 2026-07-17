@@ -12,10 +12,7 @@ import { ProjectPrimaryAction } from '@/components/project-primary-action'
 import { SiteVisual } from '@/components/site-visual'
 import { WebsiteCheckProgress } from '@/components/website-check-progress'
 import { getProjectDetail } from '@/lib/project-data'
-import { createPrivateMetadata } from '@/lib/seo'
 import { queueProjectAudit, updateFindingWorkflow } from './actions'
-
-export const metadata = createPrivateMetadata('Monitored website')
 
 export default async function ProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params
@@ -23,7 +20,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
   if (!project) notFound()
   const latest = project.latestAudit
   const firstCheckRunning = Boolean(project.activeCheck && !latest)
-  const waitingForCi = project.accessMode === 'private' && !latest && !project.activeCheck
+  const waitingForCi = project.accessMode !== 'public' && !latest && !project.activeCheck
   const firstResultPending = firstCheckRunning || waitingForCi
 
   return (

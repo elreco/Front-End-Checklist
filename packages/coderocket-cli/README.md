@@ -4,26 +4,30 @@ Run the same deterministic Front-End Checklist profile used by CodeRocket and su
 
 ```bash
 npx @coderocketapp/cli@latest audit https://preview.example.com \
+  --explicit-pages \
+  --page / \
   --page /pricing \
-  --page /account \
+  --authenticated-page /account \
   --token "$CODEROCKET_TOKEN" \
   --environment preview \
   --sha "$GITHUB_SHA"
 ```
 
-The first URL and every `--page` must stay on the same HTTPS origin. Use
+Every `--page` and `--authenticated-page` must stay on the same HTTPS origin. Use
 `--environment production` to create or update the trusted live-site baseline, then use
 `--environment preview` for pull requests.
 
-For a server-rendered page behind a cookie, authorization header, or Cloudflare Access, keep the
-required headers in the runner environment rather than in the command:
+Keep infrastructure headers that apply to every page separate from the dedicated application
+session that applies only to `--authenticated-page` paths:
 
 ```bash
-export CODEROCKET_SITE_HEADERS_JSON='{"cookie":"session=dedicated-test-session"}'
+export CODEROCKET_SITE_HEADERS_JSON='{"cf-access-client-id":"service-client"}'
+export CODEROCKET_AUTH_HEADERS_JSON='{"cookie":"session=dedicated-test-session"}'
 ```
 
-These headers are sent only to the original audited origin. They are never included in the result
-payload sent to CodeRocket. Use a dedicated, least-privileged test session.
+These headers are sent only to the original audited origin. Authentication headers are added only
+to explicitly authenticated pages. No header is included in the result payload sent to CodeRocket.
+Use a dedicated, least-privileged test session.
 
 Exit code `0` means the quality gate passed or needs a new baseline, `1` means a new critical or high-priority regression was found, and `2` means the check could not produce a reliable result.
 

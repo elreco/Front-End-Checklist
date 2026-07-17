@@ -56,10 +56,11 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
           </div>
         </div>
         <p className="mt-3 text-muted text-sm leading-6">{access.description}</p>
-        {project.accessMode === 'private' || recoveryKind === 'access' ? (
+        {project.accessMode !== 'public' || recoveryKind === 'access' ? (
           <div className="mt-4">
             <ProjectCliSetup
               configured={project.apiTokenConfigured}
+              authenticatedPages={project.authenticatedPages}
               pages={project.pages}
               plan={project.plan}
               projectId={project.id}
@@ -114,10 +115,10 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
           />
           <ProjectActionStep
             complete={
-              project.accessMode === 'private' ? project.ciRuns > 0 : project.scheduleEnabled
+              project.accessMode !== 'public' ? project.ciRuns > 0 : project.scheduleEnabled
             }
             description={
-              project.accessMode === 'private'
+              project.accessMode !== 'public'
                 ? project.ciRuns > 0
                   ? `${project.ciRuns} secure ${project.ciRuns === 1 ? 'check has' : 'checks have'} reached CodeRocket.`
                   : 'Required: connect an environment that can already open the protected pages.'
@@ -126,7 +127,7 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
                   : 'Turn on automatic checks so changes to the live site are not missed.'
             }
             title={
-              project.accessMode === 'private'
+              project.accessMode !== 'public'
                 ? 'Connect secure access'
                 : 'Keep automatic monitoring active'
             }
@@ -147,28 +148,29 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
       </section>
 
       <section className="h-full border border-border bg-surface p-5">
-        {project.accessMode === 'private' ? (
+        {project.accessMode !== 'public' ? (
           <LockKeyhole aria-hidden className="h-5 w-5 text-signal" />
         ) : (
           <Cloud aria-hidden className="h-5 w-5 text-signal" />
         )}
         <p className="mt-4 font-mono text-[10px] text-signal uppercase tracking-[.12em]">
-          {project.accessMode === 'private' ? 'Required for protected pages' : 'Active by default'}
+          {project.accessMode !== 'public' ? 'Required for protected pages' : 'Active by default'}
         </p>
         <h2 className="mt-2 font-heading font-semibold text-lg">
-          {project.accessMode === 'private'
+          {project.accessMode !== 'public'
             ? 'Secure access from your own environment'
             : 'Monitor the published website'}
         </h2>
         <p className="mt-2 text-muted text-sm leading-6">
-          {project.accessMode === 'private'
-            ? 'A runner in GitHub, GitLab, Bitbucket, or your private network opens the protected pages. Passwords, cookies, and access headers stay there.'
+          {project.accessMode !== 'public'
+            ? `${project.pages.length - project.authenticatedPages.length} public ${project.pages.length - project.authenticatedPages.length === 1 ? 'page stays' : 'pages stay'} anonymous, while ${project.authenticatedPages.length} ${project.authenticatedPages.length === 1 ? 'page receives' : 'pages receive'} the dedicated test session. The runner keeps every secret in your environment.`
             : `CodeRocket checks the live pages from the cloud. Next automatic check ${project.nextCheck}. No repository setup is needed.`}
         </p>
-        {project.accessMode === 'private' ? (
+        {project.accessMode !== 'public' ? (
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <ProjectCliSetup
               configured={project.apiTokenConfigured}
+              authenticatedPages={project.authenticatedPages}
               pages={project.pages}
               plan={project.plan}
               projectId={project.id}
@@ -267,7 +269,7 @@ function accessContent(
       description:
         'Sign-in, a firewall, or a challenge blocked the cloud check. Run it from an environment that can already open these pages.'
     }
-  if (project.accessMode === 'private')
+  if (project.accessMode !== 'public')
     return {
       icon: LockKeyhole,
       title:
@@ -278,17 +280,10 @@ function accessContent(
             : 'Secure access required',
       description:
         project.ciRuns > 0
-          ? 'Cloud monitoring stays off. Protected-page results arrive from your own secure runner.'
+          ? 'The secure runner sends one complete result while keeping public pages anonymous and signed-in pages authenticated.'
           : project.apiTokenConfigured
-            ? 'A project key exists. Run the generated job once to confirm that every protected page can be opened.'
-            : 'These pages need private access. CodeRocket will not try to bypass the sign-in screen or store your normal account password.'
-    }
-  if (project.accessMode === 'protected')
-    return {
-      icon: ShieldCheck,
-      title: 'Cloud check',
-      description:
-        'CodeRocket checks these pages from the cloud. If it cannot confirm the expected HTML, the result becomes incomplete rather than clear.'
+            ? 'A project key exists. Run the generated job once to confirm every public and protected page in one complete result.'
+            : 'Some or all pages need controlled access. CodeRocket will not bypass protection or store your normal account password.'
     }
   return {
     icon: Cloud,

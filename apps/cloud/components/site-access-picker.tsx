@@ -1,5 +1,5 @@
 import type { SiteAccessMode } from '@coderocket/core'
-import { Cloud, LockKeyhole } from '@repo/design-system/icons'
+import { Cloud, Layers3, LockKeyhole } from '@repo/design-system/icons'
 
 const options = [
   {
@@ -11,12 +11,20 @@ const options = [
     badge: 'Automatic'
   },
   {
+    value: 'protected',
+    icon: Layers3,
+    title: 'Some pages require sign-in',
+    description:
+      'Public pages stay anonymous. Mark only dashboards, accounts, admin pages, or other signed-in screens in the next step.',
+    badge: 'Mixed access'
+  },
+  {
     value: 'private',
     icon: LockKeyhole,
-    title: 'Sign-in or private access is required',
+    title: 'Every page requires sign-in',
     description:
-      'Choose this for customer accounts, private previews, access headers, or an internal network.',
-    badge: 'Secure setup'
+      'Choose this when every selected page belongs to an account, admin area, or signed-in application.',
+    badge: 'Signed-in app'
   }
 ] as const
 
@@ -29,7 +37,7 @@ export function SiteAccessPicker({
   onChange: (mode: SiteAccessMode) => void
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid gap-3 md:grid-cols-3">
       {options.map(option => {
         const Icon = option.icon
         const selected = option.value === value
@@ -68,9 +76,15 @@ export function SiteAccessPicker({
   )
 }
 
-/** Explain the operational consequence of the selected access mode. */
-export function SiteAccessExplanation({ mode }: { mode: SiteAccessMode }) {
-  const content = getAccessExplanation(mode)
+/** Explain the operational consequence of the selected access and execution modes. */
+export function SiteAccessExplanation({
+  mode,
+  secureRunnerRequired = false
+}: {
+  mode: SiteAccessMode
+  secureRunnerRequired?: boolean
+}) {
+  const content = getAccessExplanation(mode, secureRunnerRequired)
   const Icon = content.icon
   return (
     <div className="flex max-w-2xl gap-3 border border-border bg-background p-4" role="status">
@@ -84,13 +98,27 @@ export function SiteAccessExplanation({ mode }: { mode: SiteAccessMode }) {
 }
 
 /** Describe what the selected reachability contract changes operationally. */
-function getAccessExplanation(mode: SiteAccessMode) {
+function getAccessExplanation(mode: SiteAccessMode, secureRunnerRequired: boolean) {
+  if (mode === 'protected')
+    return {
+      icon: Layers3,
+      title: 'Public and signed-in pages stay separate',
+      description:
+        'The secure runner checks the complete selection, but it adds the dedicated application session only to pages you mark as requiring sign-in.'
+    }
   if (mode === 'private')
     return {
       icon: LockKeyhole,
       title: 'We will guide you through secure access',
       description:
-        'Run the same HTML check from an environment that already has access. You can copy the setup for a developer, and CodeRocket never stores your normal website password.'
+        'Every selected page receives the dedicated application session from your secure environment. Infrastructure restrictions are configured separately.'
+    }
+  if (secureRunnerRequired)
+    return {
+      icon: LockKeyhole,
+      title: 'Pages stay anonymous inside your secure runner',
+      description:
+        'CodeRocket will not request this site from the public cloud. The runner uses your network or infrastructure access without adding an application login session.'
     }
   return {
     icon: Cloud,

@@ -1,4 +1,11 @@
-import { assertPublicHttpsUrl, getPlanEntitlements, type PlanId } from '@coderocket/core'
+import {
+  assertPublicHttpsUrl,
+  deriveSiteAccessMode,
+  getPlanEntitlements,
+  normalizeAuthenticatedPagePaths,
+  normalizeHttpsOrigin,
+  type PlanId
+} from '@coderocket/core'
 import { z } from 'zod'
 import {
   normalizeEditablePagePaths,
@@ -7,8 +14,10 @@ import {
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 const configurationSchema = z.object({
+  authenticatedPages: z.array(z.string().trim().min(1).max(2048)).max(50).default([]),
   checkNow: z.boolean().optional().default(true),
   pages: z.array(z.string().trim().min(1).max(2048)).min(1).max(50),
+  secureRunnerRequired: z.boolean().optional(),
   url: z.string().trim().min(1).max(2048)
 })
 
@@ -31,7 +40,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
 
   const { data: project, error: projectError } = await supabase
     .from('cr_projects')
-    .select('id,production_url,page_paths,access_mode')
+    .select('id,production_url,page_paths,authenticated_page_paths,secure_runner_required')
     .eq('id', projectId)
     .eq('owner_id', auth.user.id)
     .is('archived_at', null)
@@ -40,7 +49,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     return Response.json({ error: 'The monitored site could not be loaded.' }, { status: 500 })
   if (!project) return Response.json({ error: 'Monitored site not found.' }, { status: 404 })
 
-  const normalized = await normalizeConfiguration(input.data.url, input.data.pages)
+  const normalized = await normalizeConfiguration(
+    input.data.url,
+    input.data.pages,
+    input.data.authenticatedPages,
+    input.data.secureRunnerRequired ?? project.secure_runner_required
+  )
   if (!normalized.success) return Response.json({ error: normalized.error }, { status: 422 })
 
   const [{ data: subscription }, { count: activeChecks }] = await Promise.all([
@@ -69,8 +83,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     )
 
   const changed = projectConfigurationChanged(
-    { pages: project.page_paths, url: project.production_url },
-    normalized
+    {
+      authenticatedPages: project.authenticated_page_paths ?? [],
+      pages: project.page_paths,
+      secureRunnerRequired: project.secure_runner_required,
+      url: project.production_url
+    },
+    {
+      ...normalized,
+      secureRunnerRequired: normalized.accessMode !== 'public'
+    }
   )
   if (changed) {
     const changedAt = new Date().toISOString()
@@ -78,9 +100,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     const { error } = await supabase
       .from('cr_projects')
       .update({
+        access_mode: normalized.accessMode,
+        authenticated_page_paths: normalized.authenticatedPages,
         baseline_reset_at: changedAt,
         page_paths: normalized.pages,
         production_url: normalized.url,
+        schedule_enabled: normalized.accessMode === 'public',
+        secure_runner_required: normalized.accessMode !== 'public',
         ...(siteUrlChanged ? { social_image_url: null } : {}),
         updated_at: changedAt
       })
@@ -91,7 +117,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
       return Response.json({ error: 'The monitored URLs could not be saved.' }, { status: 500 })
   }
 
-  const shouldQueue = input.data.checkNow && project.access_mode !== 'private'
+  const shouldQueue = input.data.checkNow && normalized.accessMode === 'public'
   const queueResult = shouldQueue
     ? await queueConfigurationCheck({
         ownerId: auth.user.id,
@@ -103,10 +129,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     : { queued: false }
 
   return Response.json({
+    accessMode: normalized.accessMode,
+    authenticatedPages: normalized.authenticatedPages,
     changed,
     queued: queueResult.queued,
     checkWarning: queueResult.warning,
     pages: normalized.pages,
+    secureRunnerRequired: normalized.accessMode !== 'public',
     url: normalized.url
   })
 }
@@ -143,11 +172,36 @@ async function readConfigurationInput(request: Request) {
 /** Normalize and SSRF-check the website origin plus every monitored page. */
 async function normalizeConfiguration(
   rawUrl: string,
-  rawPages: string[]
-): Promise<{ success: true; pages: string[]; url: string } | { success: false; error: string }> {
+  rawPages: string[],
+  rawAuthenticatedPages: string[],
+  secureRunnerRequired: boolean
+): Promise<
+  | {
+      success: true
+      accessMode: 'public' | 'protected' | 'private'
+      authenticatedPages: string[]
+      pages: string[]
+      url: string
+    }
+  | { success: false; error: string }
+> {
   try {
-    const url = (await assertPublicHttpsUrl(rawUrl)).origin
-    return { success: true, pages: normalizeEditablePagePaths(rawPages, url), url }
+    const effectiveSecureRunnerRequired = secureRunnerRequired || rawAuthenticatedPages.length > 0
+    const url = effectiveSecureRunnerRequired
+      ? normalizeHttpsOrigin(rawUrl)
+      : (await assertPublicHttpsUrl(rawUrl)).origin
+    const pages = normalizeEditablePagePaths(rawPages, url)
+    const authenticatedPages = normalizeAuthenticatedPagePaths(
+      normalizeEditablePagePaths(rawAuthenticatedPages, url),
+      pages
+    )
+    return {
+      success: true,
+      accessMode: deriveSiteAccessMode(pages, authenticatedPages, effectiveSecureRunnerRequired),
+      authenticatedPages,
+      pages,
+      url
+    }
   } catch (error) {
     return {
       success: false,
@@ -171,12 +225,29 @@ function updateDemoConfiguration(
     if (parsed.protocol !== 'https:') throw new Error('Use a secure https:// website address.')
     const url = parsed.origin
     const pages = normalizeEditablePagePaths(input.pages, url)
+    const authenticatedPages = normalizeAuthenticatedPagePaths(
+      normalizeEditablePagePaths(input.authenticatedPages, url),
+      pages
+    )
     const limits = getPlanEntitlements('free')
     if (pages.length > limits.pagesPerProject)
       throw new Error(
         `The free plan allows up to ${limits.pagesPerProject} monitored pages per site.`
       )
-    return Response.json({ changed: true, queued: input.checkNow, pages, url })
+    const accessMode = deriveSiteAccessMode(
+      pages,
+      authenticatedPages,
+      Boolean(input.secureRunnerRequired) || authenticatedPages.length > 0
+    )
+    return Response.json({
+      accessMode,
+      authenticatedPages,
+      changed: true,
+      queued: input.checkNow && accessMode === 'public',
+      pages,
+      secureRunnerRequired: accessMode !== 'public',
+      url
+    })
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : 'Check the monitored URLs.' },

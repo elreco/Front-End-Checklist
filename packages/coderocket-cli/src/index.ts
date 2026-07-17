@@ -9,8 +9,15 @@ import { parseArguments } from './arguments'
 export async function run(args = process.argv.slice(2)): Promise<0 | 1 | 2> {
   try {
     const options = parseArguments(args, process.env)
+    const authenticatedUrls = new Set(options.authenticatedUrls)
     const pages = await Promise.all(
-      options.urls.map(url => auditPage(url, { requestHeaders: options.requestHeaders }))
+      options.urls.map(url =>
+        auditPage(url, {
+          requestHeaders: authenticatedUrls.has(url)
+            ? { ...options.requestHeaders, ...options.authenticatedRequestHeaders }
+            : options.requestHeaders
+        })
+      )
     )
     const response = await fetch(options.apiUrl, {
       method: 'POST',

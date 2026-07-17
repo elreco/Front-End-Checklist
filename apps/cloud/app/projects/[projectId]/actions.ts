@@ -29,7 +29,7 @@ export async function queueProjectAudit(projectId: string): Promise<void> {
       .in('status', ['queued', 'leased'])
   ])
   if (!project) redirect('/dashboard')
-  if (project.access_mode === 'private')
+  if (project.access_mode !== 'public')
     redirect(`/projects/${projectId}?notice=private-runner-required`)
   if ((pending ?? 0) > 0) redirect(`/projects/${projectId}?notice=already-running`)
   const plan: PlanId =
@@ -90,6 +90,7 @@ export async function updateFindingWorkflow(projectId: string, formData: FormDat
   redirect(withNotice(returnPath, error ? 'workflow-failed' : `workflow-${status}`))
 }
 
+/** Preserve finding filters when a workflow mutation redirects back to the project. */
 function resolveProjectReturnPath(projectId: string, referer: string | null): string {
   const fallback = `/projects/${projectId}`
   if (!referer) return fallback
@@ -106,6 +107,7 @@ function resolveProjectReturnPath(projectId: string, referer: string | null): st
   }
 }
 
+/** Add one safe UI notice to an internal project return path. */
 function withNotice(path: string, notice: string): string {
   const url = new URL(path, 'https://coderocket.local')
   url.searchParams.set('notice', notice)

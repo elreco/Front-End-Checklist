@@ -7,9 +7,11 @@ import { PageLimitUpsell } from './plan-limit-upsell'
 
 interface ProjectPageFieldsProps {
   fieldId: string
+  authenticatedPages: string[]
   initialPages: string[]
   maxPages: number
   onAdd: () => void
+  onAccessToggle: (page: string) => void
   onRemove: (index: number) => void
   onUpdate: (index: number, value: string) => void
   pages: string[]
@@ -20,9 +22,11 @@ interface ProjectPageFieldsProps {
 /** Edit the monitored page list and reveal plan capacity only when it becomes relevant. */
 export function ProjectPageFields({
   fieldId,
+  authenticatedPages,
   initialPages,
   maxPages,
   onAdd,
+  onAccessToggle,
   onRemove,
   onUpdate,
   pages,
@@ -45,6 +49,7 @@ export function ProjectPageFields({
       <div className="mt-3 space-y-2">
         {pages.map((page, index) => {
           const needsAttention = problemPaths.includes(page)
+          const requiresSignIn = authenticatedPages.includes(page)
           return (
             <div
               className={`grid grid-cols-[1fr_auto] items-center gap-2 border bg-background p-2 ${
@@ -74,6 +79,21 @@ export function ProjectPageFields({
               >
                 <Trash2 aria-hidden />
               </CodeRocketButton>
+              <label className="col-span-2 flex cursor-pointer items-start gap-2 px-1 py-1 text-xs">
+                <input
+                  checked={requiresSignIn}
+                  className="mt-0.5 h-4 w-4 accent-signal"
+                  disabled={!page.trim()}
+                  onChange={() => onAccessToggle(page)}
+                  type="checkbox"
+                />
+                <span>
+                  <span className="font-semibold text-foreground">Sign-in required</span>
+                  <span className="ml-1 text-muted">
+                    — apply the dedicated test session only to this page.
+                  </span>
+                </span>
+              </label>
               {needsAttention ? (
                 <p className="col-span-2 px-1 text-danger text-xs">
                   This address failed in the latest check.

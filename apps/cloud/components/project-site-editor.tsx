@@ -28,13 +28,14 @@ import { ProjectPageFields } from './project-page-fields'
 
 /** Edit a monitored website without discarding its saved history or integrations. */
 export function ProjectSiteEditor({
-  accessMode,
+  authenticatedPages: initialAuthenticatedPages,
   checking = false,
   maxPages,
   pages: initialPages,
   plan,
   problemPaths = [],
   projectId,
+  secureRunnerRequired: initialSecureRunnerRequired,
   siteUrl,
   triggerLabel = 'Edit URLs',
   variant = 'outline'
@@ -46,11 +47,14 @@ export function ProjectSiteEditor({
   const [saving, setSaving] = useState(false)
   const [url, setUrl] = useState(siteUrl)
   const [pages, setPages] = useState(initialPages)
+  const [authenticatedPages, setAuthenticatedPages] = useState(initialAuthenticatedPages)
+  const [secureRunnerRequired, setSecureRunnerRequired] = useState(initialSecureRunnerRequired)
   const [error, setError] = useState('')
   const currentOrigin = safeHttpsOrigin(siteUrl)
   const nextOrigin = safeHttpsOrigin(url)
   const originChanged = Boolean(nextOrigin && currentOrigin && nextOrigin !== currentOrigin)
-  const checkAfterSave = accessMode !== 'private'
+  const effectiveSecureRunnerRequired = secureRunnerRequired || authenticatedPages.length > 0
+  const checkAfterSave = !effectiveSecureRunnerRequired
 
   /** Reset draft values whenever the dialog starts a new editing session. */
   function changeOpen(nextOpen: boolean) {
@@ -58,12 +62,21 @@ export function ProjectSiteEditor({
     if (!nextOpen) return
     setUrl(siteUrl)
     setPages(initialPages)
+    setAuthenticatedPages(initialAuthenticatedPages)
+    setSecureRunnerRequired(initialSecureRunnerRequired)
     setError('')
   }
 
   /** Update one controlled page path without changing the order of the monitored pages. */
   function updatePage(index: number, value: string) {
-    setPages(current => current.map((page, pageIndex) => (pageIndex === index ? value : page)))
+    setPages(current => {
+      const previousPage = current[index]
+      if (previousPage && authenticatedPages.includes(previousPage))
+        setAuthenticatedPages(paths =>
+          paths.map(path => (path === previousPage ? value : path)).filter(Boolean)
+        )
+      return current.map((page, pageIndex) => (pageIndex === index ? value : page))
+    })
     setError('')
   }
 
@@ -73,7 +86,17 @@ export function ProjectSiteEditor({
       setError('Keep at least one page to monitor.')
       return
     }
+    const removedPage = pages[index]
     setPages(current => current.filter((_, pageIndex) => pageIndex !== index))
+    if (removedPage) setAuthenticatedPages(current => current.filter(path => path !== removedPage))
+  }
+
+  /** Switch one page between anonymous and dedicated signed-in rendering. */
+  function togglePageAccess(page: string) {
+    if (!page.trim()) return
+    setAuthenticatedPages(current =>
+      current.includes(page) ? current.filter(path => path !== page) : [...current, page]
+    )
   }
 
   /** Validate and persist the URL configuration, then refresh the project summary. */
@@ -93,7 +116,13 @@ export function ProjectSiteEditor({
       const response = await fetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ url, pages, checkNow: checkAfterSave })
+        body: JSON.stringify({
+          url,
+          pages,
+          authenticatedPages,
+          secureRunnerRequired: effectiveSecureRunnerRequired,
+          checkNow: checkAfterSave
+        })
       })
       const payload: unknown = await response.json()
       if (!response.ok || !isProjectConfigurationSaveResponse(payload))
@@ -192,16 +221,36 @@ export function ProjectSiteEditor({
           ) : null}
 
           <ProjectPageFields
+            authenticatedPages={authenticatedPages}
             fieldId={fieldId}
             initialPages={initialPages}
             maxPages={maxPages}
             onAdd={() => setPages(current => [...current, ''])}
+            onAccessToggle={togglePageAccess}
             onRemove={removePage}
             onUpdate={updatePage}
             pages={pages}
             plan={plan}
             problemPaths={problemPaths}
           />
+
+          <label className="flex cursor-pointer items-start gap-3 border border-border bg-background p-4 text-sm">
+            <input
+              checked={effectiveSecureRunnerRequired}
+              className="mt-0.5 h-4 w-4 accent-signal"
+              disabled={authenticatedPages.length > 0}
+              onChange={event => setSecureRunnerRequired(event.target.checked)}
+              type="checkbox"
+            />
+            <span>
+              <span className="block font-semibold">Run checks from my secure environment</span>
+              <span className="mt-1 block text-muted text-xs leading-5">
+                Keep this enabled for Cloudflare Access, preview passwords, IP allowlists, private
+                networks, client certificates, or any protection the public cloud checker cannot
+                cross. It is automatically required while a page needs sign-in.
+              </span>
+            </span>
+          </label>
 
           {error ? (
             <p className="border border-danger bg-background p-3 text-danger text-sm" role="alert">

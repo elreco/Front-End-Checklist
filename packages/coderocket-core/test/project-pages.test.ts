@@ -2,6 +2,9 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   buildProjectPageUrl,
+  deriveSiteAccessMode,
+  normalizeAuthenticatedPagePaths,
+  normalizeHttpsOrigin,
   normalizeProjectPagePath,
   normalizeProjectPagePaths
 } from '../src/index'
@@ -13,6 +16,15 @@ describe('CodeRocket project page paths', () => {
       '/pricing',
       '/contact'
     ])
+  })
+
+  it('accepts a protected HTTPS origin without requiring public network reachability', () => {
+    assert.equal(
+      normalizeHttpsOrigin('https://internal.example.test/app'),
+      'https://internal.example.test'
+    )
+    assert.throws(() => normalizeHttpsOrigin('http://internal.example.test'), /HTTPS/)
+    assert.throws(() => normalizeHttpsOrigin('https://user:secret@example.com'), /credentials/)
   })
 
   it('rejects protocol-relative, query, fragment, and oversized paths', () => {
@@ -30,6 +42,20 @@ describe('CodeRocket project page paths', () => {
     assert.throws(
       () => buildProjectPageUrl('https://www.example.com', '//other.example'),
       /hostname/
+    )
+  })
+
+  it('keeps authenticated pages inside the monitored selection and derives mixed access', () => {
+    const pages = ['/', '/pricing', '/dashboard']
+    assert.deepEqual(normalizeAuthenticatedPagePaths(['/dashboard'], pages), ['/dashboard'])
+    assert.equal(deriveSiteAccessMode(pages, []), 'public')
+    assert.equal(deriveSiteAccessMode(pages, [], true), 'protected')
+    assert.equal(deriveSiteAccessMode(pages, ['/dashboard']), 'protected')
+    assert.equal(deriveSiteAccessMode(pages, ['/dashboard'], false), 'protected')
+    assert.equal(deriveSiteAccessMode(pages, pages), 'private')
+    assert.throws(
+      () => normalizeAuthenticatedPagePaths(['/admin'], pages),
+      /must also be monitored/
     )
   })
 })

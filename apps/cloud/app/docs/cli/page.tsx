@@ -85,16 +85,19 @@ export default function CliDocumentationPage() {
         </p>
         <div className="mt-6">
           <DocsCodeBlock language="bash">{`coderocket audit https://preview.example.com \\
+  --explicit-pages \\
+  --page / \\
   --page /pricing \\
-  --page /account \\
+  --authenticated-page /account \\
   --token "$CODEROCKET_TOKEN" \\
           --environment production`}</DocsCodeBlock>
         </div>
         <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
-          The first URL and each <DocsInlineCode>--page</DocsInlineCode> stay on the same HTTPS
-          website. The protected-site setup uses{' '}
-          <DocsInlineCode>--environment production</DocsInlineCode> and can run manually or on a
-          schedule.
+          Each public <DocsInlineCode>--page</DocsInlineCode> and signed-in{' '}
+          <DocsInlineCode>--authenticated-page</DocsInlineCode> stays on the same HTTPS website. A
+          production result must contain every page configured in the project. The protected-site
+          setup uses <DocsInlineCode>--environment production</DocsInlineCode> and can run manually
+          or on a schedule.
         </p>
       </section>
 
@@ -104,22 +107,33 @@ export default function CliDocumentationPage() {
           Access protected server-rendered pages
         </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
-          Store the required cookie, authorization header, or Cloudflare Access headers in the
-          secret named <DocsInlineCode>CODEROCKET_SITE_HEADERS_JSON</DocsInlineCode>. The CI process
-          uses them only for requests to the original website origin and never includes them in the
-          submitted result.
+          Store Cloudflare, preview, or gateway headers that apply to every page in{' '}
+          <DocsInlineCode>CODEROCKET_SITE_HEADERS_JSON</DocsInlineCode>. Store the dedicated
+          application cookie or authorization token in{' '}
+          <DocsInlineCode>CODEROCKET_AUTH_HEADERS_JSON</DocsInlineCode>; it is added only to pages
+          marked as requiring sign-in. Neither secret is included in the submitted result.
         </p>
         <div className="mt-6">
           <DocsCodeBlock language="json">{`{
-  "cookie": "session=dedicated-test-session",
   "cf-access-client-id": "client-id",
   "cf-access-client-secret": "client-secret"
+}`}</DocsCodeBlock>
+        </div>
+        <div className="mt-4">
+          <DocsCodeBlock language="json">{`{
+  "cookie": "session=dedicated-test-session"
 }`}</DocsCodeBlock>
         </div>
         <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
           Use a dedicated, least-privileged test account. The secure runner reads returned HTML and
           response headers; it does not inspect repository source files, execute page JavaScript, or
           automate a multi-step sign-in, MFA, or CAPTCHA journey.
+        </p>
+        <p className="mt-3 max-w-3xl text-muted text-sm leading-6">
+          Protection layers can be combined. A private application may require a self-hosted runner
+          inside its network, Cloudflare Access headers, and an application session at the same
+          time. The runner must be configured with every required layer; CI does not grant access
+          automatically.
         </p>
       </section>
 

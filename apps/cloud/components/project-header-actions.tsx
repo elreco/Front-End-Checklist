@@ -18,6 +18,7 @@ export function ProjectHeaderActions({
       {showCiSetup ? (
         <ProjectCliSetup
           configured={project.apiTokenConfigured}
+          authenticatedPages={project.authenticatedPages}
           pages={project.pages}
           plan={project.plan}
           projectId={project.id}
@@ -27,12 +28,13 @@ export function ProjectHeaderActions({
         />
       ) : null}
       <ProjectSiteEditor
-        accessMode={project.accessMode}
+        authenticatedPages={project.authenticatedPages}
         checking={project.checking}
         maxPages={getPlanEntitlements(project.plan).pagesPerProject}
         pages={project.pages}
         plan={project.plan}
         projectId={project.id}
+        secureRunnerRequired={project.secureRunnerRequired}
         siteUrl={project.url}
       />
       <CodeRocketButton asChild size="sm" variant="outline">

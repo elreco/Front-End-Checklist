@@ -1,14 +1,6 @@
 'use client'
 
-import {
-  Check,
-  Copy,
-  LockKeyhole,
-  RefreshCw,
-  Send,
-  ShieldCheck,
-  Terminal
-} from '@repo/design-system/icons'
+import { LockKeyhole, Send, Terminal } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { toast } from '@repo/design-system/ui/coderocket-toast'
 import {
@@ -35,10 +27,12 @@ import {
   type SecureAccessMethod
 } from '@/lib/secure-access-copy'
 import { CiPlatformPicker } from './ci-platform-picker'
+import { ConnectionStatus, HandoffAction, PageAccessSummary } from './project-cli-setup-sections'
 import { SecureAccessAdvancedSetup } from './secure-access-advanced-setup'
 import { SecureAccessMethodPicker } from './secure-access-method-picker'
 
 interface ProjectSecureAccessSetupProps {
+  authenticatedPages: string[]
   configured: boolean
   pages: string[]
   plan: 'free' | 'solo' | 'agency'
@@ -50,6 +44,7 @@ interface ProjectSecureAccessSetupProps {
 
 /** Guide owners and developers through secure checks without exposing CI first. */
 export function ProjectCliSetup({
+  authenticatedPages,
   configured,
   pages,
   plan,
@@ -58,24 +53,34 @@ export function ProjectCliSetup({
   siteUrl,
   triggerLabel
 }: ProjectSecureAccessSetupProps) {
-  const [accessMethod, setAccessMethod] = useState<SecureAccessMethod>('unknown')
+  const [accessMethods, setAccessMethods] = useState<SecureAccessMethod[]>(
+    authenticatedPages.length > 0 ? ['account'] : ['unknown']
+  )
   const [copied, setCopied] = useState<keyof SecureAccessCopy | null>(null)
   const [platform, setPlatform] = useState<CiPlatform>('github')
   const configuration = useMemo(
-    () => buildCiConfiguration(platform, { accessMethod, pages, plan, siteUrl }),
-    [accessMethod, pages, plan, platform, siteUrl]
+    () =>
+      buildCiConfiguration(platform, {
+        accessMethods,
+        authenticatedPages,
+        pages,
+        plan,
+        siteUrl
+      }),
+    [accessMethods, authenticatedPages, pages, plan, platform, siteUrl]
   )
   const copy = useMemo(
     () =>
       buildSecureAccessCopy({
-        accessMethod,
+        accessMethods,
+        authenticatedPages,
         configuration,
         configurationLocation: getCiConfigLocation(platform),
         pages,
         platformLabel: getCiPlatformLabel(platform),
         siteUrl
       }),
-    [accessMethod, configuration, pages, platform, siteUrl]
+    [accessMethods, authenticatedPages, configuration, pages, platform, siteUrl]
   )
 
   /** Copy one safe handoff without including credentials. */
@@ -112,7 +117,8 @@ export function ProjectCliSetup({
         </CodeRocketButton>
       </DialogTrigger>
       <DialogContent
-        className="flex max-h-[calc(100dvh-2rem)] max-w-4xl flex-col gap-0 overflow-hidden rounded-none bg-surface p-0"
+        className="isolate flex max-h-[calc(100dvh-2rem)] max-w-4xl transform-gpu flex-col gap-0 overflow-hidden rounded-none bg-surface p-0 [backface-visibility:hidden]"
+        overlayClassName="bg-black/75 backdrop-blur-none"
         showClose
       >
         <DialogHeader className="shrink-0 border-border border-b p-6 pr-14">
@@ -129,15 +135,17 @@ export function ProjectCliSetup({
               </DialogTitle>
               <DialogDescription className="mt-2 max-w-2xl leading-6">
                 Run the check from an environment that can already open this site. Website
-                credentials stay there; CodeRocket receives only the check result.
+                credentials stay there; GitHub or GitLab does not create access by itself, and
+                CodeRocket receives only the check result.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-6">
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-none p-6 [scrollbar-gutter:stable]">
           <ConnectionStatus configured={configured} receivedChecks={receivedChecks} />
-          <SecureAccessMethodPicker onChange={setAccessMethod} value={accessMethod} />
+          <PageAccessSummary authenticatedPages={authenticatedPages} pages={pages} />
+          <SecureAccessMethodPicker onChange={setAccessMethods} value={accessMethods} />
           <CiPlatformPicker onChange={setPlatform} value={platform} />
 
           <section aria-labelledby="handoff-title" className="border border-border bg-background">
@@ -172,7 +180,7 @@ export function ProjectCliSetup({
           </section>
 
           <SecureAccessAdvancedSetup
-            accessMethod={accessMethod}
+            accessMethods={accessMethods}
             configuration={configuration}
             configured={configured}
             plan={plan}
@@ -193,91 +201,5 @@ export function ProjectCliSetup({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-/** Explain whether a key or a complete secure check has been observed. */
-function ConnectionStatus({
-  configured,
-  receivedChecks
-}: {
-  configured: boolean
-  receivedChecks: number
-}) {
-  if (receivedChecks > 0)
-    return (
-      <div className="flex items-start gap-3 border border-success bg-success/10 p-4">
-        <ShieldCheck aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-success" />
-        <div>
-          <p className="font-semibold text-sm">Secure access connected</p>
-          <p className="mt-1 text-muted text-xs leading-5">
-            CodeRocket has received {receivedChecks} secure{' '}
-            {receivedChecks === 1 ? 'check' : 'checks'} from your runner.
-          </p>
-        </div>
-      </div>
-    )
-  if (configured)
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-3 border border-signal bg-signal/10 p-4">
-        <div>
-          <p className="font-semibold text-sm">Waiting for the first secure check</p>
-          <p className="mt-1 text-muted text-xs leading-5">
-            A project key exists. Run the generated job once, then refresh this page.
-          </p>
-        </div>
-        <CodeRocketButton
-          onClick={() => window.location.reload()}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <RefreshCw aria-hidden /> Refresh status
-        </CodeRocketButton>
-      </div>
-    )
-  return (
-    <div className="flex items-start gap-3 border border-border bg-background p-4">
-      <LockKeyhole aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-signal" />
-      <div>
-        <p className="font-semibold text-sm">Secure access is not connected yet</p>
-        <p className="mt-1 text-muted text-xs leading-5">
-          Start by describing the protection, then send the instructions or open the advanced setup.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-/** Render one copy-first handoff option. */
-function HandoffAction({
-  copied,
-  description,
-  icon: Icon,
-  label,
-  onCopy
-}: {
-  copied: boolean
-  description: string
-  icon: typeof Copy
-  label: string
-  onCopy: () => void
-}) {
-  return (
-    <article className="flex flex-col bg-surface p-5">
-      <Icon aria-hidden className="h-5 w-5 text-signal" />
-      <h4 className="mt-4 font-heading font-semibold text-base">{label}</h4>
-      <p className="mt-2 flex-1 text-muted text-xs leading-5">{description}</p>
-      <CodeRocketButton
-        className="mt-4 justify-center"
-        onClick={onCopy}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-        <span aria-live="polite">{copied ? 'Copied' : 'Copy instructions'}</span>
-      </CodeRocketButton>
-    </article>
   )
 }

@@ -82,7 +82,7 @@ const notices: Record<string, ToastMessage> = {
   },
   'private-runner-required': {
     description:
-      'This site requires private access, so CodeRocket will not send the public cloud checker. Connect an environment that can already open it.',
+      'One or more access layers prevent a reliable cloud check. Connect an environment that can open every selected page.',
     kind: 'info',
     title: 'Connect secure access'
   },

@@ -63,7 +63,7 @@ const planLabels: Record<PlanId, string> = {
 
 const accessModeLabels: Record<SiteAccessMode, string> = {
   public: 'Cloud check',
-  protected: 'Cloud check',
+  protected: 'Mixed access runner',
   private: 'Secure runner'
 }
 
