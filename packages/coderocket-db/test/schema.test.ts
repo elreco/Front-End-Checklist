@@ -105,6 +105,25 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('allows owners to update only finding workflow metadata', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607170005_finding_workflow_permissions.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(
+      sql,
+      /grant update \(workflow_status, workflow_note, workflow_updated_at\)[^;]+to authenticated/s
+    )
+    assert.match(sql, /create policy cr_findings_owner_update/)
+    assert.match(sql, /for update/)
+    assert.match(sql, /using \(auth\.uid\(\) = owner_id\)/)
+    assert.match(sql, /with check \(auth\.uid\(\) = owner_id\)/)
+    assert.doesNotMatch(sql.toLowerCase(), /grant update on table public\.cr_findings/)
+  })
+
   it('meters evidence-grounded AI analyses without changing audit truth', async () => {
     const sql = await readFile(
       new URL('../supabase/migrations/202607160008_ai_analysis.sql', import.meta.url),

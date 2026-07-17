@@ -2,12 +2,11 @@ import assert from 'node:assert/strict'
 import * as path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { loadRules } from '../load-rules'
+import { loadRules, resolveRulesDirectory } from '../load-rules'
 
-const fixtureRulesDir = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  'fixtures/rules/en'
-)
+const testDirectory = path.dirname(fileURLToPath(import.meta.url))
+const fixtureRulesDir = path.resolve(testDirectory, 'fixtures/rules/en')
+const repositoryRoot = path.resolve(testDirectory, '../../../..')
 
 test('loadRules parses normalized rule records from MDX files', () => {
   const rules = loadRules(fixtureRulesDir)
@@ -62,4 +61,17 @@ test('loadRules parses normalized rule records from MDX files', () => {
       url: '/rules/html/multi-category-rule'
     }
   ])
+})
+
+test('resolveRulesDirectory finds monorepo rules from a bundled server runtime', () => {
+  const expectedDirectory = path.resolve(repositoryRoot, 'packages/content/rules/en')
+  for (const workingDirectory of [repositoryRoot, path.resolve(repositoryRoot, 'apps/cloud')]) {
+    const rulesDirectory = resolveRulesDirectory({
+      moduleDirectory: path.resolve(repositoryRoot, 'apps/cloud/.next/server/chunks'),
+      workingDirectory
+    })
+
+    assert.equal(rulesDirectory, expectedDirectory)
+    assert.ok(loadRules(rulesDirectory).some(rule => rule.slug === 'responsive-images'))
+  }
 })

@@ -56,6 +56,7 @@ export async function getBillingAccountData(
   }
 }
 
+/** Build a safe local billing snapshot when no authenticated database is available. */
 function fallbackBillingAccount(
   includedCredits: number,
   consumedCredits: number
@@ -78,6 +79,7 @@ function fallbackBillingAccount(
   }
 }
 
+/** Prefer a future usage reset, then a future Stripe period end, then one month from now. */
 function normalizeResetDate(
   usagePeriodEnd: string | null | undefined,
   subscriptionPeriodEnd: string | null | undefined
@@ -88,6 +90,7 @@ function normalizeResetDate(
   return nextMonthlyReset()
 }
 
+/** Return a stable fallback reset date one UTC month from now. */
 function nextMonthlyReset(): string {
   const date = new Date()
   date.setUTCMonth(date.getUTCMonth() + 1)

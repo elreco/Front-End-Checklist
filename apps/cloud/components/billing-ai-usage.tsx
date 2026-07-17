@@ -6,15 +6,13 @@ import {
   CircleDollarSign,
   Gauge
 } from '@repo/design-system/icons'
+import { type BillingAccountData, billingConnectionState, summarizeAiUsage } from '@/lib/billing'
 import {
-  type BillingAccountData,
-  billingConnectionState,
   formatAiCredits,
   formatAiSpending,
   formatBillingDate,
-  microeurosToEuros,
-  summarizeAiUsage
-} from '@/lib/billing'
+  microeurosToEuros
+} from '@/lib/billing-format'
 import { AiSpendingControls } from './ai-spending-controls'
 
 /** Present included AI usage, metered spending, warnings, and the account budget control. */
@@ -153,6 +151,7 @@ export function BillingAiUsage({ account, plan }: { account: BillingAccountData;
   )
 }
 
+/** Render one compact AI billing metric. */
 function UsageFact({
   icon: Icon,
   label,
@@ -171,6 +170,7 @@ function UsageFact({
   )
 }
 
+/** Render a usage bar with visible 80% warning and 100% outcome markers. */
 function UsageProgress({
   detail,
   endLabel,

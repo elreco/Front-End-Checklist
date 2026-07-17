@@ -14,8 +14,11 @@ import type {
 import { RULE_CATEGORIES, RULE_SUBCATEGORIES } from './types.js'
 
 const CURRENT_DIR = path.dirname(fileURLToPath(import.meta.url))
-const PACKAGE_RULES_DIR = path.resolve(CURRENT_DIR, '../rules/en')
-const MONOREPO_RULES_DIR = path.resolve(CURRENT_DIR, '../../content/rules/en')
+
+interface RulesDirectoryOptions {
+  moduleDirectory?: string
+  workingDirectory?: string
+}
 
 /** Check whether an unknown value is a plain object. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -144,10 +147,24 @@ function parseRelatedRules(
   return relatedRules.length > 0 ? relatedRules : undefined
 }
 
-/** Resolve the default rule directory for the current execution environment. */
-function resolveDefaultRulesDir(): string {
-  if (fs.existsSync(PACKAGE_RULES_DIR)) return PACKAGE_RULES_DIR
-  return MONOREPO_RULES_DIR
+/**
+ * Resolve packaged, source-workspace, and bundled-runtime rule locations.
+ *
+ * @param options - Optional directories used to verify bundled runtime resolution.
+ * @returns The first rule directory available to the current process.
+ */
+export function resolveRulesDirectory(options: RulesDirectoryOptions = {}): string {
+  const moduleDirectory = options.moduleDirectory ?? CURRENT_DIR
+  const workingDirectory = options.workingDirectory ?? process.cwd()
+  const candidates = [
+    path.resolve(moduleDirectory, '../rules/en'),
+    path.resolve(moduleDirectory, '../../content/rules/en'),
+    path.resolve(workingDirectory, 'packages/rules/rules/en'),
+    path.resolve(workingDirectory, 'packages/content/rules/en'),
+    path.resolve(workingDirectory, '../../packages/rules/rules/en'),
+    path.resolve(workingDirectory, '../../packages/content/rules/en')
+  ]
+  return candidates.find(candidate => fs.existsSync(candidate)) ?? candidates[0]
 }
 
 /** Decode YAML frontmatter into a safe record. */
@@ -162,7 +179,7 @@ function parseFrontmatter(rawFrontmatter: string): Record<string, unknown> | und
  * @param rulesDir - Optional override for the rules directory.
  * @returns Normalized rule records for the rules package.
  */
-export function loadRules(rulesDir: string = resolveDefaultRulesDir()): FrontendChecklistRule[] {
+export function loadRules(rulesDir: string = resolveRulesDirectory()): FrontendChecklistRule[] {
   if (!fs.existsSync(rulesDir)) return []
 
   const rules: FrontendChecklistRule[] = []

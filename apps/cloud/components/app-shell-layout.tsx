@@ -123,7 +123,7 @@ export function AppShellLayout({
         }`}
       >
         <TooltipProvider delayDuration={250}>
-          <div className="flex min-h-24 items-center">
+          <div className="flex h-16 items-center">
             <Link
               aria-label="CodeRocket overview"
               className={`flex min-w-0 items-center ${collapsed ? 'mx-auto justify-center' : 'px-1'}`}

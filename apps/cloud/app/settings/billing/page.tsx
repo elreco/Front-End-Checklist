@@ -13,8 +13,9 @@ import { BillingAiUsage } from '@/components/billing-ai-usage'
 import { UpgradeLink } from '@/components/plan-limit-upsell'
 import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
-import { type BillingAccountData, billingConnectionState, formatBillingDate } from '@/lib/billing'
+import { type BillingAccountData, billingConnectionState } from '@/lib/billing'
 import { getBillingAccountData } from '@/lib/billing-data'
+import { formatBillingDate } from '@/lib/billing-format'
 import { getPlanLabel } from '@/lib/product-language'
 import { createPrivateMetadata } from '@/lib/seo'
 import { getNextPlan } from '@/lib/upgrade'
@@ -96,6 +97,7 @@ export default async function BillingPage() {
   )
 }
 
+/** Always expose the correct Stripe or checkout action for the current account state. */
 function ManageBilling({ account, plan }: { account: BillingAccountData; plan: PlanId }) {
   const connection = billingConnectionState(plan, account)
   return (
@@ -162,6 +164,7 @@ function ManageBilling({ account, plan }: { account: BillingAccountData; plan: P
   )
 }
 
+/** Summarize free, connected, test, and payment-issue subscription states. */
 function PlanStatus({ account, plan }: { account: BillingAccountData; plan: PlanId }) {
   const connection = billingConnectionState(plan, account)
   if (connection === 'test')
@@ -191,6 +194,7 @@ function PlanStatus({ account, plan }: { account: BillingAccountData; plan: Plan
   )
 }
 
+/** Render one compact fact about the current billing plan. */
 function PlanFact({
   icon: Icon,
   label,

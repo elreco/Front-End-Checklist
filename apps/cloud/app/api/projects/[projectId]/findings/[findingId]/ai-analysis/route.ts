@@ -171,12 +171,14 @@ export async function POST(request: Request, context: RouteContext) {
   )
 }
 
+/** Load the authenticated Supabase session used by both route methods. */
 async function getSession() {
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase.auth.getUser()
   return data.user ? { supabase, userId: data.user.id } : null
 }
 
+/** Confirm that the requested finding occurrence belongs to the signed-in account. */
 async function verifyFindingOwnership(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userId: string,
@@ -196,6 +198,7 @@ async function verifyFindingOwnership(
   return Boolean(data)
 }
 
+/** Load the current rule and ruleset identity needed to generate a grounded explanation. */
 async function loadFindingContext(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userId: string,
@@ -237,6 +240,7 @@ async function loadFindingContext(
     : null
 }
 
+/** Convert a stored AI task and its queue status into the public response shape. */
 async function serializeTask(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userId: string,
@@ -265,6 +269,7 @@ async function serializeTask(
   }
 }
 
+/** Return a consistent JSON error response for the AI analysis endpoint. */
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status })
 }
