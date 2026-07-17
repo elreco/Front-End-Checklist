@@ -39,7 +39,7 @@ export async function POST(request: Request, context: { params: Promise<{ auditI
     .select('id')
     .single()
   if (error) return Response.json({ error: error.message }, { status: 400 })
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://coderocket.app'
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.coderocket.app'
   return Response.json(
     { id: link.id, url: `${origin}/reports/${token}`, expiresAt },
     { status: 201 }

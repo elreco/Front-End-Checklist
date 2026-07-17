@@ -92,12 +92,23 @@ async function loadAnalysisContext(job: WorkerJob, taskId: string) {
   }
 }
 
+/** Atomically enqueue billable usage once included credits are exhausted. */
+async function prepareUsageBilling(taskId: string) {
+  const { error } = await createServiceClient().rpc('cr_prepare_ai_usage_billing', {
+    p_task_id: taskId
+  })
+  if (error) throw new Error(error.message)
+}
+
 /** Generate and settle one idempotent, evidence-grounded finding explanation. */
 export async function processAiAnalysisJob(job: WorkerJob): Promise<void> {
   const taskId = typeof job.payload.taskId === 'string' ? job.payload.taskId : ''
   if (!taskId) throw new Error('AI analysis job has no task identifier')
   const context = await loadAnalysisContext(job, taskId)
-  if (context.task.status === 'succeeded') return
+  if (context.task.status === 'succeeded') {
+    await prepareUsageBilling(taskId)
+    return
+  }
   if (!(context.finding && context.occurrence)) throw new Error('AI analysis context is incomplete')
 
   const db = createServiceClient()
@@ -164,6 +175,7 @@ export async function processAiAnalysisJob(job: WorkerJob): Promise<void> {
     p_error: null
   })
   if (error) throw new Error(error.message)
+  await prepareUsageBilling(taskId)
   await updateAiProgress(job, 'completed', 'Explanation ready')
 }
 

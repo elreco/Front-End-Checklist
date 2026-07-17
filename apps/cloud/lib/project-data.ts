@@ -59,6 +59,15 @@ export interface ProjectCheckProgress {
   updatedAt: string
 }
 
+export interface ProjectPageCheck {
+  durationMs?: number
+  error?: string
+  httpStatus?: number
+  path: string
+  reachable: boolean
+  url: string
+}
+
 export interface ProjectDetail {
   id: string
   name: string
@@ -70,6 +79,7 @@ export interface ProjectDetail {
   checking: boolean
   activeCheck?: ProjectCheckProgress
   latestAudit?: ProjectAudit
+  latestPages: ProjectPageCheck[]
   audits: ProjectAudit[]
   findings: ProjectFinding[]
   plan: 'free' | 'solo' | 'agency'
@@ -103,6 +113,15 @@ const demoProject: ProjectDetail = {
   nextCheck: 'tomorrow',
   checking: false,
   latestAudit: demoAudit,
+  latestPages: [
+    {
+      path: '/',
+      url: 'https://acme.example/',
+      reachable: true,
+      httpStatus: 200,
+      durationMs: 420
+    }
+  ],
   audits: [demoAudit],
   findings: [
     {
@@ -147,10 +166,61 @@ const demoProject: ProjectDetail = {
   ciRuns: 0
 }
 
+const demoUrlErrorAudit: ProjectAudit = {
+  ...demoAudit,
+  id: 'demo-audit-url-error',
+  status: 'succeeded',
+  gate: 'inconclusive',
+  newCount: 0,
+  persistentCount: 0,
+  resolvedCount: 0,
+  blockingCount: 0,
+  requestedPageCount: 3,
+  checkedPageCount: 1,
+  trigger: 'manual',
+  environment: 'production'
+}
+
+const demoUrlErrorProject: ProjectDetail = {
+  ...demoProject,
+  id: 'demo-url-error',
+  name: 'Watch Peak',
+  url: 'https://watchpeak.example',
+  pages: ['/', '/contact', '/pricing'],
+  latestAudit: demoUrlErrorAudit,
+  latestPages: [
+    {
+      path: '/',
+      url: 'https://watchpeak.example/',
+      reachable: true,
+      httpStatus: 200,
+      durationMs: 380
+    },
+    {
+      path: '/contact',
+      url: 'https://watchpeak.example/contact',
+      reachable: false,
+      error: 'HTTP 404'
+    },
+    {
+      path: '/pricing',
+      url: 'https://watchpeak.example/pricing',
+      reachable: false,
+      error: 'HTTP 404'
+    }
+  ],
+  audits: [demoUrlErrorAudit],
+  findings: []
+}
+
 /** Load one owner-scoped project with its latest real findings and check history. */
 export async function getProjectDetail(projectId: string): Promise<ProjectDetail | null> {
   if (process.env.CODEROCKET_DEMO_MODE === 'true')
-    return projectId === demoProject.id ? demoProject : null
+    return projectId === demoProject.id
+      ? demoProject
+      : projectId === demoUrlErrorProject.id
+        ? demoUrlErrorProject
+        : null
   if (!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY))
     return null
   const supabase = await createSupabaseServerClient()
@@ -166,7 +236,9 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
   ] = await Promise.all([
     supabase
       .from('cr_projects')
-      .select('id,name,production_url,page_paths,access_mode,schedule_enabled,next_audit_at')
+      .select(
+        'id,name,production_url,page_paths,access_mode,schedule_enabled,next_audit_at,baseline_reset_at'
+      )
       .eq('id', projectId)
       .eq('owner_id', auth.user.id)
       .is('archived_at', null)
@@ -207,7 +279,8 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
       .eq('trigger', 'ci')
   ])
   if (!project) return null
-  const auditHistory = (audits ?? []).map(audit => ({
+  const storedAudits = audits ?? []
+  const auditHistory = storedAudits.map(audit => ({
     id: audit.id,
     status: audit.status,
     gate: resolveGate(audit.gate_status),
@@ -222,16 +295,31 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     trigger: audit.trigger,
     environment: audit.environment
   }))
-  const latestAudit = auditHistory[0]
+  const baselineResetAt = project.baseline_reset_at
+    ? new Date(project.baseline_reset_at).getTime()
+    : 0
+  const latestCurrentAuditId = storedAudits.find(
+    audit => new Date(audit.created_at).getTime() >= baselineResetAt
+  )?.id
+  const latestAudit = auditHistory.find(audit => audit.id === latestCurrentAuditId)
   let findings: ProjectFinding[] = []
+  let latestPages: ProjectPageCheck[] = []
   if (latestAudit) {
-    const { data: occurrences } = await supabase
-      .from('cr_occurrences')
-      .select(
-        'id,status,message,evidence,cr_findings(id,priority,title,normalized_path,rule_slug,category,source,workflow_status,workflow_note)'
-      )
-      .eq('audit_id', latestAudit.id)
-      .eq('owner_id', auth.user.id)
+    const [{ data: occurrences }, { data: auditPages }] = await Promise.all([
+      supabase
+        .from('cr_occurrences')
+        .select(
+          'id,status,message,evidence,cr_findings(id,priority,title,normalized_path,rule_slug,category,source,workflow_status,workflow_note)'
+        )
+        .eq('audit_id', latestAudit.id)
+        .eq('owner_id', auth.user.id),
+      supabase
+        .from('cr_audit_pages')
+        .select('url,normalized_path,reachable,http_status,duration_ms,error')
+        .eq('audit_id', latestAudit.id)
+        .eq('owner_id', auth.user.id)
+        .order('normalized_path')
+    ])
     findings = (occurrences ?? []).flatMap(occurrence => {
       const relatedFindings = Array.isArray(occurrence.cr_findings)
         ? occurrence.cr_findings
@@ -264,6 +352,14 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
           : []
       )
     })
+    latestPages = (auditPages ?? []).map(page => ({
+      path: page.normalized_path,
+      url: page.url,
+      reachable: page.reachable,
+      httpStatus: page.http_status ?? undefined,
+      durationMs: page.duration_ms ?? undefined,
+      error: page.error ?? undefined
+    }))
   }
 
   const activeCheck: ProjectCheckProgress | undefined = activeJob
@@ -291,6 +387,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     checking: Boolean(activeCheck),
     activeCheck,
     latestAudit,
+    latestPages,
     audits: auditHistory,
     findings,
     plan:
@@ -302,28 +399,35 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
   }
 }
 
+/** Normalize stored reachability modes while preserving legacy protected projects. */
 function resolveAccessMode(value: unknown): SiteAccessMode {
   return value === 'protected' || value === 'private' ? value : 'public'
 }
 
+/** Narrow an unknown database JSON value to an object with string keys. */
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+/** Normalize optional evidence JSON without relying on a type assertion. */
 function resolveEvidence(value: unknown): FindingEvidence | undefined {
-  if (!value || typeof value !== 'object') return undefined
-  const evidence = value as Record<string, unknown>
-  if (evidence.kind !== 'html' && evidence.kind !== 'header' && evidence.kind !== 'network')
-    return undefined
-  if (typeof evidence.summary !== 'string') return undefined
+  if (!isUnknownRecord(value)) return undefined
+  if (value.kind !== 'html' && value.kind !== 'header' && value.kind !== 'network') return undefined
+  if (typeof value.summary !== 'string') return undefined
   return {
-    kind: evidence.kind,
-    summary: evidence.summary,
-    observed: typeof evidence.observed === 'string' ? evidence.observed : undefined,
-    expected: typeof evidence.expected === 'string' ? evidence.expected : undefined
+    kind: value.kind,
+    summary: value.summary,
+    observed: typeof value.observed === 'string' ? value.observed : undefined,
+    expected: typeof value.expected === 'string' ? value.expected : undefined
   }
 }
 
+/** Normalize the owner-controlled workflow state stored for a finding. */
 function resolveWorkflowStatus(value: unknown): 'open' | 'acknowledged' | 'muted' {
   return value === 'acknowledged' || value === 'muted' ? value : 'open'
 }
 
+/** Normalize worker progress into the stages understood by the product UI. */
 function resolveCheckStage(value: unknown): CheckProgressStage {
   return value === 'starting' ||
     value === 'checking_pages' ||
@@ -335,6 +439,7 @@ function resolveCheckStage(value: unknown): CheckProgressStage {
     : 'queued'
 }
 
+/** Normalize persisted gate values with a safe first-result fallback. */
 function resolveGate(value: unknown): GateStatus {
   return value === 'passed' || value === 'failed' || value === 'inconclusive'
     ? value

@@ -59,6 +59,7 @@ const categories = [
   'Testing'
 ]
 
+/** Present the main jobs CodeRocket supports for owners and agencies. */
 export function UseCases() {
   return (
     <section className="border-border border-b px-5 py-20 sm:py-28">
@@ -70,8 +71,8 @@ export function UseCases() {
             <em>that cost trust.</em>
           </h2>
           <p className="max-w-xl text-lg text-muted leading-8 lg:justify-self-end">
-            Public websites work with no installation. Protected pages first get an honest access
-            test; private pages can be checked from GitHub Actions or your own environment.
+            Pages that open without sign-in work with no installation. Restricted pages can be
+            checked from GitHub, GitLab, Bitbucket, or your own CI.
           </p>
         </div>
         <div className="divide-y divide-border">
@@ -114,6 +115,7 @@ export function UseCases() {
   )
 }
 
+/** Explain the deterministic rules used to classify each check result. */
 export function DecisionRules() {
   return (
     <section className="px-5 py-20 sm:py-28">

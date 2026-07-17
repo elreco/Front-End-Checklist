@@ -1,3 +1,8 @@
+import {
+  BitbucketBrandIcon,
+  GitHubBrandIcon,
+  GitLabBrandIcon
+} from '@repo/design-system/brand-icons'
 import { CheckCircle2, GitBranch, KeyRound, LockKeyhole, Terminal } from '@repo/design-system/icons'
 import type { Metadata } from 'next'
 import { DocsInlineCode } from '@/components/docs-inline-code'
@@ -5,12 +10,39 @@ import { DocsCodeBlock, DocsHeader } from '@/components/docs-shell'
 import { createPublicMetadata } from '@/lib/seo'
 
 export const metadata: Metadata = createPublicMetadata({
-  title: 'Runner & GitHub',
+  title: 'CI checks',
   description:
-    'Run CodeRocket where a protected or private website is reachable, check preview deployments, and protect GitHub pull requests.',
+    'Run CodeRocket from GitHub, GitLab, Bitbucket, or another CI environment that can reach restricted pages and preview deployments.',
   path: '/docs/cli',
   image: '/docs/opengraph-image'
 })
+
+const platforms = [
+  {
+    title: 'GitHub',
+    detail: '.github/workflows/coderocket.yml',
+    secretLocation: 'Repository settings → Secrets and variables → Actions',
+    icon: GitHubBrandIcon
+  },
+  {
+    title: 'GitLab',
+    detail: '.gitlab-ci.yml',
+    secretLocation: 'Settings → CI/CD → Variables',
+    icon: GitLabBrandIcon
+  },
+  {
+    title: 'Bitbucket',
+    detail: 'bitbucket-pipelines.yml',
+    secretLocation: 'Repository settings → Repository variables',
+    icon: BitbucketBrandIcon
+  },
+  {
+    title: 'Another CI',
+    detail: 'Any environment with Node.js 20+',
+    secretLocation: 'Save CODEROCKET_TOKEN in the platform secret store',
+    icon: Terminal
+  }
+]
 
 const workflow = `name: CodeRocket
 on: pull_request
@@ -36,8 +68,8 @@ export default function CliDocumentationPage() {
     <>
       <DocsHeader
         description="Run the same audit engine from an environment that can reach the page. CodeRocket receives the result, never the private access headers."
-        eyebrow="Private and preview checks"
-        title="Bring the check to the website."
+        eyebrow="Restricted and preview checks"
+        title="Connect the CI you already use."
       />
 
       <section className="py-10">
@@ -72,7 +104,7 @@ export default function CliDocumentationPage() {
         </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
           Store the required cookie, authorization header, or Cloudflare Access headers in the
-          secret named <DocsInlineCode>CODEROCKET_SITE_HEADERS_JSON</DocsInlineCode>. The runner
+          secret named <DocsInlineCode>CODEROCKET_SITE_HEADERS_JSON</DocsInlineCode>. The CI process
           uses them only for requests to the original website origin and never includes them in the
           submitted result.
         </p>
@@ -84,9 +116,30 @@ export default function CliDocumentationPage() {
 }`}</DocsCodeBlock>
         </div>
         <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
-          Use a dedicated, least-privileged test account. The current runner checks returned HTML;
-          it does not yet automate a JavaScript sign-in flow or multi-step browser journey.
+          Use a dedicated, least-privileged test account. The current CI check reads returned HTML
+          and response headers; it does not inspect repository source files, execute page
+          JavaScript, or automate a multi-step sign-in journey.
         </p>
+      </section>
+
+      <section className="py-10">
+        <Terminal aria-hidden className="h-6 w-6 text-signal" />
+        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">Choose your CI platform</h2>
+        <p className="mt-4 max-w-3xl text-muted leading-7">
+          Open a project and choose <strong className="text-foreground">Set up a CI check</strong>.
+          The guided setup creates the correct file and shows where to save the same revocable
+          <DocsInlineCode>CODEROCKET_TOKEN</DocsInlineCode> for each platform.
+        </p>
+        <div className="mt-7 grid gap-px border border-border bg-border sm:grid-cols-2">
+          {platforms.map(({ detail, icon: Icon, secretLocation, title }) => (
+            <article className="bg-surface p-5" key={title}>
+              <Icon aria-hidden className="h-5 w-5 text-signal" />
+              <h3 className="mt-4 font-heading font-semibold">{title}</h3>
+              <p className="mt-2 font-mono text-foreground text-xs">{detail}</p>
+              <p className="mt-2 text-muted text-xs leading-5">{secretLocation}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-4 border-border border-y py-10 md:grid-cols-3">
@@ -109,11 +162,12 @@ export default function CliDocumentationPage() {
 
       <section className="py-10">
         <GitBranch aria-hidden className="h-6 w-6 text-signal" />
-        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">GitHub Actions</h2>
+        <h2 className="mt-5 font-editorial text-4xl tracking-[-.025em]">GitHub Actions example</h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
           Keep the package on <DocsInlineCode>@latest</DocsInlineCode> so the workflow follows the
           maintained CodeRocket client. Configure the workflow name as a required check in the
-          repository branch protection.
+          repository branch protection. The project setup dialog generates the equivalent GitLab,
+          Bitbucket, and generic CI configurations.
         </p>
         <div className="mt-6">
           <DocsCodeBlock language="yaml">{workflow}</DocsCodeBlock>

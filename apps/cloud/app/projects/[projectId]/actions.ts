@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 /** Queue an owner-authorized, quota-checked manual website audit. */
-export async function queueProjectAudit(projectId: string) {
+export async function queueProjectAudit(projectId: string): Promise<void> {
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) redirect(`/login?next=/projects/${projectId}`)

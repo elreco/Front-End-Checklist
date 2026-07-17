@@ -17,6 +17,7 @@
     "@coderocket/core": "workspace:*",
     "@coderocket/db": "workspace:*",
     "resend": "catalog:",
+    "stripe": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

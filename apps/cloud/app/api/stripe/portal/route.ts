@@ -14,7 +14,7 @@ export async function POST() {
   if (!subscription?.stripe_customer_id) redirect('/pricing')
   const portal = await createStripeClient().billingPortal.sessions.create({
     customer: subscription.stripe_customer_id,
-    return_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://coderocket.app'}/settings/billing`
+    return_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.coderocket.app'}/settings/billing`
   })
   redirect(portal.url)
 }

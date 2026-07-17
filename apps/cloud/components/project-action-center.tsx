@@ -3,7 +3,6 @@ import {
   BellRing,
   BrainCircuit,
   CheckCircle2,
-  CircleDashed,
   Cloud,
   GitBranch,
   LockKeyhole,
@@ -11,8 +10,10 @@ import {
 } from '@repo/design-system/icons'
 import { Badge } from '@repo/design-system/ui/badge'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
-import Link from 'next/link'
 import type { ProjectDetail } from '@/lib/project-data'
+import { getProjectRecoveryKind } from '@/lib/project-recovery'
+import { UpgradeLink } from './plan-limit-upsell'
+import { ProjectActionStep, ProjectCoverageMetric } from './project-action-center-parts'
 import { ProjectCliSetup } from './project-cli-setup'
 
 /** Shows next actions, monitoring coverage, integrations, and contextual plan value. */
@@ -31,7 +32,11 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
   const existingFindings = new Set(
     openFindings.filter(finding => finding.status === 'persistent').map(finding => finding.rule)
   ).size
-  const access = accessContent(project)
+  const recoveryKind =
+    project.latestAudit?.gate === 'inconclusive'
+      ? getProjectRecoveryKind(project.latestPages.filter(page => !page.reachable))
+      : undefined
+  const access = accessContent(project, recoveryKind)
   const AccessIcon = access.icon
 
   return (
@@ -52,9 +57,15 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
           </div>
         </div>
         <p className="mt-3 text-muted text-sm leading-6">{access.description}</p>
-        {project.accessMode === 'private' || project.latestAudit?.gate === 'inconclusive' ? (
+        {project.accessMode === 'private' || recoveryKind === 'access' ? (
           <div className="mt-4">
-            <ProjectCliSetup configured={project.apiTokenConfigured} projectId={project.id} />
+            <ProjectCliSetup
+              configured={project.apiTokenConfigured}
+              pages={project.pages}
+              plan={project.plan}
+              projectId={project.id}
+              siteUrl={project.url}
+            />
           </div>
         ) : null}
       </section>
@@ -83,7 +94,7 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
           </Badge>
         </div>
         <ol className="mt-5 grid gap-2 sm:grid-cols-2">
-          <ActionStep
+          <ProjectActionStep
             complete={newFindings === 0}
             description={
               newFindings === 0
@@ -92,7 +103,7 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
             }
             title="Review new problems"
           />
-          <ActionStep
+          <ProjectActionStep
             complete={existingFindings === 0}
             description={
               existingFindings === 0
@@ -101,20 +112,18 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
             }
             title="Work through known problems"
           />
-          <ActionStep
+          <ProjectActionStep
             complete={project.apiTokenConfigured}
             description={
               project.apiTokenConfigured
-                ? `${project.ciRuns} runner ${project.ciRuns === 1 ? 'check' : 'checks'} received.`
+                ? `${project.ciRuns} CI ${project.ciRuns === 1 ? 'check' : 'checks'} received.`
                 : project.accessMode === 'private'
-                  ? 'Required: run the check from an environment that can open the private pages.'
+                  ? 'Required: run the check from an environment that can open the restricted pages.'
                   : 'Optional: check a test version before it reaches the live site.'
             }
-            title={
-              project.accessMode === 'private' ? 'Connect the private runner' : 'Connect GitHub'
-            }
+            title={project.accessMode === 'private' ? 'Set up the CI check' : 'Connect your CI'}
           />
-          <ActionStep
+          <ProjectActionStep
             complete={project.scheduleEnabled}
             description={
               project.scheduleEnabled
@@ -143,23 +152,29 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
         <GitBranch aria-hidden className="h-5 w-5 text-signal" />
         <p className="mt-4 font-mono text-[10px] text-signal uppercase tracking-[.12em]">
           {project.accessMode === 'private'
-            ? 'Required for private pages'
+            ? 'Required for restricted pages'
             : 'Optional · for development teams'}
         </p>
         <h2 className="mt-2 font-heading font-semibold text-lg">
           {project.accessMode === 'private'
-            ? 'Check from inside your environment'
+            ? 'Check from your CI environment'
             : 'Check before publishing'}
         </h2>
         <p className="mt-2 text-muted text-sm leading-6">
           {project.accessMode === 'private'
-            ? 'The runner opens the pages from GitHub Actions or your own environment, then sends only the check result to CodeRocket.'
-            : 'Connect GitHub to check a test version before it replaces the live website. A release is stopped only when a new urgent or important problem appears.'}
+            ? 'The CI job opens the pages from GitHub, GitLab, Bitbucket, or your own environment, then sends only the check result to CodeRocket.'
+            : 'Connect your CI platform to check a test version before it replaces the live website. A release is stopped only when a new urgent or important problem appears.'}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <ProjectCliSetup configured={project.apiTokenConfigured} projectId={project.id} />
+          <ProjectCliSetup
+            configured={project.apiTokenConfigured}
+            pages={project.pages}
+            plan={project.plan}
+            projectId={project.id}
+            siteUrl={project.url}
+          />
           <span className="font-mono text-[10px] text-muted uppercase tracking-[.1em]">
-            {project.apiTokenConfigured ? 'GitHub access ready' : 'Not connected'}
+            {project.apiTokenConfigured ? 'CI access ready' : 'Not connected'}
           </span>
         </div>
       </section>
@@ -170,15 +185,18 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
           <h2 className="font-heading font-semibold text-lg">What is covered</h2>
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
-          <Metric label="Pages" value={String(project.pages.length)} />
-          <Metric label="Frequency" value={project.plan === 'free' ? 'Weekly' : 'Daily'} />
-          <Metric
+          <ProjectCoverageMetric label="Pages" value={String(project.pages.length)} />
+          <ProjectCoverageMetric
+            label="Frequency"
+            value={project.plan === 'free' ? 'Weekly' : 'Daily'}
+          />
+          <ProjectCoverageMetric
             label="History"
             value={
               project.plan === 'free' ? '30 days' : project.plan === 'solo' ? '90 days' : '1 year'
             }
           />
-          <Metric label="Alerts" value="Important changes" />
+          <ProjectCoverageMetric label="Alerts" value="Important changes" />
         </dl>
       </section>
 
@@ -196,12 +214,14 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
                 Check every day, not every week.
               </h2>
               <p className="mt-2 max-w-4xl text-muted text-sm leading-6">
-                Get more monitored pages, 90 days of history, 100 checks started by you or GitHub,
-                and at least 100 evidence-grounded AI fix plans each month.
+                Get more monitored pages, 90 days of history, 100 checks started by you or CI, and
+                at least 100 evidence-grounded AI fix plans each month.
               </p>
             </div>
             <CodeRocketButton asChild className="shrink-0" size="sm">
-              <Link href="/pricing">Compare plans →</Link>
+              <UpgradeLink currentPlan="free" source="daily_monitoring" targetPlan="solo">
+                Check this site every day →
+              </UpgradeLink>
             </CodeRocketButton>
           </div>
         </section>
@@ -210,26 +230,49 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
   )
 }
 
-function accessContent(project: ProjectDetail) {
+/** Describe the active website reachability contract and its recovery state. */
+function accessContent(
+  project: ProjectDetail,
+  recoveryKind?: ReturnType<typeof getProjectRecoveryKind>
+) {
+  if (recoveryKind === 'address' || recoveryKind === 'pages')
+    return {
+      icon: AlertTriangle,
+      title:
+        recoveryKind === 'address' ? 'Website address needs checking' : 'Some URLs need correcting',
+      description:
+        recoveryKind === 'address'
+          ? 'The saved hostname could not be found. Correct the website address before running another check.'
+          : 'The website is reachable, but one or more selected page addresses do not exist. Update the monitored page list before retrying.'
+    }
+  if (recoveryKind === 'temporary')
+    return {
+      icon: AlertTriangle,
+      title: 'Cloud check incomplete',
+      description:
+        'Some pages did not return a reliable result. Retry the check first, then review the monitored URLs if the problem continues.'
+    }
+  if (recoveryKind === 'access')
+    return {
+      icon: LockKeyhole,
+      title: 'Protected pages need CI access',
+      description:
+        'Sign-in, a firewall, or a challenge blocked the cloud check. Run it from an environment that can already open these pages.'
+    }
   if (project.accessMode === 'private')
     return {
       icon: LockKeyhole,
-      title: project.apiTokenConfigured ? 'Private runner connected' : 'Private runner required',
+      title: project.apiTokenConfigured ? 'CI check connected' : 'CI check required',
       description: project.apiTokenConfigured
-        ? 'Cloud monitoring stays off. Checks are accepted only through this project’s private access key.'
+        ? 'Cloud monitoring stays off. Checks are accepted through this project’s CI access key.'
         : 'These pages need private access. CodeRocket will not try to bypass the sign-in screen or store your normal account password.'
     }
   if (project.accessMode === 'protected')
     return {
       icon: ShieldCheck,
-      title:
-        project.latestAudit?.gate === 'inconclusive'
-          ? 'Site protection blocked the check'
-          : 'Protected-site access test',
+      title: 'Cloud check',
       description:
-        project.latestAudit?.gate === 'inconclusive'
-          ? 'No healthy result was recorded. Use the runner when Cloudflare, a firewall, or an access screen keeps blocking cloud checks.'
-          : 'CodeRocket checks the public pages from the cloud. If the protection blocks access, the result becomes incomplete rather than clear.'
+        'CodeRocket checks these pages from the cloud. If it cannot confirm the expected HTML, the result becomes incomplete rather than clear.'
     }
   return {
     icon: Cloud,
@@ -237,45 +280,4 @@ function accessContent(project: ProjectDetail) {
     description:
       'CodeRocket opens the selected public pages without signing in. Pages it cannot read are reported as incomplete.'
   }
-}
-
-function ActionStep({
-  complete,
-  description,
-  title
-}: {
-  complete: boolean
-  description: string
-  title: string
-}) {
-  const Icon = complete ? CheckCircle2 : CircleDashed
-  return (
-    <li className="grid grid-cols-[auto_1fr] gap-3 border border-border bg-background p-3.5">
-      <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center border ${complete ? 'border-success text-success' : 'border-signal text-signal'}`}
-      >
-        <Icon aria-hidden className="h-4 w-4" />
-      </span>
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="font-semibold text-sm">{title}</p>
-          <span
-            className={`font-mono text-[10px] uppercase tracking-[.1em] ${complete ? 'text-success' : 'text-signal'}`}
-          >
-            {complete ? 'Done' : 'To do'}
-          </span>
-        </div>
-        <p className="mt-1 text-muted text-xs leading-5">{description}</p>
-      </div>
-    </li>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="font-mono text-[10px] text-muted uppercase tracking-[.1em]">{label}</dt>
-      <dd className="mt-1 font-semibold text-xs">{value}</dd>
-    </div>
-  )
 }

@@ -1,7 +1,9 @@
 import {
+  SiBitbucket,
   SiClaude,
   SiFacebook,
   SiGithub,
+  SiGitlab,
   SiGoogle,
   SiX,
   SiYoutube
@@ -10,40 +12,27 @@ import type { ComponentPropsWithoutRef } from 'react'
 
 type BrandIconProps = Omit<ComponentPropsWithoutRef<typeof SiX>, 'title'>
 
-/**
- * Official Claude brand icon from Simple Icons.
- */
-export function ClaudeBrandIcon(props: BrandIconProps) {
-  return <SiClaude aria-hidden="true" {...props} />
+/** Wrap one official brand glyph with the shared decorative icon contract. */
+function createBrandIcon(Icon: typeof SiX) {
+  return (props: BrandIconProps) => <Icon aria-hidden="true" {...props} />
 }
 
-/**
- * Official GitHub brand icon from Simple Icons.
- */
-export function GitHubBrandIcon(props: BrandIconProps) {
-  return <SiGithub aria-hidden="true" {...props} />
-}
+const BitbucketBrandIcon = createBrandIcon(SiBitbucket)
+const ClaudeBrandIcon = createBrandIcon(SiClaude)
+const FacebookBrandIcon = createBrandIcon(SiFacebook)
+const GitHubBrandIcon = createBrandIcon(SiGithub)
+const GitLabBrandIcon = createBrandIcon(SiGitlab)
+const GoogleBrandIcon = createBrandIcon(SiGoogle)
+const XBrandIcon = createBrandIcon(SiX)
+const YouTubeBrandIcon = createBrandIcon(SiYoutube)
 
-/** Official Google brand icon from Simple Icons. */
-export function GoogleBrandIcon(props: BrandIconProps) {
-  return <SiGoogle aria-hidden="true" {...props} />
-}
-
-/** Official Facebook brand icon from Simple Icons. */
-export function FacebookBrandIcon(props: BrandIconProps) {
-  return <SiFacebook aria-hidden="true" {...props} />
-}
-
-/**
- * Official X brand icon from Simple Icons.
- */
-export function XBrandIcon(props: BrandIconProps) {
-  return <SiX aria-hidden="true" {...props} />
-}
-
-/**
- * Official YouTube brand icon from Simple Icons.
- */
-export function YouTubeBrandIcon(props: BrandIconProps) {
-  return <SiYoutube aria-hidden="true" {...props} />
+export {
+  BitbucketBrandIcon,
+  ClaudeBrandIcon,
+  FacebookBrandIcon,
+  GitHubBrandIcon,
+  GitLabBrandIcon,
+  GoogleBrandIcon,
+  XBrandIcon,
+  YouTubeBrandIcon
 }

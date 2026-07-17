@@ -4,12 +4,14 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono, Playfair_Display } from 'next/font/google'
 import Link from 'next/link'
 import { type ReactNode, Suspense } from 'react'
+import { GoogleAnalyticsConsent } from '@/components/google-analytics-consent'
 import { MarketingAccountActions } from '@/components/marketing-account-actions'
 import { MarketingChrome } from '@/components/marketing-chrome'
 import { MarketingFooter } from '@/components/marketing-footer'
 import { MarketingNavigationLinks } from '@/components/marketing-navigation-links'
 import { NavigationFeedback } from '@/components/navigation-feedback'
 import { RouteToasts } from '@/components/route-toasts'
+import { GOOGLE_ANALYTICS_ID } from '@/lib/analytics'
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_SOCIAL_IMAGE,
@@ -103,6 +105,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           <RouteToasts />
         </Suspense>
         <CodeRocketToaster />
+        <GoogleAnalyticsConsent
+          measurementId={GOOGLE_ANALYTICS_ID}
+          trackingEnabled={process.env.NODE_ENV === 'production'}
+        />
         <MarketingChrome>
           <header className="sticky top-0 z-50 border-border border-b bg-background">
             <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">

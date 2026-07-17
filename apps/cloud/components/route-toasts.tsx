@@ -60,21 +60,20 @@ const notices: Record<string, ToastMessage> = {
   },
   'private-site-created': {
     description:
-      'Cloud monitoring is off. Connect the runner from this page to check pages that require access.',
+      'Cloud monitoring is off. Follow the guided CI setup to check pages that require access.',
     kind: 'success',
-    title: 'Private site added'
+    title: 'Restricted site added'
   },
   'private-runner-required': {
     description:
-      'This site requires private access, so CodeRocket will not send the public cloud checker. Set up its runner instead.',
+      'This site requires private access, so CodeRocket will not send the public cloud checker. Run the check from your CI environment instead.',
     kind: 'info',
-    title: 'Use the private runner'
+    title: 'Set up a CI check'
   },
   'protected-site-created': {
-    description:
-      'CodeRocket is testing whether it can safely read the selected pages through the site protection.',
+    description: 'CodeRocket is checking whether it can read and confirm each selected page.',
     kind: 'success',
-    title: 'Protected site added'
+    title: 'Website access test started'
   },
   'queue-failed': {
     description: 'The site is safe. Please try starting the check again.',
@@ -188,6 +187,7 @@ export function RouteToasts() {
   return null
 }
 
+/** Render one redirect notice with the matching visual severity. */
 function showToast(message: ToastMessage) {
   if (message.kind === 'success') {
     toast.success(message.title, { description: message.description })
@@ -200,6 +200,7 @@ function showToast(message: ToastMessage) {
   toast.info(message.title, { description: message.description })
 }
 
+/** Remove transient redirect parameters after their notices have been announced. */
 function removeHandledParameters() {
   const url = new URL(window.location.href)
   url.searchParams.delete('notice')

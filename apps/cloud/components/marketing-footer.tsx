@@ -1,6 +1,7 @@
 import { CODEROCKET_TAGLINE, CodeRocketLogo } from '@repo/design-system/coderocket-logo'
 import Link from 'next/link'
 import { SUPPORT_EMAIL } from '@/lib/seo'
+import { CookieSettingsButton } from './google-analytics-consent'
 
 const footerGroups = [
   {
@@ -17,7 +18,7 @@ const footerGroups = [
     links: [
       { href: '/docs', label: 'Documentation' },
       { href: '/docs/rules', label: 'Rules reference' },
-      { href: '/docs/cli', label: 'GitHub & runner' },
+      { href: '/docs/cli', label: 'CI checks' },
       { href: '/docs/security', label: 'Security model' }
     ]
   },
@@ -84,7 +85,13 @@ export function MarketingFooter() {
         </div>
 
         <div className="flex flex-col gap-3 pt-6 font-mono text-muted text-xs sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} CodeRocket. All rights reserved.</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p>© {new Date().getFullYear()} CodeRocket. All rights reserved.</p>
+            <CookieSettingsButton
+              className="font-mono text-muted text-xs hover:text-signal"
+              compact
+            />
+          </div>
           <p>Frontend quality, cleared for launch.</p>
         </div>
       </div>

@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { JsonLd } from '@/components/json-ld'
 import { PricingCards } from '@/components/pricing-cards'
+import { LOCALIZED_PRICING, type PricingCurrency, pricingCurrencyFromHeaders } from '@/lib/pricing'
 import { absoluteUrl, createPublicMetadata, SITE_NAME, SITE_URL } from '@/lib/seo'
+import { parsePricingUpgradeContext } from '@/lib/upgrade'
 
 export const metadata: Metadata = createPublicMetadata({
   title: 'Pricing',
@@ -12,48 +15,58 @@ export const metadata: Metadata = createPublicMetadata({
   keywords: ['website monitoring pricing', 'frontend monitoring plans', 'website health checker']
 })
 
-const pricingStructuredData = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  '@id': `${SITE_URL}/#software`,
-  name: SITE_NAME,
-  url: SITE_URL,
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-  description:
-    'Website health monitoring for availability, search visibility, accessibility, speed, security, and frontend quality.',
-  offers: [
-    {
-      '@type': 'Offer',
-      name: 'Free',
-      price: '0',
-      priceCurrency: 'EUR',
-      url: absoluteUrl('/pricing'),
-      availability: 'https://schema.org/InStock'
-    },
-    {
-      '@type': 'Offer',
-      name: 'Personal',
-      price: '12',
-      priceCurrency: 'EUR',
-      url: absoluteUrl('/pricing'),
-      availability: 'https://schema.org/InStock'
-    },
-    {
-      '@type': 'Offer',
-      name: 'Agency',
-      price: '99',
-      priceCurrency: 'EUR',
-      url: absoluteUrl('/pricing'),
-      availability: 'https://schema.org/InStock'
-    }
-  ]
+/** Build structured pricing data that matches the currency visible on the page. */
+function createPricingStructuredData(currency: PricingCurrency) {
+  const pricing = LOCALIZED_PRICING[currency]
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    '@id': `${SITE_URL}/#software`,
+    name: SITE_NAME,
+    url: SITE_URL,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    description:
+      'Website health monitoring for availability, search visibility, accessibility, speed, security, and frontend quality.',
+    offers: [
+      {
+        '@type': 'Offer',
+        name: 'Free',
+        price: '0',
+        priceCurrency: currency,
+        url: absoluteUrl('/pricing'),
+        availability: 'https://schema.org/InStock'
+      },
+      {
+        '@type': 'Offer',
+        name: 'Personal',
+        price: String(pricing.personal),
+        priceCurrency: currency,
+        url: absoluteUrl('/pricing'),
+        availability: 'https://schema.org/InStock'
+      },
+      {
+        '@type': 'Offer',
+        name: 'Agency',
+        price: String(pricing.agency),
+        priceCurrency: currency,
+        url: absoluteUrl('/pricing'),
+        availability: 'https://schema.org/InStock'
+      }
+    ]
+  }
 }
 
-export default function PricingPage() {
+export default async function PricingPage({
+  searchParams
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const currency = pricingCurrencyFromHeaders(await headers())
+  const upgradeContext = parsePricingUpgradeContext(await searchParams)
   return (
     <main className="px-5 py-20">
-      <JsonLd data={pricingStructuredData} />
+      <JsonLd data={createPricingStructuredData(currency)} />
       <div className="mx-auto max-w-7xl">
         <div className="mx-auto mb-16 max-w-4xl text-center">
           <p className="font-mono text-muted text-xs uppercase tracking-[.2em]">
@@ -68,9 +81,10 @@ export default function PricingPage() {
             replaces the fresh check that confirms a fix.
           </p>
         </div>
-        <PricingCards />
+        <PricingCards currency={currency} {...upgradeContext} />
         <p className="mt-8 text-center font-mono text-muted text-xs">
-          Applicable VAT is calculated by Stripe at checkout · paid plans open after final review
+          Prices shown in {currency} based on your location · Stripe confirms the billing currency
+          and calculates applicable tax at checkout
         </p>
       </div>
     </main>

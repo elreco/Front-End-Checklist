@@ -1,15 +1,17 @@
 import { CalendarClock, Check, CreditCard, Gauge, Globe2 } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
-import Link from 'next/link'
+import { UpgradeLink } from '@/components/plan-limit-upsell'
 import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
 import { getPlanLabel } from '@/lib/product-language'
 import { createPrivateMetadata } from '@/lib/seo'
+import { getNextPlan } from '@/lib/upgrade'
 
 export const metadata = createPrivateMetadata('Plan & billing')
 
 export default async function BillingPage() {
   const context = await getAppShellContext()
+  const nextPlan = getNextPlan(context.plan)
   const benefits = [
     `${context.limits.projects} monitored ${context.limits.projects === 1 ? 'site' : 'sites'}`,
     `${context.limits.pagesPerProject} pages per site`,
@@ -66,9 +68,13 @@ export default async function BillingPage() {
               ))}
             </ul>
             <div className="mt-7 flex flex-wrap gap-3">
-              {context.plan !== 'agency' ? (
+              {nextPlan ? (
                 <CodeRocketButton asChild>
-                  <Link href="/pricing">Compare and upgrade</Link>
+                  <UpgradeLink currentPlan={context.plan} source="billing" targetPlan={nextPlan}>
+                    {context.plan === 'free'
+                      ? 'Unlock 25 pages per site'
+                      : 'Unlock the Agency workspace'}
+                  </UpgradeLink>
                 </CodeRocketButton>
               ) : null}
               {context.hasBillingAccount ? (
@@ -97,8 +103,9 @@ export default async function BillingPage() {
           <div className="mt-5 border border-border bg-surface p-4">
             <p className="font-semibold text-sm">Billing stays predictable</p>
             <p className="mt-2 text-muted text-xs leading-5">
-              Monthly plans, no trial countdown. Tax details and invoices are handled in Stripe’s
-              secure checkout and customer portal.
+              Monthly plans, no trial countdown. Included AI credits are used first. Additional AI
+              usage is measured from the model’s token usage, billed on the same Stripe invoice, and
+              protected by the monthly spending cap shown in your billing currency at checkout.
             </p>
           </div>
         </aside>
@@ -107,6 +114,7 @@ export default async function BillingPage() {
   )
 }
 
+/** Render one compact fact about the current billing plan. */
 function PlanFact({
   icon: Icon,
   label,

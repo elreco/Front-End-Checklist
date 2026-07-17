@@ -3,7 +3,7 @@ import { AlertTriangle, Check, Globe2, Radar } from '@repo/design-system/icons'
 const steps = [
   {
     label: 'Choose how the page is reached',
-    detail: 'Use the cloud for public pages or your runner for restricted pages.'
+    detail: 'Use the cloud for open pages or your CI environment for restricted pages.'
   },
   {
     label: 'Check what visitors receive',
@@ -40,6 +40,7 @@ const findings = [
   }
 ]
 
+/** Show how a website check becomes a short, prioritized result. */
 export function AuditDemo() {
   return (
     <section className="border-border border-b px-5 py-20 sm:py-28" id="live-example">

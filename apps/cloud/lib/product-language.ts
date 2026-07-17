@@ -63,48 +63,59 @@ const planLabels: Record<PlanId, string> = {
 
 const accessModeLabels: Record<SiteAccessMode, string> = {
   public: 'Cloud check',
-  protected: 'Protected-site check',
-  private: 'Private runner'
+  protected: 'Cloud check',
+  private: 'CI check'
 }
 
 /** Return the same plain-language result label everywhere in the product. */
-export function getGateLanguage(status: GateStatus): GateLanguage {
+function getGateLanguage(status: GateStatus): GateLanguage {
   return gateLanguage[status]
 }
 
 /** Translate an internal priority into a user-facing level. */
-export function getPriorityLabel(priority: FindingPriority): string {
+function getPriorityLabel(priority: FindingPriority): string {
   return priorityLabels[priority]
 }
 
 /** Translate comparison state without exposing diff terminology. */
-export function getFindingStatusLabel(status: FindingStatus): string {
+function getFindingStatusLabel(status: FindingStatus): string {
   return findingStatusLabels[status]
 }
 
 /** Return a readable website-health area name. */
-export function getCategoryLabel(category: FindingCategory): string {
+function getCategoryLabel(category: FindingCategory): string {
   return categoryLabels[category]
 }
 
 /** Return the commercial plan name shown to customers. */
-export function getPlanLabel(plan: PlanId): string {
+function getPlanLabel(plan: PlanId): string {
   return planLabels[plan]
 }
 
 /** Explain how CodeRocket reaches a monitored website. */
-export function getAccessModeLabel(mode: SiteAccessMode): string {
+function getAccessModeLabel(mode: SiteAccessMode): string {
   return accessModeLabels[mode]
 }
 
 /** Explain which version of a website was checked. */
-export function getEnvironmentLabel(environment: AuditEnvironment): string {
+function getEnvironmentLabel(environment: AuditEnvironment): string {
   return environment === 'preview' ? 'Test version' : 'Live website'
 }
 
 /** Explain how a check started without exposing internal trigger names. */
-export function getTriggerLabel(trigger: AuditTrigger): string {
+function getTriggerLabel(trigger: AuditTrigger): string {
   if (trigger === 'scheduled') return 'Automatic'
   if (trigger === 'manual') return 'Started by you'
-  return 'GitHub'
+  return 'CI'
+}
+
+export {
+  getAccessModeLabel,
+  getCategoryLabel,
+  getEnvironmentLabel,
+  getFindingStatusLabel,
+  getGateLanguage,
+  getPlanLabel,
+  getPriorityLabel,
+  getTriggerLabel
 }

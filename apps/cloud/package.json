@@ -18,6 +18,7 @@
     "@frontendchecklist/rules": "workspace:*",
     "@coderocket/core": "workspace:*",
     "@coderocket/db": "workspace:*",
+    "@next/third-parties": "catalog:",
     "@repo/design-system": "workspace:*",
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",

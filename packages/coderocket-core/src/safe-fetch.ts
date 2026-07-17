@@ -286,7 +286,7 @@ async function requestPinnedAddress(
           ...customHeaders,
           accept,
           host: target.url.host,
-          'user-agent': 'CodeRocket/0.1 (+https://coderocket.app)'
+          'user-agent': 'CodeRocket/0.1 (+https://www.coderocket.app)'
         },
         hostname: address.address,
         method: 'GET',
@@ -344,7 +344,7 @@ async function requestWithFetch(
     headers: {
       ...customHeaders,
       accept,
-      'user-agent': 'CodeRocket/0.1 (+https://coderocket.app)'
+      'user-agent': 'CodeRocket/0.1 (+https://www.coderocket.app)'
     },
     signal
   })

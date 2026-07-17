@@ -6,8 +6,7 @@ import {
   Code2,
   LockKeyhole,
   RefreshCw,
-  ScanSearch,
-  ShieldCheck
+  ScanSearch
 } from '@repo/design-system/icons'
 import type { Metadata } from 'next'
 import { DocsCodeBlock, DocsHeader } from '@/components/docs-shell'
@@ -16,7 +15,7 @@ import { createPublicMetadata } from '@/lib/seo'
 export const metadata: Metadata = createPublicMetadata({
   title: 'How checks work',
   description:
-    'Learn how CodeRocket safely checks public, protected, and private pages, proves website problems, and compares changes over time.',
+    'Learn how CodeRocket safely checks open and restricted pages, proves website problems, and compares changes over time.',
   path: '/docs/audits',
   image: '/docs/opengraph-image'
 })
@@ -54,21 +53,16 @@ export default function AuditDocumentationPage() {
       />
 
       <section className="py-10">
-        <div className="grid gap-px border border-border bg-border lg:grid-cols-3">
+        <div className="grid gap-px border border-border bg-border lg:grid-cols-2">
           <CheckType
-            description="CodeRocket opens the selected HTTPS pages from the cloud. This is the simplest option for websites that anyone can visit."
+            description="CodeRocket opens the selected HTTPS pages from the cloud. A CDN or firewall is fine when the pages still open without sign-in."
             icon={Cloud}
-            label="Public website"
+            label="No sign-in required"
           />
           <CheckType
-            description="CodeRocket first tests whether Cloudflare, a firewall, or an access screen allows the page. A blocked page is marked incomplete, never healthy."
-            icon={ShieldCheck}
-            label="Protected website"
-          />
-          <CheckType
-            description="The cloud check stays off. A runner inside GitHub Actions or your own environment opens the page and sends only the result to CodeRocket."
+            description="The cloud check stays off. GitHub, GitLab, Bitbucket, or another CI environment with access opens the page and sends only the result."
             icon={LockKeyhole}
-            label="Private application"
+            label="Sign-in or private access required"
           />
         </div>
       </section>
@@ -183,6 +177,7 @@ export default function AuditDocumentationPage() {
   )
 }
 
+/** Explain one supported access or evidence mode. */
 function CheckType({
   description,
   icon: Icon,
@@ -201,6 +196,7 @@ function CheckType({
   )
 }
 
+/** Describe one deterministic result transition and its user-facing meaning. */
 function GateRule({
   description,
   icon: Icon,

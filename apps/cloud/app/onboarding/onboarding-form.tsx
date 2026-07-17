@@ -4,8 +4,11 @@ import type { SiteAccessMode } from '@coderocket/core'
 import { ArrowLeft, ArrowRight, Check, Globe2, Radar, UserRound } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput, CodeRocketTextarea } from '@repo/design-system/ui/coderocket-field'
+import type { FormEvent, MouseEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { PageLimitUpsell } from '@/components/plan-limit-upsell'
 import { SiteAccessExplanation, SiteAccessPicker } from '@/components/site-access-picker'
+import type { PlanId } from '@/lib/upgrade'
 import { createProject } from './actions'
 
 const audienceOptions = [
@@ -35,14 +38,20 @@ const steps = [
 /** A short, keyboard-friendly setup wizard for the first monitored website. */
 export function OnboardingForm({
   pagesPerProject,
+  plan,
   planName
 }: {
   pagesPerProject: number
+  plan: PlanId
   planName: string
 }) {
   const [step, setStep] = useState(1)
   const [accessMode, setAccessMode] = useState<SiteAccessMode>('public')
+  const [pagesValue, setPagesValue] = useState('/\n/pricing\n/contact')
+  const [pageLimitAttempted, setPageLimitAttempted] = useState(false)
   const mounted = useRef(false)
+  const pageCount = countEnteredPages(pagesValue)
+  const extraPages = Math.max(0, pageCount - pagesPerProject)
 
   useEffect(() => {
     if (!mounted.current) {
@@ -52,7 +61,8 @@ export function OnboardingForm({
     document.getElementById(`setup-step-${step}-title`)?.focus()
   }, [step])
 
-  function goForward() {
+  /** Validate only the visible setup panel before advancing the wizard. */
+  function advanceStep() {
     const panel = document.querySelector(`[data-setup-step="${step}"]`)
     if (!(panel instanceof HTMLElement)) return
     const fields = panel.querySelectorAll('input, textarea')
@@ -68,8 +78,27 @@ export function OnboardingForm({
     setStep(current => Math.min(3, current + 1))
   }
 
+  /** Prevent the advancing button from becoming a submit button during the same browser click. */
+  function handleContinue(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    advanceStep()
+  }
+
+  /** Turn implicit submissions into navigation until the final setup step is visible. */
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (step < 3) {
+      event.preventDefault()
+      advanceStep()
+      return
+    }
+    if (extraPages > 0) {
+      event.preventDefault()
+      setPageLimitAttempted(true)
+    }
+  }
+
   return (
-    <form action={createProject}>
+    <form action={createProject} onSubmit={handleSubmit}>
       <div className="border-border border-b p-5 sm:p-7">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -166,11 +195,11 @@ export function OnboardingForm({
             id="setup-step-2-title"
             tabIndex={-1}
           >
-            How can CodeRocket reach this website?
+            Can these pages open without signing in?
           </h2>
           <p className="max-w-2xl text-muted leading-7">
-            Pick the closest answer. This prevents a blocked or private page from being presented as
-            a healthy result.
+            Cloudflare or another CDN does not make a page private by itself. Choose based on
+            whether the selected pages need credentials or access from a specific network.
           </p>
           <SiteAccessPicker onChange={setAccessMode} value={accessMode} />
           <label className="block max-w-2xl font-semibold text-sm" htmlFor="project-name">
@@ -220,22 +249,63 @@ export function OnboardingForm({
           <label className="block max-w-2xl font-semibold text-sm" htmlFor="monitored-pages">
             Pages to watch
             <CodeRocketTextarea
-              defaultValue={'/\n/pricing\n/contact'}
+              aria-describedby="page-capacity-status"
               id="monitored-pages"
               name="pages"
+              onChange={event => {
+                setPagesValue(event.target.value)
+                if (countEnteredPages(event.target.value) <= pagesPerProject)
+                  setPageLimitAttempted(false)
+              }}
               required
+              value={pagesValue}
             />
           </label>
-          <div className="max-w-2xl border border-border bg-background p-4 text-sm">
-            <p className="flex items-start gap-2">
-              <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-              <span>
-                Up to <strong>{pagesPerProject} pages</strong> on the {planName} plan. Your first
-                {accessMode === 'private'
-                  ? ' check will start after you connect a private runner.'
-                  : ' check starts automatically after this step.'}
+          <div className="max-w-2xl space-y-3" id="page-capacity-status">
+            <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-background p-4 text-sm">
+              <p className="flex items-start gap-2">
+                <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                <span>
+                  Your first
+                  {accessMode === 'private'
+                    ? ' check will start after you connect your CI environment.'
+                    : ' check starts automatically after this step.'}
+                </span>
+              </p>
+              <span
+                className={`shrink-0 font-mono text-xs ${
+                  extraPages > 0
+                    ? 'text-danger'
+                    : pageCount >= pagesPerProject
+                      ? 'text-accent'
+                      : 'text-muted'
+                }`}
+              >
+                {pageCount} / {pagesPerProject} pages
               </span>
-            </p>
+            </div>
+            {pageCount === pagesPerProject - 1 ? (
+              <p className="border border-border bg-background px-4 py-3 text-muted text-xs">
+                One page slot remains on your {planName} plan.
+              </p>
+            ) : null}
+            {extraPages > 0 ? (
+              <p
+                className="border border-danger bg-background p-4 text-danger text-sm"
+                role={pageLimitAttempted ? 'alert' : 'status'}
+              >
+                Keep the {extraPages} extra {extraPages === 1 ? 'page' : 'pages'} here while you
+                compare plans, or remove {extraPages === 1 ? 'it' : 'them'} to continue with{' '}
+                {planName}.
+              </p>
+            ) : null}
+            {pageCount >= pagesPerProject ? (
+              <PageLimitUpsell
+                attemptedPages={pageCount}
+                currentPages={pagesPerProject}
+                plan={plan}
+              />
+            ) : null}
           </div>
         </fieldset>
 
@@ -252,14 +322,12 @@ export function OnboardingForm({
             <span className="text-muted text-xs">No code or payment card required.</span>
           )}
           {step < 3 ? (
-            <CodeRocketButton onClick={goForward} type="button">
+            <CodeRocketButton key="continue" onClick={handleContinue} type="button">
               Continue <ArrowRight aria-hidden />
             </CodeRocketButton>
           ) : (
-            <CodeRocketButton size="lg" type="submit">
-              {accessMode === 'private'
-                ? 'Add site and connect runner'
-                : 'Add site and test access'}{' '}
+            <CodeRocketButton key="submit" size="lg" type="submit">
+              {accessMode === 'private' ? 'Add site and set up CI' : 'Add site and check access'}{' '}
               <ArrowRight aria-hidden />
             </CodeRocketButton>
           )}
@@ -267,4 +335,13 @@ export function OnboardingForm({
       </div>
     </form>
   )
+}
+
+/** Count distinct non-empty draft lines without changing what the visitor typed. */
+function countEnteredPages(value: string): number {
+  const pages = value
+    .split('\n')
+    .map(page => page.trim())
+    .filter(Boolean)
+  return new Set(pages).size
 }

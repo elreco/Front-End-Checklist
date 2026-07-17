@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const SITE_NAME = 'CodeRocket'
-export const SITE_URL = 'https://coderocket.app'
+export const SITE_URL = 'https://www.coderocket.app'
 export const SUPPORT_EMAIL = 'contact@coderocket.app'
 export const DEFAULT_DESCRIPTION =
   'Monitor website availability, search visibility, accessibility, speed, security, and frontend quality. See what changed and what needs attention.'

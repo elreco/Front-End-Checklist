@@ -1,14 +1,14 @@
-import type { GateStatus } from '@coderocket/core'
 import { CodeRocketLogo } from '@repo/design-system/coderocket-logo'
-import { BarChart3, Plus } from '@repo/design-system/icons'
+import { Plus } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { getAppShellContext } from '@/lib/app-shell-data'
-import { getGateLanguage } from '@/lib/product-language'
 import { AppNavigation } from './app-navigation'
 import { AppShellLayout } from './app-shell-layout'
+
+export { EmptyState, GateBadge } from './product-ui'
 
 /** Distinct authenticated application frame used by every private product screen. */
 export async function ProductShell({
@@ -94,34 +94,5 @@ export async function ProductShell({
         </div>
       </AppShellLayout>
     </main>
-  )
-}
-
-export function GateBadge({ status }: { status: GateStatus }) {
-  const language = getGateLanguage(status)
-  const className =
-    status === 'passed'
-      ? 'border-success bg-success/10 text-success'
-      : status === 'failed'
-        ? 'border-danger bg-danger/10 text-danger'
-        : status === 'inconclusive'
-          ? 'border-warning bg-warning/10 text-warning'
-          : 'border-accent bg-accent/10 text-accent'
-  return (
-    <span
-      className={`inline-flex border px-2.5 py-1 font-mono font-semibold text-[10px] uppercase tracking-[.08em] ${className}`}
-    >
-      {language.label}
-    </span>
-  )
-}
-
-export function EmptyState({ children, title }: { children: ReactNode; title: string }) {
-  return (
-    <div className="border border-border border-dashed bg-surface px-6 py-14 text-center">
-      <BarChart3 aria-hidden className="mx-auto h-7 w-7 text-signal" />
-      <h2 className="mt-4 font-heading font-semibold text-xl">{title}</h2>
-      <div className="mx-auto mt-2 max-w-md text-muted leading-7">{children}</div>
-    </div>
   )
 }

@@ -34,7 +34,7 @@ jobs:
       - name: Smoke test canonical endpoint
         id: smoke
         continue-on-error: true
-        run: curl --fail --retry 8 --retry-delay 5 --retry-all-errors https://coderocket.app/api/health
+        run: curl --fail --retry 8 --retry-delay 5 --retry-all-errors https://www.coderocket.app/api/health
       - name: Roll back to the previous image
         if: steps.smoke.outcome == 'failure' && steps.previous.outputs.image != ''
         run: flyctl deploy --config fly.coderocket.toml --image "${{ steps.previous.outputs.image }}" --strategy immediate --skip-release-command

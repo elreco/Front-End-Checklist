@@ -1,6 +1,7 @@
-import { Bell, LockKeyhole, Mail, UserRound } from '@repo/design-system/icons'
+import { BarChart3, Bell, LockKeyhole, Mail, UserRound } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
+import { CookieSettingsButton } from '@/components/google-analytics-consent'
 import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
 import { createPrivateMetadata } from '@/lib/seo'
@@ -70,6 +71,17 @@ export default async function SettingsPage() {
               Websites and results are visible only to your account. A shared report is created only
               when you ask for one, and its link can expire.
             </p>
+          </div>
+          <div className="border border-border bg-background p-5">
+            <div className="flex items-center gap-2">
+              <BarChart3 aria-hidden className="h-4 w-4 text-signal" />
+              <h2 className="font-heading font-semibold text-lg">Optional analytics</h2>
+            </div>
+            <p className="mt-3 text-muted text-sm leading-6">
+              Choose whether CodeRocket may use Google Analytics to understand which product pages
+              are useful. No account name or email is sent.
+            </p>
+            <CookieSettingsButton className="mt-4" />
           </div>
         </aside>
       </div>

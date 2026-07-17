@@ -15,7 +15,7 @@ const links = [
   { href: '/docs', label: 'Start here', icon: BookOpen },
   { href: '/docs/audits', label: 'How checks work', icon: Workflow },
   { href: '/docs/ai', label: 'AI fix assistant', icon: BrainCircuit },
-  { href: '/docs/cli', label: 'Runner & GitHub', icon: Terminal },
+  { href: '/docs/cli', label: 'CI checks', icon: Terminal },
   { href: '/docs/rules', label: 'Website rules', icon: ListChecks },
   { href: '/docs/security', label: 'Security details', icon: ShieldCheck }
 ]
@@ -25,7 +25,10 @@ export function DocsNavigation() {
   const pathname = usePathname()
 
   return (
-    <nav aria-label="Documentation navigation" className="grid p-2 sm:grid-cols-2 lg:block">
+    <nav
+      aria-label="Documentation navigation"
+      className="grid p-2 font-mono font-normal text-xs sm:grid-cols-2 lg:block"
+    >
       {links.map(({ href, label, icon: Icon }) => {
         const current =
           href === '/docs'

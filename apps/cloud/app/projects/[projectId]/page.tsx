@@ -1,20 +1,13 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock3,
-  ExternalLink,
-  Play,
-  RefreshCw
-} from '@repo/design-system/icons'
-import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
+import { AlertTriangle, CheckCircle2, Clock3 } from '@repo/design-system/icons'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { GateBadge, ProductShell } from '@/components/product-shell'
+import { ProjectAccessRecovery } from '@/components/project-access-recovery'
 import { ProjectActionCenter } from '@/components/project-action-center'
-import { ProjectCliSetup } from '@/components/project-cli-setup'
 import { ProjectFindingsPanel } from '@/components/project-findings-panel'
+import { ProjectHeaderActions } from '@/components/project-header-actions'
 import { ProjectHealthOverview } from '@/components/project-health-overview'
-import { ShareReportButton } from '@/components/share-report-button'
+import { ProjectPrimaryAction } from '@/components/project-primary-action'
 import { WebsiteCheckProgress } from '@/components/website-check-progress'
 import { getEnvironmentLabel, getTriggerLabel } from '@/lib/product-language'
 import { getProjectDetail } from '@/lib/project-data'
@@ -29,26 +22,16 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
   if (!project) notFound()
   const latest = project.latestAudit
   const firstCheckRunning = Boolean(project.activeCheck && !latest)
-  const waitingForRunner = project.accessMode === 'private' && !latest && !project.activeCheck
-  const firstResultPending = firstCheckRunning || waitingForRunner
+  const waitingForCi = project.accessMode === 'private' && !latest && !project.activeCheck
+  const firstResultPending = firstCheckRunning || waitingForCi
 
   return (
     <ProductShell
       action={
-        project.accessMode === 'private' ? (
-          <ProjectCliSetup configured={project.apiTokenConfigured} projectId={project.id} />
-        ) : (
-          <form action={queueProjectAudit.bind(null, projectId)}>
-            <CodeRocketButton disabled={project.checking} size="sm" type="submit">
-              {project.checking ? (
-                <RefreshCw aria-hidden className="animate-spin" />
-              ) : (
-                <Play aria-hidden />
-              )}
-              {project.checking ? 'Checking…' : 'Check now'}
-            </CodeRocketButton>
-          </form>
-        )
+        <ProjectPrimaryAction
+          project={project}
+          queueAction={queueProjectAudit.bind(null, projectId)}
+        />
       }
       eyebrow="Monitored site"
       title={project.name}
@@ -64,9 +47,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                {waitingForRunner ? (
+                {waitingForCi ? (
                   <span className="inline-flex border border-accent bg-accent/10 px-2.5 py-1 font-mono font-semibold text-[10px] text-accent uppercase tracking-[.08em]">
-                    Runner required
+                    CI setup required
                   </span>
                 ) : (
                   <GateBadge status={latest?.gate ?? 'needs_baseline'} />
@@ -74,19 +57,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
                 <span className="text-muted text-xs">
                   {latest
                     ? `Last checked ${latest.when}`
-                    : waitingForRunner
+                    : waitingForCi
                       ? 'Cloud checks are off for this site'
                       : 'Waiting for the first check'}
                 </span>
               </div>
               <h2 className="mt-4 font-heading font-semibold text-2xl">
-                {waitingForRunner
-                  ? 'Connect the runner to start checking'
+                {waitingForCi
+                  ? 'Set up the CI check to start'
                   : getHeadline(latest?.gate, latest?.persistentCount ?? 0, project.checking)}
               </h2>
               <p className="mt-2 max-w-3xl text-muted leading-7">
-                {waitingForRunner
-                  ? 'This site needs a sign-in or private access. Run CodeRocket from GitHub Actions or your own environment; your normal password does not need to be stored here.'
+                {waitingForCi
+                  ? 'These pages need sign-in or private access. Run the HTML check from GitHub, GitLab, Bitbucket, or another environment that can already open them.'
                   : getExplanation(
                       latest?.gate,
                       latest?.blockingCount ?? 0,
@@ -95,16 +78,18 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
                     )}
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <CodeRocketButton asChild size="sm" variant="outline">
-                <a href={project.url} rel="noreferrer" target="_blank">
-                  Visit site <ExternalLink aria-hidden />
-                </a>
-              </CodeRocketButton>
-              {latest?.status === 'succeeded' ? <ShareReportButton auditId={latest.id} /> : null}
-            </div>
+            <ProjectHeaderActions
+              project={project}
+              shareAuditId={latest?.status === 'succeeded' ? latest.id : undefined}
+            />
           </div>
         )}
+        {latest?.gate === 'inconclusive' && !project.activeCheck ? (
+          <ProjectAccessRecovery
+            project={project}
+            retryAction={queueProjectAudit.bind(null, projectId)}
+          />
+        ) : null}
       </section>
 
       <ProjectHealthOverview
@@ -140,15 +125,15 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
         <div className="bg-surface p-5">
           <p className="text-muted text-sm">Pages checked</p>
           <p className="mt-4 font-heading font-semibold text-3xl">
-            {waitingForRunner
+            {waitingForCi
               ? '—'
               : latest
                 ? `${latest.checkedPageCount}/${latest.requestedPageCount}`
                 : `${project.activeCheck?.current ?? 0}/${project.activeCheck?.total ?? project.pages.length}`}
           </p>
           <p className="mt-1 text-muted text-xs">
-            {waitingForRunner
-              ? 'Waiting for runner'
+            {waitingForCi
+              ? 'Waiting for CI setup'
               : firstCheckRunning
                 ? 'Checking now'
                 : `Next check ${project.nextCheck}`}
@@ -206,6 +191,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
   )
 }
 
+/** Render one compact latest-check metric with an optional semantic tone. */
 function Stat({
   icon: Icon,
   label,
@@ -228,6 +214,7 @@ function Stat({
   )
 }
 
+/** Select the project headline from the latest reliable gate state. */
 function getHeadline(gate: string | undefined, persistent: number, checking: boolean): string {
   if (checking) return 'A fresh check is underway'
   if (gate === 'failed') return 'New problems need your attention'
@@ -243,6 +230,7 @@ function getHeadline(gate: string | undefined, persistent: number, checking: boo
   return 'Your first check is being prepared'
 }
 
+/** Explain the latest gate without presenting partial coverage as healthy. */
 function getExplanation(
   gate: string | undefined,
   blocking: number,

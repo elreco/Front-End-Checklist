@@ -14,9 +14,22 @@ const legacyGonePrefixes = [
 ]
 
 export async function proxy(request: NextRequest) {
-  if (request.headers.get('host')?.toLowerCase() === 'www.coderocket.app') {
+  const hostname =
+    request.headers.get('host')?.toLowerCase().split(':')[0] ??
+    request.nextUrl.hostname.toLowerCase()
+  if (hostname === 'docs.coderocket.app') {
     const canonical = request.nextUrl.clone()
-    canonical.host = 'coderocket.app'
+    canonical.host = 'www.coderocket.app'
+    canonical.protocol = 'https'
+    canonical.port = ''
+    if (!canonical.pathname.startsWith('/docs')) {
+      canonical.pathname = canonical.pathname === '/' ? '/docs' : `/docs${canonical.pathname}`
+    }
+    return NextResponse.redirect(canonical, 308)
+  }
+  if (hostname === 'coderocket.app') {
+    const canonical = request.nextUrl.clone()
+    canonical.host = 'www.coderocket.app'
     canonical.protocol = 'https'
     canonical.port = ''
     return NextResponse.redirect(canonical, 308)

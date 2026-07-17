@@ -1,6 +1,6 @@
 import { createServiceClient } from '@coderocket/db'
 import type Stripe from 'stripe'
-import { createStripeClient, planForStripePrice } from '@/lib/stripe'
+import { createStripeClient, paidPlanItem } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 
@@ -35,8 +35,8 @@ export async function POST(request: Request) {
   ) {
     const subscription = event.data.object
     const ownerId = subscription.metadata.ownerId
-    const priceId = subscription.items.data[0]?.price.id
-    if (ownerId) {
+    const planItem = paidPlanItem(subscription.items.data)
+    if (ownerId && planItem) {
       await db.from('cr_subscriptions').upsert(
         {
           owner_id: ownerId,
@@ -45,10 +45,10 @@ export async function POST(request: Request) {
               ? subscription.customer
               : subscription.customer.id,
           stripe_subscription_id: subscription.id,
-          stripe_price_id: priceId,
-          plan_id: subscription.status === 'canceled' ? 'free' : planForStripePrice(priceId),
+          stripe_price_id: planItem.priceId,
+          plan_id: subscription.status === 'canceled' ? 'free' : planItem.plan,
           status: subscription.status,
-          current_period_end: unixDate(subscription.items.data[0]?.current_period_end),
+          current_period_end: unixDate(planItem.currentPeriodEnd),
           grace_period_end:
             subscription.status === 'past_due'
               ? new Date(Date.now() + 7 * 86_400_000).toISOString()

@@ -28,6 +28,7 @@ export class JobCancelledError extends Error {
   }
 }
 
+/** Persist owner-visible job progress while refusing work cancelled during execution. */
 async function updateProgress(
   job: WorkerJob,
   progress: {
@@ -56,6 +57,7 @@ async function updateProgress(
   if (!data) throw new JobCancelledError()
 }
 
+/** Audit configured pages in bounded concurrent batches with durable progress updates. */
 async function auditProjectPages(job: WorkerJob, urls: string[]): Promise<PageAuditResult[]> {
   const pages: PageAuditResult[] = []
   for (let offset = 0; offset < urls.length; offset += PAGE_CONCURRENCY) {
@@ -103,7 +105,7 @@ export async function processAuditJob(
 
   const { data: project, error } = await db
     .from('cr_projects')
-    .select('id,owner_id,name,production_url,page_paths')
+    .select('id,owner_id,name,production_url,page_paths,baseline_reset_at')
     .eq('id', job.project_id)
     .eq('owner_id', job.owner_id)
     .is('archived_at', null)
@@ -134,7 +136,7 @@ export async function processAuditJob(
     message: 'Looking for changes since the previous complete check'
   })
   const version = getRulesetVersion()
-  const { data: baselineAudit, error: baselineAuditError } = await db
+  let baselineQuery = db
     .from('cr_audits')
     .select('id,ruleset_version')
     .eq('project_id', project.id)
@@ -143,15 +145,20 @@ export async function processAuditJob(
     .neq('gate_status', 'inconclusive')
     .order('created_at', { ascending: false })
     .limit(1)
-    .maybeSingle()
+  if (project.baseline_reset_at)
+    baselineQuery = baselineQuery.gte('created_at', project.baseline_reset_at)
+  const { data: baselineAudit, error: baselineAuditError } = await baselineQuery.maybeSingle()
   if (baselineAuditError) throw new Error(baselineAuditError.message)
-  const { data: recentAudits, error: recentAuditsError } = await db
+  let recentAuditsQuery = db
     .from('cr_audits')
     .select('gate_status')
     .eq('project_id', project.id)
     .eq('environment', 'production')
     .order('created_at', { ascending: false })
     .limit(3)
+  if (project.baseline_reset_at)
+    recentAuditsQuery = recentAuditsQuery.gte('created_at', project.baseline_reset_at)
+  const { data: recentAudits, error: recentAuditsError } = await recentAuditsQuery
   if (recentAuditsError) throw new Error(recentAuditsError.message)
   let baseline: AuditFindingInput[] = []
   if (baselineAudit) {

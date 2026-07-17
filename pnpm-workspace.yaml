@@ -3,6 +3,19 @@ packages:
   - packages/*
   - configs/*
 
+allowBuilds:
+  '@prisma/engines': set this to true or false
+  '@sentry/cli': set this to true or false
+  core-js: set this to true or false
+  esbuild: set this to true or false
+  lefthook: set this to true or false
+  prisma: set this to true or false
+  sharp: set this to true or false
+  tree-sitter: set this to true or false
+  tree-sitter-javascript: set this to true or false
+  tree-sitter-typescript: set this to true or false
+  unrs-resolver: set this to true or false
+
 catalog:
   # TypeScript & tooling
   # UI utilities
@@ -33,6 +46,7 @@ catalog:
   "framer-motion": "^12.40.0"
   jest: "^30.4.2"
   # Next
+  "@next/third-parties": "^16.2.6"
   next: "^16.2.6"
   prisma: "^7.8.0"
   # React

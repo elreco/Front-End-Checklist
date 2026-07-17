@@ -4,7 +4,7 @@
 
 1. Do not migrate, query, or modify historical application tables. Only Supabase `auth.users` identities are intentionally reused.
 2. Verify `email`, GitHub, Google, and Facebook providers are still enabled.
-3. Add `https://coderocket.app/auth/callback` and the local callback to the Auth redirect allow-list.
+3. Add `https://www.coderocket.app/auth/callback` and the local callback to the Auth redirect allow-list.
 4. Apply the `packages/coderocket-db/supabase/migrations` files. The first migration disables the legacy broad welcome-email trigger before creating the new profile trigger.
 5. Confirm every historical `auth.users.id` has a matching `cr_profiles` and `cr_subscriptions` row.
 6. Run cross-owner RLS tests with two non-service sessions before accepting signups.
@@ -41,9 +41,10 @@ Deploy and smoke-test the Fly hostname first. Only then:
 
 1. add the apex domain certificate in Fly;
 2. point the apex DNS records at Fly;
-3. add `www` and verify its permanent redirect to the apex;
-4. verify `/api/health`, sign-in callbacks, sitemap, robots, social card, favicon, and a private report;
-5. submit the new sitemap and remove historical AI-builder URLs in Search Console.
+3. add `www` as the canonical host and verify the apex permanently redirects to it;
+4. add `docs` and verify it permanently redirects into the canonical `/docs` section;
+5. verify `/api/health`, sign-in callbacks, sitemap, robots, social card, favicon, and a private report;
+6. submit the new sitemap and remove historical AI-builder URLs in Search Console.
 
 The deployment workflow records the previous image. If the canonical health smoke test fails, it redeploys that image with an immediate strategy and skips the release command.
 

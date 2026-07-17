@@ -48,7 +48,7 @@ export function parseArguments(args: string[], environment: NodeJS.ProcessEnv): 
     sha: valueAfter(args, '--sha'),
     branch: valueAfter(args, '--branch'),
     pr: valueAfter(args, '--pr'),
-    apiUrl: environment.CODEROCKET_API_URL ?? 'https://coderocket.app/api/v1/audits',
+    apiUrl: environment.CODEROCKET_API_URL ?? 'https://www.coderocket.app/api/v1/audits',
     requestHeaders: parseRequestHeaders(environment.CODEROCKET_SITE_HEADERS_JSON)
   }
 }

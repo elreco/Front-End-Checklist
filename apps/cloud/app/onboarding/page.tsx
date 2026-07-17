@@ -1,10 +1,12 @@
 import { Clock3, Radar, ShieldCheck } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
+import { UpgradeLink } from '@/components/plan-limit-upsell'
 import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
 import { getPlanLabel } from '@/lib/product-language'
 import { createPrivateMetadata } from '@/lib/seo'
+import { getNextPlan } from '@/lib/upgrade'
 import { OnboardingForm } from './onboarding-form'
 
 export const metadata = createPrivateMetadata('Add a site')
@@ -13,7 +15,8 @@ const outcomes = [
   {
     icon: Radar,
     title: 'The right access method is used',
-    description: 'Public pages use a cloud check. Private pages wait for your runner connection.'
+    description:
+      'Pages without sign-in use the cloud check. Restricted pages run from your CI environment.'
   },
   {
     icon: ShieldCheck,
@@ -30,6 +33,7 @@ const outcomes = [
 export default async function OnboardingPage() {
   const context = await getAppShellContext()
   const limitReached = context.projectCount >= context.limits.projects
+  const nextPlan = getNextPlan(context.plan)
 
   return (
     <ProductShell eyebrow="Guided setup" title="Add a website">
@@ -45,9 +49,17 @@ export default async function OnboardingPage() {
                   plan with more room.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <CodeRocketButton asChild>
-                    <Link href="/pricing">See plans</Link>
-                  </CodeRocketButton>
+                  {nextPlan ? (
+                    <CodeRocketButton asChild>
+                      <UpgradeLink
+                        currentPlan={context.plan}
+                        source="site_limit"
+                        targetPlan={nextPlan}
+                      >
+                        Unlock more websites
+                      </UpgradeLink>
+                    </CodeRocketButton>
+                  ) : null}
                   <CodeRocketButton asChild variant="outline">
                     <Link href="/dashboard#sites">Back to my websites</Link>
                   </CodeRocketButton>
@@ -57,6 +69,7 @@ export default async function OnboardingPage() {
           ) : (
             <OnboardingForm
               pagesPerProject={context.limits.pagesPerProject}
+              plan={context.plan}
               planName={getPlanLabel(context.plan)}
             />
           )}

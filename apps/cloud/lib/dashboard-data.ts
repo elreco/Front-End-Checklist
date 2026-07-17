@@ -12,6 +12,7 @@ export interface DashboardProject {
   id: string
   name: string
   url: string
+  createdAt: string
   accessMode: SiteAccessMode
   hasCompletedCheck: boolean
   pageCount: number
@@ -77,6 +78,7 @@ const demoData: DashboardData = {
       id: 'demo-acme',
       name: 'Acme Storefront',
       url: 'https://acme.example',
+      createdAt: '2026-07-16T08:00:00.000Z',
       accessMode: 'public',
       hasCompletedCheck: true,
       pageCount: 5,
@@ -131,7 +133,9 @@ export async function getDashboardData(): Promise<DashboardData> {
   ] = await Promise.all([
     supabase
       .from('cr_projects')
-      .select('id,name,production_url,page_paths,access_mode,next_audit_at,schedule_enabled')
+      .select(
+        'id,name,production_url,page_paths,access_mode,next_audit_at,schedule_enabled,created_at'
+      )
       .eq('owner_id', auth.user.id)
       .is('archived_at', null)
       .order('created_at', { ascending: false }),
@@ -168,7 +172,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       .in('status', ['queued', 'leased']),
     supabase
       .from('cr_ai_usage_accounts')
-      .select('allowance_credits,consumed_credits,reserved_credits')
+      .select('included_credits,consumed_credits,reserved_credits')
       .eq('owner_id', auth.user.id)
       .maybeSingle()
   ])
@@ -187,6 +191,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       id: project.id,
       name: project.name,
       url: project.production_url,
+      createdAt: project.created_at,
       accessMode: resolveAccessMode(project.access_mode),
       hasCompletedCheck: Boolean(latest),
       pageCount: project.page_paths.length,
@@ -212,10 +217,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     plan,
     projectLimit: limits.projects,
     runLimit: limits.onDemandRunsPerMonth,
-    aiCreditAllowance: aiUsageResult.data?.allowance_credits ?? limits.aiCreditsPerMonth,
+    aiCreditAllowance: aiUsageResult.data?.included_credits ?? limits.aiCreditsPerMonth,
     aiCreditsRemaining: Math.max(
       0,
-      (aiUsageResult.data?.allowance_credits ?? limits.aiCreditsPerMonth) -
+      (aiUsageResult.data?.included_credits ?? limits.aiCreditsPerMonth) -
         (aiUsageResult.data?.consumed_credits ?? 0) -
         (aiUsageResult.data?.reserved_credits ?? 0)
     ),

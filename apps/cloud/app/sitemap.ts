@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { DOCUMENTATION_RULES, getRuleDocumentationUrl } from '@/lib/docs'
+import { SITE_URL } from '@/lib/seo'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: Array<{
@@ -22,12 +23,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/legal/notices', changeFrequency: 'yearly', priority: 0.2 }
   ]
   const staticEntries: MetadataRoute.Sitemap = staticPages.map(entry => ({
-    url: `https://coderocket.app${entry.path}`,
+    url: `${SITE_URL}${entry.path}`,
     changeFrequency: entry.changeFrequency,
     priority: entry.priority
   }))
   const ruleEntries: MetadataRoute.Sitemap = DOCUMENTATION_RULES.map(rule => ({
-    url: `https://coderocket.app${getRuleDocumentationUrl(rule)}`,
+    url: `${SITE_URL}${getRuleDocumentationUrl(rule)}`,
     changeFrequency: 'monthly',
     priority: 0.6
   }))

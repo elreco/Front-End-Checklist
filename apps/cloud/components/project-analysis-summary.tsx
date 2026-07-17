@@ -29,7 +29,7 @@ export function ProjectAnalysisSummary({
   return (
     <aside
       aria-label="Recommended analysis focus"
-      className="border-border border-t bg-background p-5 xl:border-t-0 xl:border-l"
+      className="flex flex-col justify-center border-border border-t bg-background p-5 xl:border-t-0 xl:border-l"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="font-mono text-[10px] text-signal uppercase tracking-[.12em]">
@@ -48,22 +48,8 @@ export function ProjectAnalysisSummary({
               : 'No urgent item'}
         </Badge>
       </div>
-      <h3 className="mt-4 font-heading font-semibold text-xl">{title}</h3>
+      <h3 className="mt-3 font-heading font-semibold text-xl">{title}</h3>
       <p className="mt-2 text-muted text-sm leading-6">{description}</p>
-      <dl className="mt-5 grid grid-cols-3 gap-px border border-border bg-border">
-        <SummaryMetric label="New" value={newCount} />
-        <SummaryMetric label="Known" value={knownCount} />
-        <SummaryMetric label="Important" value={importantCount} />
-      </dl>
     </aside>
-  )
-}
-
-function SummaryMetric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="bg-surface px-3 py-3">
-      <dt className="font-mono text-[9px] text-muted uppercase tracking-[.1em]">{label}</dt>
-      <dd className="mt-1 font-heading font-semibold text-lg">{value}</dd>
-    </div>
   )
 }

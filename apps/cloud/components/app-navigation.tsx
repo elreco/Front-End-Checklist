@@ -1,20 +1,23 @@
 'use client'
 
-import { BookOpen, CreditCard, Gauge, History, Settings } from '@repo/design-system/icons'
+import { BookOpen, CreditCard, Gauge, Globe2, History, Settings } from '@repo/design-system/icons'
 import { TooltipHint, TooltipProvider } from '@repo/design-system/ui/tooltip'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const navigation = [
   { href: '/dashboard', label: 'Overview', icon: Gauge },
+  { href: '/sites', label: 'Sites', icon: Globe2 },
   { href: '/audits', label: 'Check history', icon: History },
   { href: '/docs', label: 'Help & rules', icon: BookOpen },
   { href: '/settings', label: 'Account settings', icon: Settings },
   { href: '/settings/billing', label: 'Plan & billing', icon: CreditCard }
 ]
 
+/** Match nested product routes to their owning navigation destination. */
 function isCurrentPath(pathname: string, href: string): boolean {
-  if (href === '/dashboard')
+  if (href === '/dashboard') return pathname === href
+  if (href === '/sites')
     return (
       pathname === href || pathname.startsWith('/projects/') || pathname.startsWith('/onboarding')
     )
@@ -40,7 +43,7 @@ export function AppNavigation({
         aria-label="Product navigation"
         className="flex gap-1 overflow-x-auto border-border border-b bg-surface px-4 py-2 lg:hidden"
       >
-        {navigation.slice(0, 3).map(({ href, label, icon: Icon }) => {
+        {navigation.slice(0, 4).map(({ href, label, icon: Icon }) => {
           const current = isCurrentPath(pathname, href)
           return (
             <Link
@@ -64,14 +67,14 @@ export function AppNavigation({
         className="space-y-1 font-mono font-normal text-xs"
         id="product-sidebar-navigation"
       >
-        {navigation.map(({ href, label, icon: Icon }, index) => {
+        {navigation.map(({ href, label, icon: Icon }) => {
           const current = isCurrentPath(pathname, href)
           const link = (
             <Link
               aria-current={current ? 'page' : undefined}
               className={`flex items-center border py-2.5 transition-colors ${
                 collapsed ? 'justify-center px-0' : 'gap-2.5 px-3'
-              } ${index === 3 ? 'mt-5' : ''} ${
+              } ${href === '/settings' ? 'mt-5' : ''} ${
                 current
                   ? 'border-border bg-surface-raised text-foreground'
                   : 'border-transparent text-muted hover:border-border hover:bg-surface hover:text-foreground'

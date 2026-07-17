@@ -13,7 +13,9 @@ import Link from 'next/link'
 import { type ReactNode, useEffect, useSyncExternalStore } from 'react'
 import { signOut } from '@/app/actions'
 import { getPlanLabel } from '@/lib/product-language'
+import { getNextPlan } from '@/lib/upgrade'
 import { AppNavigation } from './app-navigation'
+import { UpgradeLink } from './plan-limit-upsell'
 
 const SIDEBAR_STORAGE_KEY = 'coderocket:sidebar-collapsed'
 const SIDEBAR_COOKIE_KEY = 'coderocket-sidebar-collapsed'
@@ -223,6 +225,7 @@ function PlanPrompt({
   projectLimit: number
 }) {
   const isAgency = plan === 'agency'
+  const nextPlan = getNextPlan(plan)
   return (
     <div className="mt-auto border border-border bg-background p-4">
       <div className="flex items-center justify-between gap-2">
@@ -253,14 +256,17 @@ function PlanPrompt({
             ? 'Need more client websites and reports without CodeRocket branding?'
             : 'Get daily checks, more sites, and a longer history.'}
       </p>
-      {isAgency ? null : (
-        <Link
+      {nextPlan ? (
+        <UpgradeLink
           className="mt-3 inline-flex items-center gap-1 font-mono text-accent text-xs hover:text-signal"
-          href="/pricing"
+          currentPlan={plan}
+          source="sidebar_plan"
+          targetPlan={nextPlan}
         >
-          Compare plans <ArrowUpRight aria-hidden className="h-3.5 w-3.5" />
-        </Link>
-      )}
+          {plan === 'free' ? 'Unlock more sites' : 'Grow to Agency'}{' '}
+          <ArrowUpRight aria-hidden className="h-3.5 w-3.5" />
+        </UpgradeLink>
+      ) : null}
     </div>
   )
 }

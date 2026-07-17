@@ -1,14 +1,6 @@
 'use client'
 
-import {
-  CheckCircle2,
-  Copy,
-  FileCheck2,
-  KeyRound,
-  LoaderCircle,
-  LockKeyhole,
-  Terminal
-} from '@repo/design-system/icons'
+import { CheckCircle2, Copy, KeyRound, LoaderCircle, Terminal } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { toast } from '@repo/design-system/ui/coderocket-toast'
 import {
@@ -22,7 +14,15 @@ import {
   DialogTrigger
 } from '@repo/design-system/ui/dialog'
 import Link from 'next/link'
-import { useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
+import {
+  buildCiConfiguration,
+  type CiPlatform,
+  getCiConfigLocation,
+  getCiPlatformLabel,
+  getCiSecretLocation
+} from '@/lib/ci-config'
+import { CiPlatformPicker } from './ci-platform-picker'
 
 interface TokenResponse {
   message: string
@@ -30,33 +30,49 @@ interface TokenResponse {
   token: string
 }
 
-/** Creates a one-time project token and guides the owner into the private runner workflow. */
+interface ProjectCliSetupProps {
+  configured: boolean
+  pages: string[]
+  plan: 'free' | 'solo' | 'agency'
+  projectId: string
+  siteUrl: string
+  triggerLabel?: string
+}
+
+/** Guide an owner through a copy-ready CI setup for restricted website checks. */
 export function ProjectCliSetup({
   configured,
-  projectId
-}: {
-  configured: boolean
-  projectId: string
-}) {
+  pages,
+  plan,
+  projectId,
+  siteUrl,
+  triggerLabel
+}: ProjectCliSetupProps) {
   const [loading, setLoading] = useState(false)
+  const [platform, setPlatform] = useState<CiPlatform>('github')
   const [token, setToken] = useState('')
+  const configuration = useMemo(
+    () => buildCiConfiguration(platform, { pages, plan, siteUrl }),
+    [pages, plan, platform, siteUrl]
+  )
 
+  /** Create one project-scoped credential labelled for the selected CI platform. */
   async function createToken() {
     setLoading(true)
     try {
       const response = await fetch(`/api/projects/${projectId}/tokens`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: 'GitHub Actions' })
+        body: JSON.stringify({ name: getCiPlatformLabel(platform) })
       })
       const payload: unknown = await response.json()
       if (!response.ok || !isTokenResponse(payload)) throw new Error(readError(payload))
       setToken(payload.token)
-      toast.success('Project token created', {
-        description: 'Copy it now. CodeRocket stores only its secure hash.'
+      toast.success('Project key created', {
+        description: `Save it in ${getCiPlatformLabel(platform)} now. CodeRocket stores only its secure hash.`
       })
     } catch (error) {
-      toast.error('Token could not be created', {
+      toast.error('Project key could not be created', {
         description: error instanceof Error ? error.message : 'Please try again.'
       })
     } finally {
@@ -64,124 +80,147 @@ export function ProjectCliSetup({
     }
   }
 
-  async function copyToken() {
+  /** Copy a generated value and announce whether the browser accepted the request. */
+  async function copyValue(value: string, label: string) {
     try {
-      await navigator.clipboard.writeText(token)
-      toast.success('Token copied')
+      await navigator.clipboard.writeText(value)
+      toast.success(`${label} copied`)
     } catch {
-      toast.error('Token could not be copied')
+      toast.error(`${label} could not be copied`)
     }
   }
+
+  const buttonLabel = triggerLabel ?? (configured ? 'CI check details' : 'Set up a CI check')
 
   return (
     <Dialog>
       <DialogTrigger asChild>
         <CodeRocketButton size="sm" variant={configured ? 'outline' : 'primary'}>
-          <Terminal aria-hidden /> {configured ? 'Runner details' : 'Set up runner'}
+          <Terminal aria-hidden /> {buttonLabel}
         </CodeRocketButton>
       </DialogTrigger>
       <DialogContent
-        className="max-h-[calc(100dvh-2rem)] max-w-2xl gap-0 overflow-hidden rounded-none bg-surface p-0"
+        className="flex max-h-[calc(100dvh-2rem)] max-w-3xl flex-col gap-0 overflow-hidden rounded-none bg-surface p-0"
         showClose
       >
-        <DialogHeader className="border-border border-b p-6 pr-14">
+        <DialogHeader className="shrink-0 border-border border-b p-6 pr-14">
           <div className="flex items-start gap-4">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-signal bg-background text-signal">
               <Terminal aria-hidden className="h-5 w-5" />
             </span>
             <div>
               <p className="font-mono text-[10px] text-signal uppercase tracking-[.14em]">
-                Private runner
+                Guided CI setup
               </p>
               <DialogTitle className="mt-2 font-heading text-2xl">
-                Check pages from your own environment
+                Run checks from your project
               </DialogTitle>
-              <DialogDescription className="mt-2 max-w-xl leading-6">
-                Use GitHub Actions or any machine that can already open the website. CodeRocket
-                receives the check result, not your website password or session.
+              <DialogDescription className="mt-2 max-w-2xl leading-6">
+                Use an environment that can already open the website. The check analyzes returned
+                HTML and response headers; it does not read repository source files or run browser
+                JavaScript.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="overflow-y-auto p-6">
-          <ol className="grid gap-px border border-border bg-border sm:grid-cols-3">
-            <RunnerStep
-              description="Create one website-specific key."
-              icon={KeyRound}
-              number="01"
-              title="Connect"
-            />
-            <RunnerStep
-              description="Run the check where the pages are reachable."
-              icon={LockKeyhole}
-              number="02"
-              title="Check"
-            />
-            <RunnerStep
-              description="Send only structured results to CodeRocket."
-              icon={FileCheck2}
-              number="03"
-              title="Review"
-            />
-          </ol>
+        <section
+          aria-label="CI setup steps"
+          className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-6"
+        >
+          <CiPlatformPicker onChange={setPlatform} value={platform} />
 
-          {token ? (
-            <div className="mt-5 border border-signal bg-background p-5">
-              <div className="flex items-center gap-2 font-mono text-signal text-xs uppercase tracking-[.12em]">
-                <CheckCircle2 aria-hidden className="h-4 w-4" /> Key ready · copy it now
+          <SetupSection
+            complete={configured || Boolean(token)}
+            number="01"
+            title="Save the project key"
+          >
+            <p className="text-muted text-sm leading-6">
+              Create a website-specific key, then save it as{' '}
+              <code className="font-mono text-foreground text-xs">CODEROCKET_TOKEN</code> in{' '}
+              {getCiSecretLocation(platform)}.
+            </p>
+            {token ? (
+              <div className="mt-4 border border-signal bg-surface p-4">
+                <p className="font-mono text-[10px] text-signal uppercase tracking-[.1em]">
+                  Shown once · copy it now
+                </p>
+                <code className="mt-3 block max-h-24 overflow-auto break-all border border-border bg-background p-3 text-xs leading-6">
+                  {token}
+                </code>
+                <CodeRocketButton
+                  className="mt-3"
+                  onClick={() => copyValue(token, 'Project key')}
+                  size="sm"
+                  type="button"
+                >
+                  <Copy aria-hidden /> Copy project key
+                </CodeRocketButton>
               </div>
-              <p className="mt-3 text-muted text-sm leading-6">
-                This full key is displayed only once. Store it as a protected secret in GitHub or
-                your runner environment.
-              </p>
-              <code className="mt-4 block max-h-28 overflow-auto break-all border border-border bg-surface p-3 text-xs leading-6">
-                {token}
-              </code>
-              <CodeRocketButton className="mt-4" onClick={copyToken} size="sm" type="button">
-                <Copy aria-hidden /> Copy access key
-              </CodeRocketButton>
-            </div>
-          ) : (
-            <div className="mt-5 border border-border bg-background p-5">
-              <div className="flex items-start gap-3">
-                <LockKeyhole aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-signal" />
-                <div>
-                  <h3 className="font-heading font-semibold text-base">
-                    {configured ? 'A runner is already connected' : 'Create a private access key'}
-                  </h3>
-                  <p className="mt-2 text-muted text-sm leading-6">
-                    {configured
-                      ? 'Create another key only when replacing or rotating the current one. Existing keys are not revealed again.'
-                      : 'The key works only for this website. It cannot submit a result to another CodeRocket project.'}
-                  </p>
-                </div>
+            ) : (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <CodeRocketButton
+                  disabled={loading}
+                  onClick={createToken}
+                  size="sm"
+                  type="button"
+                  variant={configured ? 'outline' : 'primary'}
+                >
+                  {loading ? (
+                    <LoaderCircle aria-hidden className="animate-spin" />
+                  ) : (
+                    <KeyRound aria-hidden />
+                  )}
+                  {loading ? 'Creating…' : configured ? 'Create another key' : 'Create project key'}
+                </CodeRocketButton>
+                {configured ? (
+                  <span className="inline-flex items-center gap-2 text-success text-xs">
+                    <CheckCircle2 aria-hidden className="h-4 w-4" /> A key is already active
+                  </span>
+                ) : null}
               </div>
+            )}
+          </SetupSection>
+
+          <SetupSection number="02" title={`Add ${getCiConfigLocation(platform)}`}>
+            <p className="text-muted text-sm leading-6">
+              Copy this configuration into your repository. It runs the current lightweight HTML
+              check; no Playwright installation is required.
+            </p>
+            <div className="relative mt-4">
               <CodeRocketButton
-                className="mt-5"
-                disabled={loading}
-                onClick={createToken}
+                aria-label="Copy CI configuration"
+                className="absolute top-2 right-2 z-10"
+                onClick={() => copyValue(configuration, 'CI configuration')}
                 size="sm"
                 type="button"
+                variant="outline"
               >
-                {loading ? (
-                  <LoaderCircle aria-hidden className="animate-spin" />
-                ) : (
-                  <KeyRound aria-hidden />
-                )}
-                {loading
-                  ? 'Creating…'
-                  : configured
-                    ? 'Create replacement key'
-                    : 'Create access key'}
+                <Copy aria-hidden /> Copy
               </CodeRocketButton>
+              <pre className="max-h-72 overflow-auto whitespace-pre-wrap border border-border bg-background p-4 pr-24 font-mono text-xs leading-6">
+                <code>{configuration}</code>
+              </pre>
             </div>
-          )}
-        </div>
+            <p className="mt-3 text-muted text-xs leading-5">
+              If the site needs a cookie or access headers, also save them as{' '}
+              <code className="font-mono text-foreground">CODEROCKET_SITE_HEADERS_JSON</code>. They
+              are used inside CI and are never included in the submitted result.
+            </p>
+          </SetupSection>
 
-        <DialogFooter className="border-border border-t bg-background p-4 sm:items-center sm:justify-between">
+          <SetupSection number="03" title="Run the first check">
+            <p className="text-muted text-sm leading-6">
+              Start the generated job once. CodeRocket will confirm the connection when the first
+              result arrives. GitHub includes the {plan === 'free' ? 'weekly' : 'daily'} schedule;
+              configure the equivalent pipeline schedule in other platforms.
+            </p>
+          </SetupSection>
+        </section>
+
+        <DialogFooter className="shrink-0 border-border border-t bg-background p-4 sm:items-center sm:justify-between">
           <CodeRocketButton asChild size="sm" variant="ghost">
-            <Link href="/docs/cli">Read the setup guide →</Link>
+            <Link href="/docs/cli">Open the advanced guide →</Link>
           </CodeRocketButton>
           <DialogClose asChild>
             <CodeRocketButton size="sm" type="button" variant="outline">
@@ -194,29 +233,32 @@ export function ProjectCliSetup({
   )
 }
 
-function RunnerStep({
-  description,
-  icon: Icon,
+/** Render one numbered setup section with an optional ready state. */
+function SetupSection({
+  children,
+  complete = false,
   number,
   title
 }: {
-  description: string
-  icon: typeof Terminal
+  children: ReactNode
+  complete?: boolean
   number: string
   title: string
 }) {
   return (
-    <li className="bg-surface p-4">
+    <section className="border border-border bg-surface p-5">
       <div className="flex items-center justify-between gap-3">
-        <Icon aria-hidden className="h-4 w-4 text-signal" />
-        <span className="font-mono text-[10px] text-muted">{number}</span>
+        <h3 className="font-heading font-semibold text-base">{title}</h3>
+        <span className={`font-mono text-[10px] ${complete ? 'text-success' : 'text-muted'}`}>
+          {complete ? 'READY' : number}
+        </span>
       </div>
-      <p className="mt-3 font-heading font-semibold text-sm">{title}</p>
-      <p className="mt-1 text-muted text-xs leading-5">{description}</p>
-    </li>
+      <div className="mt-3">{children}</div>
+    </section>
   )
 }
 
+/** Validate the token endpoint payload before exposing a one-time secret. */
 function isTokenResponse(value: unknown): value is TokenResponse {
   if (!value || typeof value !== 'object') return false
   return (
@@ -229,6 +271,7 @@ function isTokenResponse(value: unknown): value is TokenResponse {
   )
 }
 
+/** Extract a safe API error message with a stable fallback. */
 function readError(value: unknown): string {
   return value && typeof value === 'object' && 'error' in value && typeof value.error === 'string'
     ? value.error

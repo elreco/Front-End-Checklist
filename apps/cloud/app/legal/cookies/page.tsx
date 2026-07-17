@@ -1,18 +1,19 @@
 import type { Metadata } from 'next'
+import { CookieSettingsButton } from '@/components/google-analytics-consent'
 import { LegalPage } from '@/components/legal-page'
 import { createPublicMetadata } from '@/lib/seo'
 
 export const metadata: Metadata = createPublicMetadata({
   title: 'Cookie policy',
   description:
-    'How CodeRocket uses essential authentication, security, preference, and billing cookies.',
+    'How CodeRocket uses essential authentication, security, preference, billing, and optional analytics cookies.',
   path: '/legal/cookies'
 })
 
 export default function CookiePolicyPage() {
   return (
     <LegalPage
-      description="CodeRocket keeps browser storage deliberately narrow. This page explains what is required for sign-in, security, and product preferences."
+      description="CodeRocket keeps browser storage deliberately narrow. This page explains essential storage, product preferences, and optional analytics."
       title="Cookie policy"
     >
       <h2>1. Essential cookies</h2>
@@ -38,17 +39,22 @@ export default function CookiePolicyPage() {
 
       <h2>4. Analytics and advertising</h2>
       <p>
-        CodeRocket does not currently set advertising cookies or third-party behavioral analytics
-        cookies. If optional analytics are introduced, this policy and any required consent controls
-        will be updated before those cookies are used.
+        With your permission, CodeRocket loads Google Analytics to understand page visits and
+        navigation patterns. Google Analytics may set first-party cookies such as <code>_ga</code>{' '}
+        and <code>_ga_*</code>. The integration is not loaded before you allow analytics, is not
+        used for advertising, and CodeRocket does not send your account name or email as analytics
+        event data.
       </p>
 
       <h2>5. Managing storage</h2>
       <p>
-        Browser settings can remove cookies and local storage. Removing an authentication cookie
-        signs the account out. Removing local preferences resets the associated interface option on
-        that device.
+        You can change the optional analytics choice at any time. Turning analytics off disables
+        collection and removes the CodeRocket Google Analytics cookies where the browser permits it.
+        Browser settings can also remove cookies and local storage. Removing an authentication
+        cookie signs the account out; removing local preferences resets the associated interface
+        option on that device.
       </p>
+      <CookieSettingsButton />
     </LegalPage>
   )
 }

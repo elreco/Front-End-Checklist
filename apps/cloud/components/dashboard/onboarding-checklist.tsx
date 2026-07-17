@@ -10,6 +10,7 @@ const SETUP_DISMISSED_KEY = 'coderocket:setup-complete-dismissed'
 const SETUP_DISMISSED_EVENT = 'coderocket:setup-complete-dismissed-change'
 let dismissedInMemory = false
 
+/** Read whether the completed setup message was dismissed in this browser. */
 function readDismissedState(): boolean {
   try {
     const saved = window.localStorage.getItem(SETUP_DISMISSED_KEY)
@@ -20,7 +21,9 @@ function readDismissedState(): boolean {
   return dismissedInMemory
 }
 
+/** Subscribe to dismissal changes from this tab and other open tabs. */
 function subscribeToDismissedState(onStoreChange: () => void): () => void {
+  /** Notify React when another tab changes the stored dismissal state. */
   const handleStorage = (event: StorageEvent) => {
     if (event.key === SETUP_DISMISSED_KEY || event.key === null) onStoreChange()
   }
@@ -32,6 +35,7 @@ function subscribeToDismissedState(onStoreChange: () => void): () => void {
   }
 }
 
+/** Persist dismissal of the completed setup message. */
 function dismissCompletedSetup(): void {
   dismissedInMemory = true
   try {
@@ -67,11 +71,10 @@ export function OnboardingChecklist({ data }: { data: DashboardData }) {
       icon: Globe2
     },
     {
-      title:
-        data.setupRequiredCount > 0 ? 'Connect the private runner' : 'Let the first check finish',
+      title: data.setupRequiredCount > 0 ? 'Set up the CI check' : 'Let the first check finish',
       description:
         data.setupRequiredCount > 0
-          ? 'Run the check from an environment that is already allowed to open the private pages.'
+          ? 'Run the HTML check from GitHub, GitLab, Bitbucket, or another environment that can open the restricted pages.'
           : 'This creates your reference point, so later changes can be compared fairly.',
       complete: data.setup.hasSuccessfulCheck,
       href: data.projects[0] ? `/projects/${data.projects[0].id}` : '/onboarding',
@@ -80,7 +83,7 @@ export function OnboardingChecklist({ data }: { data: DashboardData }) {
     },
     {
       title: 'Choose what to do with results',
-      description: 'Share a simple report, or connect GitHub if you work with a development team.',
+      description: 'Share a simple report, or use the result in your development workflow.',
       complete: data.setup.hasDeliveryConnection,
       href: data.projects[0] ? `/projects/${data.projects[0].id}` : '/docs/cli',
       action: 'See sharing options',
@@ -112,7 +115,7 @@ export function OnboardingChecklist({ data }: { data: DashboardData }) {
           <div>
             <p className="font-heading font-semibold text-lg">Your monitoring is fully set up</p>
             <p className="mt-1 text-muted text-sm">
-              Website added, first check saved, and results ready to share or use in GitHub.
+              Website added, first check saved, and results ready to share or use in CI.
             </p>
           </div>
         </div>
@@ -131,8 +134,8 @@ export function OnboardingChecklist({ data }: { data: DashboardData }) {
             Finish setup in three small steps
           </h2>
           <p className="mt-2 max-w-2xl text-muted text-sm leading-6">
-            Public websites need no technical setup. Private pages use a small runner connection so
-            CodeRocket never has to bypass their sign-in screen.
+            Pages without sign-in need no technical setup. Restricted pages use a small CI job so
+            CodeRocket never has to bypass their access screen.
           </p>
         </div>
         <div className="min-w-32">

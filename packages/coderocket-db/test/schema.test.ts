@@ -145,4 +145,29 @@ describe('CodeRocket database migration', () => {
     assert.match(sql, /before insert on public\.cr_audits/)
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
+
+  it('keeps old audits while resetting the comparison baseline after URL changes', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607170002_project_configuration_baselines.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /add column if not exists baseline_reset_at timestamptz/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('bills only paid AI overage through an idempotent Stripe outbox job', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607170001_ai_usage_billing.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /included_credits/)
+    assert.match(sql, /overage_cap_microeur/)
+    assert.match(sql, /billable_overage_microeur/)
+    assert.match(sql, /create or replace function public\.cr_prepare_ai_usage_billing/)
+    assert.match(sql, /'ai_usage'/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
 })

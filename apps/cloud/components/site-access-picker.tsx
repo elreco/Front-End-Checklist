@@ -1,27 +1,22 @@
 import type { SiteAccessMode } from '@coderocket/core'
-import { Cloud, LockKeyhole, ShieldCheck } from '@repo/design-system/icons'
+import { Cloud, LockKeyhole } from '@repo/design-system/icons'
 
 const options = [
   {
     value: 'public',
     icon: Cloud,
-    title: 'Anyone can open it',
-    description: 'Best for public websites. CodeRocket checks it from the cloud with no setup.',
-    badge: 'Simplest'
-  },
-  {
-    value: 'protected',
-    icon: ShieldCheck,
-    title: 'It has bot protection',
-    description: 'Choose this for Cloudflare, a firewall, or a password in front of public pages.',
-    badge: 'Access test'
+    title: 'No sign-in is required',
+    description:
+      'Choose this when the selected pages open in a private browser window. A CDN or firewall is fine if it allows normal access.',
+    badge: 'Automatic'
   },
   {
     value: 'private',
     icon: LockKeyhole,
-    title: 'People must sign in',
-    description: 'Choose this for customer accounts, private previews, or an internal application.',
-    badge: 'Runner needed'
+    title: 'Sign-in or private access is required',
+    description:
+      'Choose this for customer accounts, private previews, access headers, or an internal network.',
+    badge: 'CI setup'
   }
 ] as const
 
@@ -34,7 +29,7 @@ export function SiteAccessPicker({
   onChange: (mode: SiteAccessMode) => void
 }) {
   return (
-    <div className="grid gap-3 lg:grid-cols-3">
+    <div className="grid gap-3 md:grid-cols-2">
       {options.map(option => {
         const Icon = option.icon
         const selected = option.value === value
@@ -88,25 +83,19 @@ export function SiteAccessExplanation({ mode }: { mode: SiteAccessMode }) {
   )
 }
 
+/** Describe what the selected reachability contract changes operationally. */
 function getAccessExplanation(mode: SiteAccessMode) {
   if (mode === 'private')
     return {
       icon: LockKeyhole,
-      title: 'The cloud check stays off',
+      title: 'We will guide you through CI setup',
       description:
-        'After setup, connect the CodeRocket runner from GitHub or your own environment. Your normal account password is not stored in CodeRocket.'
-    }
-  if (mode === 'protected')
-    return {
-      icon: ShieldCheck,
-      title: 'We start with a safe access test',
-      description:
-        'If Cloudflare or another protection returns a challenge, the result will say Check incomplete and show the private-runner option.'
+        'Run the same HTML check from GitHub, GitLab, Bitbucket, or another environment that already has access. CodeRocket does not store your website password.'
     }
   return {
     icon: Cloud,
-    title: 'No installation needed',
+    title: 'We will verify access automatically',
     description:
-      'CodeRocket opens only the pages you selected and starts the first public check immediately.'
+      'CodeRocket will request the selected pages and analyze the HTML returned by the website. It does not inspect your repository or pretend to identify your protection provider.'
   }
 }

@@ -30,6 +30,10 @@ export default function PrivacyPage() {
         <li>AI requests, generated fix guidance, model metadata, and usage records.</li>
         <li>Plan, Stripe customer and subscription identifiers, invoices, and payment status.</li>
         <li>Security, delivery, error, support, and operational logs.</li>
+        <li>
+          Optional analytics data, such as visited pages, navigation events, browser and device
+          information, and approximate location, only after consent.
+        </li>
       </ul>
       <p>
         CodeRocket does not ask for payment card details directly. Stripe collects and processes
@@ -49,16 +53,17 @@ export default function PrivacyPage() {
         Public checks retrieve only configured HTTPS pages and save the evidence needed to explain a
         result. When a user explicitly requests an AI explanation, bounded finding evidence and the
         relevant rule context are sent to the configured AI provider. Common credential patterns are
-        removed first. Passwords, runner tokens, cookies, and secret headers must not be included in
-        support or AI requests.
+        removed first. Passwords, CI access tokens, cookies, and secret headers must not be included
+        in support or AI requests.
       </p>
 
       <h2>5. Service providers</h2>
       <p>
         CodeRocket relies on service providers for hosting and networking, Supabase authentication
-        and database services, Stripe billing, OpenAI-powered fix guidance, and transactional email.
-        They process data only for the service they provide and under their own security and privacy
-        commitments. International transfers may occur with appropriate contractual safeguards.
+        and database services, Stripe billing, OpenAI-powered fix guidance, Google Analytics where
+        consent is given, and transactional email. They process data only for the service they
+        provide and under their own security and privacy commitments. International transfers may
+        occur with appropriate contractual safeguards.
       </p>
 
       <h2>6. Retention</h2>
@@ -81,7 +86,8 @@ export default function PrivacyPage() {
       <p>
         Depending on applicable law, you may request access, correction, deletion, restriction,
         portability, or objection. You may also withdraw consent and complain to the competent data
-        protection authority. We may need to verify the request before acting on it.
+        protection authority. Optional analytics can be turned off at any time from Cookie settings.
+        We may need to verify other requests before acting on them.
       </p>
 
       <h2>9. Changes</h2>

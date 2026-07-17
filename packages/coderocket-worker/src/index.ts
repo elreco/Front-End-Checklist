@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { getPlanEntitlements, type PlanId } from '@coderocket/core'
 import { createServiceClient } from '@coderocket/db'
 import { failAiAnalysisJob, processAiAnalysisJob } from './ai-analysis-job'
+import { processAiUsageJob } from './ai-usage-job'
 import { JobCancelledError, processAuditJob, type WorkerJob } from './audit-job'
 import { sendAlertEmail } from './email'
 import { log } from './log'
@@ -39,7 +40,7 @@ async function processEmail(job: WorkerJob) {
     project: String(job.payload.project ?? 'CodeRocket website'),
     headline: String(job.payload.headline ?? 'Website needs attention'),
     detail: String(job.payload.detail ?? 'Open CodeRocket to review this website check.'),
-    runUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://coderocket.app'}/projects/${job.project_id ?? auditId}`
+    runUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.coderocket.app'}/projects/${job.project_id ?? auditId}`
   })
 }
 
@@ -47,6 +48,7 @@ async function handle(job: WorkerJob) {
   if (job.payload.kind === 'email') return processEmail(job)
   if (job.payload.kind === 'audit') return processAuditJob(job)
   if (job.payload.kind === 'ai_analysis') return processAiAnalysisJob(job)
+  if (job.payload.kind === 'ai_usage') return processAiUsageJob(job)
   throw new Error(`Unsupported worker job kind: ${String(job.payload.kind)}`)
 }
 

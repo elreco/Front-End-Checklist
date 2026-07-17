@@ -12,10 +12,12 @@ import { filterBaselineForSubmittedPages, normalizeSubmittedPages } from '@/lib/
 export const runtime = 'nodejs'
 const MAX_BODY_BYTES = 5 * 1024 * 1024
 
+/** Return a consistent bearer-token rejection without exposing verification detail. */
 function unauthorized(message: string) {
   return Response.json({ error: message }, { status: 401 })
 }
 
+/** Validate, compare, and atomically persist one authenticated CI audit submission. */
 export async function POST(request: Request) {
   const authorization = request.headers.get('authorization')
   const idempotencyKey = request.headers.get('idempotency-key')
@@ -119,7 +121,18 @@ export async function POST(request: Request) {
   if ((usedRuns ?? 0) >= limits.onDemandRunsPerMonth)
     return Response.json({ error: 'Monthly manual/CI run quota reached' }, { status: 429 })
 
-  const { data: baselineAudit, error: baselineAuditError } = await db
+  const { data: project, error: projectError } = await db
+    .from('cr_projects')
+    .select('baseline_reset_at')
+    .eq('id', tokenRow.project_id)
+    .eq('owner_id', tokenRow.owner_id)
+    .is('archived_at', null)
+    .maybeSingle()
+  if (projectError)
+    return Response.json({ error: 'Could not load the monitored site' }, { status: 500 })
+  if (!project) return Response.json({ error: 'Monitored site not found' }, { status: 404 })
+
+  let baselineQuery = db
     .from('cr_audits')
     .select('id,ruleset_version')
     .eq('project_id', tokenRow.project_id)
@@ -128,7 +141,9 @@ export async function POST(request: Request) {
     .neq('gate_status', 'inconclusive')
     .order('created_at', { ascending: false })
     .limit(1)
-    .maybeSingle()
+  if (project.baseline_reset_at)
+    baselineQuery = baselineQuery.gte('created_at', project.baseline_reset_at)
+  const { data: baselineAudit, error: baselineAuditError } = await baselineQuery.maybeSingle()
   if (baselineAuditError)
     return Response.json({ error: 'Could not load the comparison baseline' }, { status: 500 })
   let baseline: AuditFindingInput[] = []
@@ -228,7 +243,7 @@ export async function POST(request: Request) {
     .from('cr_api_tokens')
     .update({ last_used_at: new Date().toISOString() })
     .eq('id', tokenRow.id)
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://coderocket.app'
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.coderocket.app'
   const response = {
     runUrl: `${origin}/projects/${tokenRow.project_id}`,
     auditId,

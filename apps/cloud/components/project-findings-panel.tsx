@@ -45,8 +45,9 @@ export function ProjectFindingsPanel({
       label: 'Ignored',
       count: groups.filter(group => matchesFilter(group, 'muted')).length
     },
-    { value: 'all', label: 'Everything', count: groups.length }
+    { value: 'all', label: 'All', count: groups.length }
   ]
+  const activeFilter = filterOptions.find(option => option.value === filter) ?? filterOptions[0]
   const newCount = filterOptions.find(option => option.value === 'new')?.count ?? 0
   const knownCount = groups.filter(
     group => matchesFilter(group, 'action') && group.status === 'persistent'
@@ -60,30 +61,37 @@ export function ProjectFindingsPanel({
     <section aria-labelledby="findings-title" className="border border-border bg-surface">
       <div className="grid border-border border-b xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,.8fr)]">
         <div className="p-5 sm:p-6">
-          <div>
-            <h2 className="font-heading font-semibold text-xl" id="findings-title">
-              What needs attention
-            </h2>
-            <p className="mt-1 max-w-2xl text-muted text-sm leading-6">
-              Similar problems are grouped together. Each item shows the affected pages, what
-              CodeRocket found, and how to fix it.
-            </p>
-          </div>
-          <Tabs
-            className="mt-5"
-            onValueChange={value => {
-              setFilter(resolveFilter(value))
-              setVisibleLimit(PAGE_SIZE)
-            }}
-            value={filter}
-          >
+          <h2 className="font-heading font-semibold text-xl" id="findings-title">
+            What needs attention
+          </h2>
+          <p className="mt-1 max-w-2xl text-muted text-sm leading-6">
+            Similar problems are grouped together. Each item shows the affected pages, what
+            CodeRocket found, and how to fix it.
+          </p>
+        </div>
+        <ProjectAnalysisSummary
+          importantCount={importantCount}
+          knownCount={knownCount}
+          newCount={newCount}
+        />
+      </div>
+
+      <Tabs
+        onValueChange={value => {
+          setFilter(resolveFilter(value))
+          setVisibleLimit(PAGE_SIZE)
+        }}
+        value={filter}
+      >
+        <div className="flex flex-col gap-3 border-border border-b bg-background px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
             <TabsList
               aria-label="Filter website problems"
-              className="grid w-full grid-cols-2 gap-px rounded-none border border-border bg-border p-0 sm:inline-grid sm:w-auto sm:grid-cols-5"
+              className="inline-grid min-w-max auto-cols-[minmax(88px,auto)] grid-flow-col gap-px rounded-none border border-border bg-border p-0"
             >
               {filterOptions.map(option => (
                 <TabsTrigger
-                  className="group min-h-11 justify-between gap-3 rounded-none bg-surface px-4 py-2 font-mono text-muted text-xs hover:bg-surface-raised hover:text-foreground data-[state=active]:border-signal data-[state=active]:bg-surface-raised data-[state=active]:text-signal"
+                  className="group min-h-10 gap-2 rounded-none bg-surface px-3 py-2 font-mono text-muted text-xs hover:bg-surface-raised hover:text-foreground data-[state=active]:border-signal data-[state=active]:bg-surface-raised data-[state=active]:text-signal"
                   key={option.value}
                   value={option.value}
                   variant="underline"
@@ -98,57 +106,60 @@ export function ProjectFindingsPanel({
                 </TabsTrigger>
               ))}
             </TabsList>
-          </Tabs>
+          </div>
+          <p
+            aria-live="polite"
+            className="shrink-0 font-mono text-[10px] text-muted uppercase tracking-[.1em]"
+          >
+            <span className="text-foreground">{visible.length}</span>{' '}
+            {activeFilter?.label.toLowerCase()} {visible.length === 1 ? 'problem' : 'problems'}
+          </p>
         </div>
-        <ProjectAnalysisSummary
-          importantCount={importantCount}
-          knownCount={knownCount}
-          newCount={newCount}
-        />
-      </div>
 
-      {visible.length === 0 ? (
-        <div className="p-10 text-center">
-          <CheckCircle2 aria-hidden className="mx-auto h-8 w-8 text-success" />
-          <p className="mt-3 font-semibold">
-            {filter === 'action' ? 'Nothing needs your attention' : 'Nothing in this view'}
-          </p>
-          <p className="mx-auto mt-2 max-w-md text-muted text-sm leading-6">
-            {filter === 'action'
-              ? 'You are caught up. The next complete check will add anything that changes.'
-              : 'Choose another view, or wait for the next complete website check.'}
-          </p>
-        </div>
-      ) : (
-        <div className="divide-y divide-border">
-          {shown.map(group => (
-            <ProjectFindingGroupCard
-              documentationUrl={group.findings[0]?.documentationUrl ?? '/docs/rules'}
-              group={group}
-              key={group.key}
-              updateWorkflow={updateWorkflow}
-            />
-          ))}
-          {shown.length < visible.length ? (
-            <div className="flex flex-col items-center justify-between gap-3 bg-background px-5 py-4 sm:flex-row">
-              <p className="text-muted text-xs">
-                Showing {shown.length} of {visible.length} problems in this view.
-              </p>
-              <CodeRocketButton
-                onClick={() => setVisibleLimit(limit => limit + PAGE_SIZE)}
-                size="sm"
-                variant="outline"
-              >
-                Show {Math.min(PAGE_SIZE, visible.length - shown.length)} more
-              </CodeRocketButton>
-            </div>
-          ) : null}
-        </div>
-      )}
+        {visible.length === 0 ? (
+          <div className="p-10 text-center">
+            <CheckCircle2 aria-hidden className="mx-auto h-8 w-8 text-success" />
+            <p className="mt-3 font-semibold">
+              {filter === 'action' ? 'Nothing needs your attention' : 'Nothing in this view'}
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-muted text-sm leading-6">
+              {filter === 'action'
+                ? 'You are caught up. The next complete check will add anything that changes.'
+                : 'Choose another view, or wait for the next complete website check.'}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {shown.map(group => (
+              <ProjectFindingGroupCard
+                documentationUrl={group.findings[0]?.documentationUrl ?? '/docs/rules'}
+                group={group}
+                key={group.key}
+                updateWorkflow={updateWorkflow}
+              />
+            ))}
+            {shown.length < visible.length ? (
+              <div className="flex flex-col items-center justify-between gap-3 bg-background px-5 py-4 sm:flex-row">
+                <p className="text-muted text-xs">
+                  Showing {shown.length} of {visible.length} problems in this view.
+                </p>
+                <CodeRocketButton
+                  onClick={() => setVisibleLimit(limit => limit + PAGE_SIZE)}
+                  size="sm"
+                  variant="outline"
+                >
+                  Show {Math.min(PAGE_SIZE, visible.length - shown.length)} more
+                </CodeRocketButton>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </Tabs>
     </section>
   )
 }
 
+/** Group repeated rule occurrences so one action can represent every affected page. */
 function groupFindings(findings: ProjectFinding[]): FindingGroup[] {
   const groups = new Map<string, FindingGroup>()
   for (const finding of findings) {
@@ -168,6 +179,7 @@ function groupFindings(findings: ProjectFinding[]): FindingGroup[] {
   })
 }
 
+/** Return whether a grouped finding belongs in the selected user-facing view. */
 function matchesFilter(group: FindingGroup, filter: FindingFilter): boolean {
   if (filter === 'all') return true
   if (filter === 'muted') return group.workflowStatus === 'muted'
@@ -177,16 +189,19 @@ function matchesFilter(group: FindingGroup, filter: FindingFilter): boolean {
   return group.status !== 'resolved'
 }
 
+/** Keep arbitrary tab values inside the supported finding filter union. */
 function resolveFilter(value: string): FindingFilter {
   return value === 'all' || value === 'fixed' || value === 'muted' || value === 'new'
     ? value
     : 'action'
 }
 
+/** Sort finding priorities from the most urgent to the least urgent. */
 function priorityRank(priority: ProjectFinding['priority']): number {
   return { critical: 0, high: 1, medium: 2, low: 3 }[priority]
 }
 
+/** Sort new findings before persistent findings and resolved findings. */
 function statusRank(status: ProjectFinding['status']): number {
   return { new: 0, persistent: 1, resolved: 2 }[status]
 }
