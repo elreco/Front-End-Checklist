@@ -17,6 +17,7 @@ interface UpgradeLinkProps {
   children: ReactNode
   className?: string
   currentPlan: PlanId
+  preserveContext?: boolean
   source: UpgradeSource
   targetPlan: Exclude<PlanId, 'free'>
 }
@@ -40,6 +41,7 @@ export function UpgradeLink({
   children,
   className,
   currentPlan,
+  preserveContext = false,
   source,
   targetPlan
 }: UpgradeLinkProps) {
@@ -52,6 +54,8 @@ export function UpgradeLink({
     <Link
       className={className}
       href={href}
+      rel={preserveContext ? 'noreferrer' : undefined}
+      target={preserveContext ? '_blank' : undefined}
       onClick={() =>
         trackProductEvent('upgrade_clicked', {
           current_plan: currentPlan,
@@ -71,6 +75,7 @@ export function PlanLimitUpsell({
   compact = false,
   currentPlan,
   description,
+  preserveContext,
   source,
   targetPlan,
   title
@@ -98,13 +103,20 @@ export function PlanLimitUpsell({
           <p className="mt-1 text-muted text-xs leading-5">{description}</p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <CodeRocketButton asChild size="sm">
-              <UpgradeLink currentPlan={currentPlan} source={source} targetPlan={targetPlan}>
+              <UpgradeLink
+                currentPlan={currentPlan}
+                preserveContext={preserveContext}
+                source={source}
+                targetPlan={targetPlan}
+              >
                 {actionLabel} <ArrowUpRight aria-hidden />
               </UpgradeLink>
             </CodeRocketButton>
             <span className="flex items-center gap-1.5 text-muted text-xs">
               <Check aria-hidden className="h-3.5 w-3.5 text-success" />
-              Your current selection stays here
+              {preserveContext
+                ? 'Plans open in a new tab; this selection stays here'
+                : 'Your current selection stays here'}
             </span>
           </div>
         </div>
@@ -121,8 +133,19 @@ export function PageLimitUpsell({
   plan
 }: PageLimitUpsellProps) {
   const upgrade = getPageLimitUpgrade(plan)
-  if (!upgrade) return null
   const extraDraftPages = Math.max(0, (attemptedPages ?? currentPages) - currentPages)
+  if (!upgrade)
+    return (
+      <div className={`border border-border bg-background ${compact ? 'p-4' : 'p-5'}`}>
+        <p className="font-heading font-semibold text-base">
+          The Agency limit is {currentPages} pages per site
+        </p>
+        <p className="mt-1 text-muted text-xs leading-5">
+          Remove one monitored page before adding another. Your existing checks and history stay
+          unchanged.
+        </p>
+      </div>
+    )
   const title =
     extraDraftPages > 0
       ? `${extraDraftPages} more ${extraDraftPages === 1 ? 'page is' : 'pages are'} ready to add`
@@ -136,6 +159,7 @@ export function PageLimitUpsell({
       source="page_limit"
       targetPlan={upgrade.targetPlan}
       title={title}
+      preserveContext
     />
   )
 }

@@ -3,13 +3,14 @@
 import type { SiteAccessMode } from '@coderocket/core'
 import { ArrowLeft, ArrowRight, Check, Globe2, Radar, UserRound } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
-import { CodeRocketInput, CodeRocketTextarea } from '@repo/design-system/ui/coderocket-field'
+import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
 import type { FormEvent, MouseEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { PageLimitUpsell } from '@/components/plan-limit-upsell'
 import { SiteAccessExplanation, SiteAccessPicker } from '@/components/site-access-picker'
+import { countEnteredPages } from '@/lib/onboarding-pages'
 import type { PlanId } from '@/lib/upgrade'
 import { createProject } from './actions'
+import { OnboardingPagesStep } from './onboarding-pages-step'
 
 const audienceOptions = [
   {
@@ -233,81 +234,21 @@ export function OnboardingForm({
           <SiteAccessExplanation mode={accessMode} />
         </fieldset>
 
-        <fieldset className="cr-step-enter space-y-5" data-setup-step="3" hidden={step !== 3}>
-          <legend className="sr-only">Pages to watch</legend>
-          <h2
-            className="font-heading font-semibold text-2xl outline-none"
-            id="setup-step-3-title"
-            tabIndex={-1}
-          >
-            Which pages matter most?
-          </h2>
-          <p className="max-w-2xl text-muted leading-7">
-            Start with pages that bring sales, leads, or trust. Add one path per line. You can
-            change this list later.
-          </p>
-          <label className="block max-w-2xl font-semibold text-sm" htmlFor="monitored-pages">
-            Pages to watch
-            <CodeRocketTextarea
-              aria-describedby="page-capacity-status"
-              id="monitored-pages"
-              name="pages"
-              onChange={event => {
-                setPagesValue(event.target.value)
-                if (countEnteredPages(event.target.value) <= pagesPerProject)
-                  setPageLimitAttempted(false)
-              }}
-              required
-              value={pagesValue}
-            />
-          </label>
-          <div className="max-w-2xl space-y-3" id="page-capacity-status">
-            <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-background p-4 text-sm">
-              <p className="flex items-start gap-2">
-                <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                <span>
-                  Your first
-                  {accessMode === 'private'
-                    ? ' check will start after you connect your CI environment.'
-                    : ' check starts automatically after this step.'}
-                </span>
-              </p>
-              <span
-                className={`shrink-0 font-mono text-xs ${
-                  extraPages > 0
-                    ? 'text-danger'
-                    : pageCount >= pagesPerProject
-                      ? 'text-accent'
-                      : 'text-muted'
-                }`}
-              >
-                {pageCount} / {pagesPerProject} pages
-              </span>
-            </div>
-            {pageCount === pagesPerProject - 1 ? (
-              <p className="border border-border bg-background px-4 py-3 text-muted text-xs">
-                One page slot remains on your {planName} plan.
-              </p>
-            ) : null}
-            {extraPages > 0 ? (
-              <p
-                className="border border-danger bg-background p-4 text-danger text-sm"
-                role={pageLimitAttempted ? 'alert' : 'status'}
-              >
-                Keep the {extraPages} extra {extraPages === 1 ? 'page' : 'pages'} here while you
-                compare plans, or remove {extraPages === 1 ? 'it' : 'them'} to continue with{' '}
-                {planName}.
-              </p>
-            ) : null}
-            {pageCount >= pagesPerProject ? (
-              <PageLimitUpsell
-                attemptedPages={pageCount}
-                currentPages={pagesPerProject}
-                plan={plan}
-              />
-            ) : null}
-          </div>
-        </fieldset>
+        <OnboardingPagesStep
+          accessMode={accessMode}
+          extraPages={extraPages}
+          onPagesChange={value => {
+            setPagesValue(value)
+            if (countEnteredPages(value) <= pagesPerProject) setPageLimitAttempted(false)
+          }}
+          pageCount={pageCount}
+          pageLimitAttempted={pageLimitAttempted}
+          pagesPerProject={pagesPerProject}
+          pagesValue={pagesValue}
+          plan={plan}
+          planName={planName}
+          visible={step === 3}
+        />
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-border border-t pt-5">
           {step > 1 ? (
@@ -335,13 +276,4 @@ export function OnboardingForm({
       </div>
     </form>
   )
-}
-
-/** Count distinct non-empty draft lines without changing what the visitor typed. */
-function countEnteredPages(value: string): number {
-  const pages = value
-    .split('\n')
-    .map(page => page.trim())
-    .filter(Boolean)
-  return new Set(pages).size
 }

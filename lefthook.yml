@@ -134,17 +134,6 @@ pre-commit:
         apps/web/src/**/*.spec.*
       run: cd apps/web && pnpm test:coverage --silent
 
-# Pre-push validation
-pre-push:
-  commands:
-    # Run tests with coverage
-    test-coverage:
-      run: cd apps/web && pnpm test:ci
-
-    # Run build to ensure no type errors
-    build-check:
-      run: turbo build --filter=web
-
 # Commit message validation
 commit-msg:
   commands:

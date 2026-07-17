@@ -22,6 +22,7 @@ const SIDEBAR_COOKIE_KEY = 'coderocket-sidebar-collapsed'
 const SIDEBAR_CHANGE_EVENT = 'coderocket:sidebar-change'
 let sidebarMemoryState = false
 
+/** Read the persisted sidebar preference while keeping a safe in-memory fallback. */
 function readSidebarState(fallback = false): boolean {
   try {
     const storedState = window.localStorage.getItem(SIDEBAR_STORAGE_KEY)
@@ -33,7 +34,9 @@ function readSidebarState(fallback = false): boolean {
   return sidebarMemoryState
 }
 
+/** Notify React when another browser context changes the sidebar preference. */
 function subscribeToSidebarState(onStoreChange: () => void): () => void {
+  /** Relay relevant browser storage changes to the external-store subscriber. */
   const handleStorage = (event: StorageEvent) => {
     if (event.key === SIDEBAR_STORAGE_KEY || event.key === null) onStoreChange()
   }
@@ -45,6 +48,7 @@ function subscribeToSidebarState(onStoreChange: () => void): () => void {
   }
 }
 
+/** Persist one sidebar state and notify every mounted product shell. */
 function writeSidebarState(collapsed: boolean): void {
   sidebarMemoryState = collapsed
   try {
@@ -56,6 +60,7 @@ function writeSidebarState(collapsed: boolean): void {
   window.dispatchEvent(new Event(SIDEBAR_CHANGE_EVENT))
 }
 
+/** Keep the server-rendered shell aligned with the latest browser preference. */
 async function writeSidebarCookie(collapsed: boolean): Promise<void> {
   try {
     await window.cookieStore.set({
@@ -101,6 +106,7 @@ export function AppShellLayout({
     void writeSidebarCookie(readSidebarState(initialCollapsed))
   }, [initialCollapsed])
 
+  /** Toggle the desktop sidebar without affecting navigation or account state. */
   const toggleSidebar = () => {
     writeSidebarState(!collapsed)
   }
@@ -215,6 +221,7 @@ export function AppShellLayout({
   )
 }
 
+/** Summarize plan usage and expose one contextual next-plan action. */
 function PlanPrompt({
   plan,
   projectCount,

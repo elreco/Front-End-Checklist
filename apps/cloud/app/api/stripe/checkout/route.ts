@@ -3,6 +3,7 @@ import { createStripeClient, stripeAiOveragePrice, stripePriceForPlan } from '@/
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { parseUpgradeSource } from '@/lib/upgrade'
 
+/** Start a plan checkout while preserving the safe in-product upgrade attribution. */
 export async function POST(request: Request) {
   if (process.env.CODEROCKET_COMMERCIAL_LAUNCH !== 'true') {
     redirect('/pricing?checkout=unavailable')

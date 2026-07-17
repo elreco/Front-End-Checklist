@@ -81,6 +81,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
             <ProjectHeaderActions
               project={project}
               shareAuditId={latest?.status === 'succeeded' ? latest.id : undefined}
+              showCiSetup={waitingForCi}
             />
           </div>
         )}

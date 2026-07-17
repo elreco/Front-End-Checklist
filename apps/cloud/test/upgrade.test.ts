@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { getPlanEntitlements } from '@coderocket/core'
 import {
   buildPricingHref,
   getNextPlan,
@@ -16,16 +17,20 @@ describe('contextual upgrades', () => {
   })
 
   it('describes the extra page capacity unlocked by the next plan', () => {
-    assert.deepEqual(getPageLimitUpgrade('free'), {
+    const freeUpgrade = getPageLimitUpgrade('free')
+    const personalUpgrade = getPageLimitUpgrade('solo')
+    assert.deepEqual(freeUpgrade, {
       additionalPages: 20,
       targetLimit: 25,
       targetPlan: 'solo'
     })
-    assert.deepEqual(getPageLimitUpgrade('solo'), {
+    assert.deepEqual(personalUpgrade, {
       additionalPages: 25,
       targetLimit: 50,
       targetPlan: 'agency'
     })
+    assert.equal(freeUpgrade?.targetLimit, getPlanEntitlements('solo').pagesPerProject)
+    assert.equal(personalUpgrade?.targetLimit, getPlanEntitlements('agency').pagesPerProject)
     assert.equal(getPageLimitUpgrade('agency'), undefined)
   })
 

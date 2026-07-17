@@ -37,7 +37,7 @@ export function DocsNavigation() {
         return (
           <Link
             aria-current={current ? 'page' : undefined}
-            className={`flex items-center gap-3 border-l-2 px-3 py-2.5 text-sm transition-colors ${current ? 'border-accent bg-surface-raised text-foreground' : 'border-transparent text-muted hover:border-border hover:bg-surface-raised hover:text-foreground'}`}
+            className={`flex items-center gap-3 border-l-2 px-3 py-2.5 text-xs transition-colors ${current ? 'border-accent bg-surface-raised text-foreground' : 'border-transparent text-muted hover:border-border hover:bg-surface-raised hover:text-foreground'}`}
             href={href}
             key={href}
           >
