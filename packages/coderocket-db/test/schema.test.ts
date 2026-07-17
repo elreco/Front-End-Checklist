@@ -189,6 +189,22 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('stores managed website access encrypted and owner-scoped', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607170007_managed_access_connections.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /create table public\.cr_project_access_connections/)
+    assert.match(sql, /encrypted_headers text not null/)
+    assert.match(sql, /enable row level security/)
+    assert.match(sql, /auth\.uid\(\) = owner_id/)
+    assert.match(sql, /scope in \('all', 'authenticated'\)/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
   it('stores only bounded HTTPS social preview image URLs on monitored sites', async () => {
     const sql = await readFile(
       new URL('../supabase/migrations/202607170003_project_social_images.sql', import.meta.url),

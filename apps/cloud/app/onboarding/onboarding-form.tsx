@@ -6,10 +6,10 @@ import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
 import type { FormEvent, MouseEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { SiteAccessExplanation, SiteAccessPicker } from '@/components/site-access-picker'
 import { countEnteredPages, getEnteredPages } from '@/lib/onboarding-pages'
 import type { PlanId } from '@/lib/upgrade'
 import { createProject } from './actions'
+import { OnboardingAccessOptions } from './onboarding-access-options'
 import { OnboardingPagesStep } from './onboarding-pages-step'
 
 const steps = [
@@ -21,17 +21,22 @@ const lastStep = steps.length
 
 /** A short, keyboard-friendly setup wizard for the first monitored website. */
 export function OnboardingForm({
+  initialSiteName = '',
+  initialSiteUrl = '',
   pagesPerProject,
   plan,
   planName
 }: {
+  initialSiteName?: string
+  initialSiteUrl?: string
   pagesPerProject: number
   plan: PlanId
   planName: string
 }) {
   const [step, setStep] = useState(1)
+  const [siteUrl, setSiteUrl] = useState(initialSiteUrl)
   const [accessMode, setAccessMode] = useState<SiteAccessMode>('public')
-  const [pagesValue, setPagesValue] = useState('/\n/pricing\n/contact')
+  const [pagesValue, setPagesValue] = useState('/')
   const [authenticatedPages, setAuthenticatedPages] = useState<string[]>([])
   const [secureRunnerRequired, setSecureRunnerRequired] = useState(false)
   const [pageLimitAttempted, setPageLimitAttempted] = useState(false)
@@ -163,11 +168,13 @@ export function OnboardingForm({
             Which website should CodeRocket watch?
           </h2>
           <p className="max-w-2xl text-muted leading-7">
-            Add the name and HTTPS address, then tell us how the selected pages can be reached.
+            Add the name and HTTPS address. CodeRocket will test how the selected pages can be
+            reached automatically.
           </p>
           <label className="block max-w-2xl font-semibold text-sm" htmlFor="project-name">
             Website name
             <CodeRocketInput
+              defaultValue={initialSiteName}
               id="project-name"
               maxLength={120}
               name="name"
@@ -184,61 +191,45 @@ export function OnboardingForm({
               autoComplete="url"
               id="production-url"
               name="url"
+              onChange={event => setSiteUrl(event.target.value)}
               placeholder="https://www.example.com"
               required
               type="url"
+              value={siteUrl}
             />
             <span className="mt-2 block font-normal text-muted text-xs">
-              It must start with https://. Mark protected infrastructure below when only your own
-              runner can reach it.
+              It must start with https://. No access configuration is required to continue.
             </span>
           </label>
-          <div className="space-y-4 border-border border-t pt-5">
-            <div>
-              <h3 className="font-heading font-semibold text-lg">
-                Which visitor state should CodeRocket check?
-              </h3>
-              <p className="mt-2 max-w-2xl text-muted text-sm leading-6">
-                Choose whether the application itself requires a signed-in session. Cloudflare,
-                preview passwords, firewalls, VPNs, and other infrastructure layers are described
-                separately below.
-              </p>
+          <div className="max-w-2xl border border-signal bg-signal/10 p-4">
+            <div className="flex items-start gap-3">
+              <ShieldCheck aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-signal" />
+              <div>
+                <h3 className="font-heading font-semibold text-base">
+                  Access is checked automatically
+                </h3>
+                <p className="mt-1 text-muted text-sm leading-6">
+                  CodeRocket first tries the normal public website. If sign-in, Cloudflare, or
+                  another protection blocks a page, you will get one guided setup afterwards.
+                </p>
+              </div>
             </div>
-            <SiteAccessPicker
-              onChange={mode => {
-                setAccessMode(mode)
-                if (mode === 'public') setAuthenticatedPages([])
-              }}
-              value={accessMode}
-            />
-            <SiteAccessExplanation mode={accessMode} secureRunnerRequired={secureRunnerRequired} />
-            <label className="flex max-w-2xl cursor-pointer items-start gap-3 border border-border bg-background p-4">
-              <input
-                checked={secureRunnerRequired}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-signal"
-                name="secureRunnerRequired"
-                onChange={event => setSecureRunnerRequired(event.target.checked)}
-                type="checkbox"
-                value="true"
-              />
-              <ShieldCheck aria-hidden className="h-4 w-4 shrink-0 text-signal" />
-              <span>
-                <span className="block font-semibold text-sm">
-                  The cloud cannot open this site directly
-                </span>
-                <span className="mt-1 block text-muted text-xs leading-5">
-                  Select this for Cloudflare Access, a preview password, custom headers, an IP
-                  allowlist, client certificate, VPN, private network, or another infrastructure
-                  restriction. Several can apply together.
-                </span>
-              </span>
-            </label>
           </div>
+          <OnboardingAccessOptions
+            accessMode={accessMode}
+            onAccessModeChange={mode => {
+              setAccessMode(mode)
+              if (mode === 'public') setAuthenticatedPages([])
+            }}
+            onSecureRunnerRequiredChange={setSecureRunnerRequired}
+            secureRunnerRequired={secureRunnerRequired}
+          />
         </fieldset>
 
         <OnboardingPagesStep
           accessMode={accessMode}
           authenticatedPages={submittedAuthenticatedPages}
+          cloudDiscoveryBlocked={secureRunnerRequired || accessMode === 'private'}
           extraPages={extraPages}
           onPagesChange={value => {
             setPagesValue(value)
@@ -253,6 +244,7 @@ export function OnboardingForm({
           plan={plan}
           planName={planName}
           secureRunnerRequired={effectiveSecureRunnerRequired}
+          siteUrl={siteUrl}
           visible={step === lastStep}
           onAuthenticatedPagesChange={setAuthenticatedPages}
         />

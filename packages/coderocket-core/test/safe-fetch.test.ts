@@ -82,6 +82,72 @@ describe('safe HTML fetch', () => {
     )
   })
 
+  it('reports Vercel deployment protection as an explicit operational result', async () => {
+    const fakeFetch = async () =>
+      new Response('<title>Authentication Required</title>', {
+        status: 401,
+        headers: {
+          'content-type': 'text/html',
+          'x-vercel-challenge-token': 'challenge'
+        }
+      })
+    await assert.rejects(
+      () => fetchPublicHtml('https://93.184.216.34', { fetchImplementation: fakeFetch }),
+      /Vercel deployment protection/
+    )
+  })
+
+  it('reports HTTP Basic authentication as an explicit operational result', async () => {
+    const fakeFetch = async () =>
+      new Response('Authentication required', {
+        status: 401,
+        headers: { 'content-type': 'text/html', 'www-authenticate': 'Basic realm="Preview"' }
+      })
+    await assert.rejects(
+      () => fetchPublicHtml('https://93.184.216.34', { fetchImplementation: fakeFetch }),
+      /Basic authentication/
+    )
+  })
+
+  it('does not treat a redirect to a sign-in page as the requested private page', async () => {
+    const fakeFetch = async () =>
+      new Response(null, { status: 302, headers: { location: '/auth/login?next=%2Fdashboard' } })
+    await assert.rejects(
+      () =>
+        fetchPublicHtml('https://93.184.216.34/dashboard', {
+          fetchImplementation: fakeFetch
+        }),
+      /redirected to a sign-in screen/
+    )
+  })
+
+  it('does not treat a rendered sign-in screen as the requested private page', async () => {
+    const fakeFetch = async () =>
+      new Response(
+        '<!doctype html><title>Sign in</title><form><input type="password"></form>',
+        { status: 200, headers: { 'content-type': 'text/html' } }
+      )
+    await assert.rejects(
+      () =>
+        fetchPublicHtml('https://93.184.216.34/dashboard', {
+          fetchImplementation: fakeFetch
+        }),
+      /returned a sign-in screen/
+    )
+  })
+
+  it('allows a monitored sign-in page to contain a password field', async () => {
+    const fakeFetch = async () =>
+      new Response(
+        '<!doctype html><title>Sign in</title><form><input type="password"></form>',
+        { status: 200, headers: { 'content-type': 'text/html' } }
+      )
+    const response = await fetchPublicHtml('https://93.184.216.34/login', {
+      fetchImplementation: fakeFetch
+    })
+    assert.equal(response.status, 200)
+  })
+
   it('sends runner access headers only to the original origin', async () => {
     const received: Array<string | null> = []
     let requestCount = 0

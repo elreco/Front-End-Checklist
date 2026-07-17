@@ -1,10 +1,10 @@
 import type { WebsiteLevel, WebsiteLevelResult } from '@coderocket/core/website-level'
-import { CodeRocketMark } from '@repo/design-system/coderocket-logo'
 import { AlertTriangle, CheckCircle2, HelpCircle } from '@repo/design-system/icons'
 import {
   getWebsiteLevelNextStep,
   getWebsiteLevelPresentation
 } from '@/lib/website-level-presentation'
+import { WebsiteLevelMedal } from './website-level-medal'
 
 const RANKED_LEVELS: Array<Exclude<WebsiteLevel, 'unverified' | 'needs_attention'>> = [
   'bronze',
@@ -28,7 +28,7 @@ export function WebsiteLevelBadge({ level }: { level: WebsiteLevel }) {
   )
 }
 
-/** Render the geometric CodeRocket level medallion used in app and report surfaces. */
+/** Render a ranked medal or a deliberately neutral unranked status mark. */
 export function WebsiteLevelMark({
   animate = false,
   level,
@@ -40,17 +40,15 @@ export function WebsiteLevelMark({
 }) {
   const presentation = getWebsiteLevelPresentation(level)
   const compact = size === 'sm'
+  if (level === 'bronze' || level === 'silver' || level === 'gold' || level === 'platinum')
+    return <WebsiteLevelMedal animate={animate} level={level} size={size} />
   return (
     <div
       aria-label={`${presentation.label} website health level`}
       className={`relative flex shrink-0 items-center justify-center border ${compact ? 'h-12 w-12' : 'h-28 w-28'} ${presentation.borderClassName} ${presentation.backgroundClassName} ${presentation.textClassName} ${animate ? 'cr-level-arrive' : ''}`}
       role="img"
     >
-      <svg
-        aria-hidden
-        className={`absolute inset-1 ${level === 'platinum' ? 'cr-level-orbit' : ''}`}
-        viewBox="0 0 100 100"
-      >
+      <svg aria-hidden className="absolute inset-1" viewBox="0 0 100 100">
         <circle
           cx="50"
           cy="50"
@@ -58,7 +56,7 @@ export function WebsiteLevelMark({
           opacity="0.34"
           r="43"
           stroke="currentColor"
-          strokeDasharray={level === 'platinum' ? '4 5' : '2 8'}
+          strokeDasharray="2 8"
           strokeWidth="1.5"
         />
         <path
@@ -69,13 +67,9 @@ export function WebsiteLevelMark({
           strokeWidth="1.5"
         />
       </svg>
-      {level === 'unverified' || level === 'needs_attention' ? (
-        <span className={`font-mono font-semibold ${compact ? 'text-sm' : 'text-xl'}`}>
-          {level === 'unverified' ? '—' : '!'}
-        </span>
-      ) : (
-        <CodeRocketMark className={compact ? 'h-7 w-7' : 'h-14 w-14'} />
-      )}
+      <span className={`font-mono font-semibold ${compact ? 'text-sm' : 'text-xl'}`}>
+        {level === 'unverified' ? '—' : '!'}
+      </span>
     </div>
   )
 }

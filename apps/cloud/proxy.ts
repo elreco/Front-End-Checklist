@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
+import { getSafeAuthDestination } from './lib/auth-redirect'
 import { isAuthenticatedProductRoute } from './lib/product-routes'
 import { getSupabaseServerConfig } from './lib/supabase/config'
 
@@ -67,7 +68,11 @@ export async function proxy(request: NextRequest) {
   if (protectedRoute && !data.user) {
     const login = request.nextUrl.clone()
     login.pathname = '/login'
-    login.searchParams.set('next', request.nextUrl.pathname)
+    login.search = ''
+    login.searchParams.set(
+      'next',
+      getSafeAuthDestination(`${request.nextUrl.pathname}${request.nextUrl.search}`)
+    )
     return NextResponse.redirect(login)
   }
   return response

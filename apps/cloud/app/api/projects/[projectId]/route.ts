@@ -57,7 +57,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
   )
   if (!normalized.success) return Response.json({ error: normalized.error }, { status: 422 })
 
-  const [{ data: subscription }, { count: activeChecks }] = await Promise.all([
+  const [
+    { data: subscription },
+    { count: activeChecks },
+    { data: managedAccess }
+  ] = await Promise.all([
     supabase.from('cr_subscriptions').select('plan_id').eq('owner_id', auth.user.id).maybeSingle(),
     supabase
       .from('cr_jobs')
@@ -65,7 +69,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
       .eq('owner_id', auth.user.id)
       .eq('project_id', projectId)
       .eq('kind', 'audit')
-      .in('status', ['queued', 'leased'])
+      .in('status', ['queued', 'leased']),
+    supabase
+      .from('cr_project_access_connections')
+      .select('id,status')
+      .eq('project_id', projectId)
+      .eq('owner_id', auth.user.id)
+      .maybeSingle()
   ])
   const plan = resolvePlan(subscription?.plan_id)
   const limits = getPlanEntitlements(plan)
@@ -82,6 +92,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
       { status: 409 }
     )
 
+  const siteUrlChanged = project.production_url !== normalized.url
+  const hasUsableManagedAccess = managedAccess?.status === 'verified' && !siteUrlChanged
+  const secureRunnerRequired =
+    normalized.accessMode !== 'public' && !hasUsableManagedAccess
   const changed = projectConfigurationChanged(
     {
       authenticatedPages: project.authenticated_page_paths ?? [],
@@ -91,12 +105,17 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     },
     {
       ...normalized,
-      secureRunnerRequired: normalized.accessMode !== 'public'
+      secureRunnerRequired
     }
   )
   if (changed) {
     const changedAt = new Date().toISOString()
-    const siteUrlChanged = project.production_url !== normalized.url
+    if (siteUrlChanged && managedAccess)
+      await supabase
+        .from('cr_project_access_connections')
+        .delete()
+        .eq('project_id', projectId)
+        .eq('owner_id', auth.user.id)
     const { error } = await supabase
       .from('cr_projects')
       .update({
@@ -105,8 +124,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
         baseline_reset_at: changedAt,
         page_paths: normalized.pages,
         production_url: normalized.url,
-        schedule_enabled: normalized.accessMode === 'public',
-        secure_runner_required: normalized.accessMode !== 'public',
+        schedule_enabled: normalized.accessMode === 'public' || hasUsableManagedAccess,
+        secure_runner_required: secureRunnerRequired,
         ...(siteUrlChanged ? { social_image_url: null } : {}),
         updated_at: changedAt
       })
@@ -117,7 +136,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
       return Response.json({ error: 'The monitored URLs could not be saved.' }, { status: 500 })
   }
 
-  const shouldQueue = input.data.checkNow && normalized.accessMode === 'public'
+  const shouldQueue =
+    input.data.checkNow && (normalized.accessMode === 'public' || hasUsableManagedAccess)
   const queueResult = shouldQueue
     ? await queueConfigurationCheck({
         ownerId: auth.user.id,
@@ -135,7 +155,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     queued: queueResult.queued,
     checkWarning: queueResult.warning,
     pages: normalized.pages,
-    secureRunnerRequired: normalized.accessMode !== 'public',
+    secureRunnerRequired,
     url: normalized.url
   })
 }

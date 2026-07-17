@@ -11,6 +11,7 @@ import { toast } from '@repo/design-system/ui/coderocket-toast'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
+import { getSafeAuthDestination } from '@/lib/auth-redirect'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 type PendingAction = OAuthProvider | 'password' | 'magic'
@@ -23,7 +24,7 @@ export function LoginForm() {
   async function signInWithProvider(provider: OAuthProvider) {
     setPendingAction(provider)
     const supabase = createSupabaseBrowserClient()
-    const next = search.get('next') ?? '/dashboard'
+    const next = getSafeAuthDestination(search.get('next'))
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -42,10 +43,13 @@ export function LoginForm() {
     const mode = String(formData.get('mode') ?? 'password') as 'password' | 'magic'
     setPendingAction(mode)
     const supabase = createSupabaseBrowserClient()
+    const next = getSafeAuthDestination(search.get('next'))
     if (mode === 'magic') {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard` }
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+        }
       })
       if (error) toast.error('Magic link could not be sent', { description: error.message })
       else
@@ -61,7 +65,7 @@ export function LoginForm() {
       setPendingAction(undefined)
       return
     }
-    window.location.assign(search.get('next') ?? '/dashboard')
+    window.location.assign(next)
   }
 
   return (

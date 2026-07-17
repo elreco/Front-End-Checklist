@@ -75,7 +75,7 @@ export function ProjectAccessRecovery({
                 projectId={project.id}
                 receivedChecks={project.ciRuns}
                 siteUrl={project.url}
-                triggerLabel="Connect secure access"
+                triggerLabel="Fix page access"
               />
             ) : null}
             {canRetryCloud ? (
@@ -134,9 +134,9 @@ function getRecoveryContent(kind: ReturnType<typeof getProjectRecoveryKind>, pri
     }
   if (kind === 'access')
     return {
-      title: 'Give CodeRocket secure access',
+      title: 'Some pages could not be opened',
       description:
-        'The website answered, but sign-in, a firewall, or a challenge blocked the cloud check. Run it from an environment that can already open these pages.'
+        'CodeRocket detected sign-in or another protection. Connect access once, then future checks can run automatically.'
     }
   return {
     title: 'Retry the incomplete check',

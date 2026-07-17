@@ -1,6 +1,6 @@
 'use client'
 
-import { LockKeyhole, Send, Terminal } from '@repo/design-system/icons'
+import { Check, Copy, LockKeyhole, Send } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { toast } from '@repo/design-system/ui/coderocket-toast'
 import {
@@ -27,7 +27,7 @@ import {
   type SecureAccessMethod
 } from '@/lib/secure-access-copy'
 import { CiPlatformPicker } from './ci-platform-picker'
-import { ConnectionStatus, HandoffAction, PageAccessSummary } from './project-cli-setup-sections'
+import { ConnectionStatus, PageAccessSummary } from './project-cli-setup-sections'
 import { SecureAccessAdvancedSetup } from './secure-access-advanced-setup'
 import { SecureAccessMethodPicker } from './secure-access-method-picker'
 
@@ -42,7 +42,7 @@ interface ProjectSecureAccessSetupProps {
   triggerLabel?: string
 }
 
-/** Guide owners and developers through secure checks without exposing CI first. */
+/** Offer one simple protected-page recovery path before any developer controls. */
 export function ProjectCliSetup({
   authenticatedPages,
   configured,
@@ -53,9 +53,7 @@ export function ProjectCliSetup({
   siteUrl,
   triggerLabel
 }: ProjectSecureAccessSetupProps) {
-  const [accessMethods, setAccessMethods] = useState<SecureAccessMethod[]>(
-    authenticatedPages.length > 0 ? ['account'] : ['unknown']
-  )
+  const [accessMethods, setAccessMethods] = useState<SecureAccessMethod[]>(['unknown'])
   const [copied, setCopied] = useState<keyof SecureAccessCopy | null>(null)
   const [platform, setPlatform] = useState<CiPlatform>('github')
   const configuration = useMemo(
@@ -82,32 +80,24 @@ export function ProjectCliSetup({
       }),
     [accessMethods, authenticatedPages, configuration, pages, platform, siteUrl]
   )
+  const connected = receivedChecks > 0
+  const buttonLabel =
+    triggerLabel ??
+    (connected ? 'Access details' : configured ? 'Finish page access' : 'Fix page access')
 
-  /** Copy one safe handoff without including credentials. */
+  /** Copy one secret-free setup or provider request. */
   async function copyText(kind: keyof SecureAccessCopy) {
     try {
       await navigator.clipboard.writeText(copy[kind])
       setCopied(kind)
-      toast.success(
-        kind === 'developerInstructions' ? 'Developer setup copied' : 'Access request copied',
-        {
-          description: 'No project key, password, cookie, or access secret was included.'
-        }
-      )
+      toast.success(kind === 'developerInstructions' ? 'Setup copied' : 'Access request copied', {
+        description: 'No password, cookie, project key, or private access value was included.'
+      })
       window.setTimeout(() => setCopied(null), 2_000)
     } catch {
       toast.error('Could not copy the instructions')
     }
   }
-
-  const connected = receivedChecks > 0
-  const buttonLabel =
-    triggerLabel ??
-    (connected
-      ? 'Secure access details'
-      : configured
-        ? 'Finish secure access'
-        : 'Connect secure access')
 
   return (
     <Dialog>
@@ -128,70 +118,109 @@ export function ProjectCliSetup({
             </span>
             <div>
               <p className="font-mono text-[10px] text-signal uppercase tracking-[.14em]">
-                Protected site access
+                Complete website check
               </p>
               <DialogTitle className="mt-2 font-heading text-2xl">
-                Let CodeRocket reach protected pages
+                {connected ? 'Protected pages are connected' : 'Finish checking every page'}
               </DialogTitle>
               <DialogDescription className="mt-2 max-w-2xl leading-6">
-                Run the check from an environment that can already open this site. Website
-                credentials stay there; GitHub or GitLab does not create access by itself, and
-                CodeRocket receives only the check result.
+                {connected
+                  ? 'CodeRocket can receive complete checks from the environment that opens this website.'
+                  : 'Some pages ask for sign-in or block cloud checks. Connect them once from an environment that already has access; future checks then run automatically.'}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-none p-6 [scrollbar-gutter:stable]">
-          <ConnectionStatus configured={configured} receivedChecks={receivedChecks} />
+          {configured || connected ? (
+            <ConnectionStatus configured={configured} receivedChecks={receivedChecks} />
+          ) : null}
           <PageAccessSummary authenticatedPages={authenticatedPages} pages={pages} />
-          <SecureAccessMethodPicker onChange={setAccessMethods} value={accessMethods} />
-          <CiPlatformPicker onChange={setPlatform} value={platform} />
 
-          <section aria-labelledby="handoff-title" className="border border-border bg-background">
-            <div className="border-border border-b p-5">
+          {!connected ? (
+            <section
+              aria-labelledby="secure-handoff-title"
+              className="border border-signal bg-background p-5"
+            >
               <p className="font-mono text-[10px] text-signal uppercase tracking-[.12em]">
-                No technical setup required from you
+                Recommended · one-time setup
               </p>
-              <h3 className="mt-2 font-heading font-semibold text-lg" id="handoff-title">
-                Send the right instructions
+              <h3 className="mt-2 font-heading font-semibold text-lg" id="secure-handoff-title">
+                Send one ready-to-use setup
               </h3>
-              <p className="mt-1 text-muted text-sm leading-6">
-                Choose who can configure access. Secrets are deliberately excluded from both
-                formats.
+              <p className="mt-2 max-w-2xl text-muted text-sm leading-6">
+                Send this to the person who manages the website. It includes the selected pages,
+                generated configuration, and a clear success check. No password or private access
+                value is copied.
               </p>
-            </div>
-            <div className="grid gap-px bg-border sm:grid-cols-2">
-              <HandoffAction
-                copied={copied === 'developerInstructions'}
-                description="Includes the generated configuration, protected pages, and success criteria."
-                icon={Terminal}
-                label="Send to my developer"
-                onCopy={() => copyText('developerInstructions')}
-              />
-              <HandoffAction
-                copied={copied === 'providerRequest'}
-                description="Explains the narrow access needed without asking anyone to disable protection."
-                icon={Send}
-                label="Ask my hosting or security provider"
-                onCopy={() => copyText('providerRequest')}
-              />
-            </div>
-          </section>
+              <ol className="mt-4 grid gap-px bg-border sm:grid-cols-3">
+                {[
+                  'The prepared job is added once',
+                  'Website access stays private',
+                  'Future checks run automatically'
+                ].map((item, index) => (
+                  <li className="flex items-start gap-2 bg-surface p-3 text-xs" key={item}>
+                    <span className="font-mono text-signal">0{index + 1}</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <CodeRocketButton onClick={() => copyText('developerInstructions')} type="button">
+                  {copied === 'developerInstructions' ? (
+                    <Check aria-hidden />
+                  ) : (
+                    <Copy aria-hidden />
+                  )}
+                  <span aria-live="polite">
+                    {copied === 'developerInstructions'
+                      ? 'Setup copied'
+                      : 'Copy ready-to-send setup'}
+                  </span>
+                </CodeRocketButton>
+                <CodeRocketButton
+                  onClick={() => copyText('providerRequest')}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Send aria-hidden />
+                  {copied === 'providerRequest' ? 'Request copied' : 'No developer? Copy a request'}
+                </CodeRocketButton>
+              </div>
+            </section>
+          ) : null}
 
-          <SecureAccessAdvancedSetup
-            accessMethods={accessMethods}
-            configuration={configuration}
-            configured={configured}
-            plan={plan}
-            platform={platform}
-            projectId={projectId}
-          />
+          <details className="border border-border bg-background">
+            <summary className="cursor-pointer p-4 font-semibold text-sm transition-colors hover:bg-surface-raised">
+              Developer options and other platforms
+            </summary>
+            <div className="space-y-5 border-border border-t p-4 sm:p-5">
+              <CiPlatformPicker onChange={setPlatform} value={platform} />
+              <details className="border border-border bg-surface">
+                <summary className="cursor-pointer p-4 font-semibold text-sm transition-colors hover:bg-surface-raised">
+                  Describe the protection — optional
+                </summary>
+                <div className="border-border border-t p-4">
+                  <SecureAccessMethodPicker onChange={setAccessMethods} value={accessMethods} />
+                </div>
+              </details>
+              <SecureAccessAdvancedSetup
+                accessMethods={accessMethods}
+                configuration={configuration}
+                configured={configured}
+                plan={plan}
+                platform={platform}
+                projectId={projectId}
+              />
+            </div>
+          </details>
         </div>
 
         <DialogFooter className="shrink-0 border-border border-t bg-background p-4 sm:items-center sm:justify-between">
           <CodeRocketButton asChild size="sm" variant="ghost">
-            <Link href="/docs/cli">Open the protected-site guide →</Link>
+            <Link href="/docs/cli">How protected checks work →</Link>
           </CodeRocketButton>
           <DialogClose asChild>
             <CodeRocketButton size="sm" type="button" variant="outline">

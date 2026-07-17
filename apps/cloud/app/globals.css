@@ -205,12 +205,40 @@ input:focus-visible {
     transform: scale(1) rotate(0);
   }
 }
-@keyframes cr-level-orbit {
-  from {
-    transform: rotate(0);
+@keyframes cr-level-medal-float {
+  0%,
+  100% {
+    transform: translateY(0);
   }
-  to {
-    transform: rotate(360deg);
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@keyframes cr-level-medal-sheen {
+  0%,
+  68% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  76% {
+    opacity: 0.3;
+  }
+  88%,
+  100% {
+    opacity: 0;
+    transform: translateX(125px);
+  }
+}
+@keyframes cr-level-medal-spark {
+  0%,
+  72%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+  82% {
+    opacity: 1;
+    transform: scale(1.15);
   }
 }
 .cr-navigation-progress {
@@ -247,9 +275,20 @@ input:focus-visible {
 .cr-level-arrive {
   animation: cr-level-arrive 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.cr-level-orbit {
-  animation: cr-level-orbit 12s linear infinite;
+.cr-level-medal-live {
+  animation: cr-level-medal-float 4.8s ease-in-out 800ms infinite;
+}
+.cr-level-medal-sheen {
+  animation: cr-level-medal-sheen 5.6s ease-in-out 1s infinite;
+  will-change: transform, opacity;
+}
+.cr-level-medal-spark {
+  animation: cr-level-medal-spark 4.2s ease-in-out infinite;
+  transform-box: fill-box;
   transform-origin: center;
+}
+.cr-level-medal-spark-two {
+  animation-delay: 1.25s;
 }
 .cr-card-link {
   transition:
@@ -277,7 +316,9 @@ input:focus-visible {
   .cr-step-enter,
   .cr-success-pop,
   .cr-level-arrive,
-  .cr-level-orbit {
+  .cr-level-medal-live,
+  .cr-level-medal-sheen,
+  .cr-level-medal-spark {
     animation: none;
   }
   .cr-card-link {

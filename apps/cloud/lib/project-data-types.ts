@@ -10,6 +10,7 @@ import type {
   SiteAccessMode
 } from '@coderocket/core'
 import type { WebsiteLevelResult, WebsiteStabilityResult } from '@coderocket/core/website-level'
+import type { ProjectManagedAccess } from './managed-access'
 
 export interface ProjectAudit {
   id: string
@@ -87,6 +88,7 @@ export interface ProjectDetail {
   plan: 'free' | 'solo' | 'agency'
   apiTokenConfigured: boolean
   ciRuns: number
+  managedAccess?: ProjectManagedAccess
   level: WebsiteLevelResult
   stability: WebsiteStabilityResult
 }

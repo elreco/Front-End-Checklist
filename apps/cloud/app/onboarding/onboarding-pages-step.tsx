@@ -3,12 +3,14 @@
 import type { SiteAccessMode } from '@coderocket/core'
 import { Check } from '@repo/design-system/icons'
 import { CodeRocketTextarea } from '@repo/design-system/ui/coderocket-field'
+import { OnboardingPageDiscovery } from '@/components/onboarding-page-discovery'
 import { PageLimitUpsell } from '@/components/plan-limit-upsell'
 import type { PlanId } from '@/lib/upgrade'
 
 interface OnboardingPagesStepProps {
   accessMode: SiteAccessMode
   authenticatedPages: string[]
+  cloudDiscoveryBlocked: boolean
   extraPages: number
   pageCount: number
   pageLimitAttempted: boolean
@@ -17,6 +19,7 @@ interface OnboardingPagesStepProps {
   plan: PlanId
   planName: string
   secureRunnerRequired: boolean
+  siteUrl: string
   visible: boolean
   onPagesChange: (value: string) => void
   onAuthenticatedPagesChange: (pages: string[]) => void
@@ -26,6 +29,7 @@ interface OnboardingPagesStepProps {
 export function OnboardingPagesStep({
   accessMode,
   authenticatedPages,
+  cloudDiscoveryBlocked,
   extraPages,
   onPagesChange,
   onAuthenticatedPagesChange,
@@ -36,6 +40,7 @@ export function OnboardingPagesStep({
   plan,
   planName,
   secureRunnerRequired,
+  siteUrl,
   visible
 }: OnboardingPagesStepProps) {
   const enteredPages = pagesValue
@@ -65,9 +70,16 @@ export function OnboardingPagesStep({
         Which pages matter most?
       </h2>
       <p className="max-w-2xl text-muted leading-7">
-        Start with pages that bring sales, leads, or trust. Add one path per line. You can change
-        this list later.
+        Start with pages that bring sales, leads, or trust. Find them automatically, import an
+        existing route list, or add one path per line. You can change this list later.
       </p>
+      <OnboardingPageDiscovery
+        cloudDiscoveryBlocked={cloudDiscoveryBlocked}
+        onPagesChange={onPagesChange}
+        pagesPerProject={pagesPerProject}
+        pagesValue={pagesValue}
+        siteUrl={siteUrl}
+      />
       <label className="block max-w-2xl font-semibold text-sm" htmlFor="monitored-pages">
         Pages to watch
         <CodeRocketTextarea

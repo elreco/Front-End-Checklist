@@ -113,10 +113,11 @@ export function SecureAccessMethodPicker({
 
   return (
     <fieldset>
-      <legend className="font-semibold text-sm">
-        What prevents the cloud check from opening these pages?
-      </legend>
-      <p className="mt-1 text-muted text-xs">Select every protection layer that applies.</p>
+      <legend className="font-semibold text-sm">Access details — optional</legend>
+      <p className="mt-1 text-muted text-xs leading-5">
+        CodeRocket already prepared a safe default. A developer can add details here when the site
+        uses several protection layers.
+      </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {options.map(option => {
           const Icon = option.icon

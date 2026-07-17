@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 export { type PersistAuditOptions, persistAudit } from './audit-store'
+export { decryptAccessHeaders, encryptAccessHeaders } from './access-credentials'
 
 /** Build the worker-only client. Never import this function in a client component. */
 export function createServiceClient(): SupabaseClient {

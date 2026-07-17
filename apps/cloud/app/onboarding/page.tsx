@@ -7,6 +7,7 @@ import { getAppShellContext } from '@/lib/app-shell-data'
 import { getPlanLabel } from '@/lib/product-language'
 import { createPrivateMetadata } from '@/lib/seo'
 import { getNextPlan } from '@/lib/upgrade'
+import { deriveWebsiteName, normalizeWebsiteDraft } from '@/lib/website-draft'
 import { OnboardingForm } from './onboarding-form'
 
 export const metadata = createPrivateMetadata('Add a site')
@@ -30,7 +31,14 @@ const outcomes = [
   }
 ]
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = await searchParams
+  const rawSiteUrl = Array.isArray(params.url) ? params.url[0] : params.url
+  const initialSiteUrl = normalizeWebsiteDraft(rawSiteUrl ?? '') ?? ''
   const context = await getAppShellContext()
   const limitReached = context.projectCount >= context.limits.projects
   const nextPlan = getNextPlan(context.plan)
@@ -68,6 +76,8 @@ export default async function OnboardingPage() {
             </div>
           ) : (
             <OnboardingForm
+              initialSiteName={deriveWebsiteName(initialSiteUrl)}
+              initialSiteUrl={initialSiteUrl}
               pagesPerProject={context.limits.pagesPerProject}
               plan={context.plan}
               planName={getPlanLabel(context.plan)}

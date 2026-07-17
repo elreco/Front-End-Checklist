@@ -11,7 +11,12 @@ export async function queueProjectAudit(projectId: string): Promise<void> {
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) redirect(`/login?next=/projects/${projectId}`)
-  const [{ data: project }, { data: subscription }, { count: pending }] = await Promise.all([
+  const [
+    { data: project },
+    { data: subscription },
+    { count: pending },
+    { count: managedAccessCount }
+  ] = await Promise.all([
     supabase
       .from('cr_projects')
       .select('id,page_paths,access_mode')
@@ -26,10 +31,16 @@ export async function queueProjectAudit(projectId: string): Promise<void> {
       .eq('owner_id', auth.user.id)
       .eq('project_id', projectId)
       .eq('kind', 'audit')
-      .in('status', ['queued', 'leased'])
+      .in('status', ['queued', 'leased']),
+    supabase
+      .from('cr_project_access_connections')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', auth.user.id)
+      .eq('project_id', projectId)
+      .eq('status', 'verified')
   ])
   if (!project) redirect('/dashboard')
-  if (project.access_mode !== 'public')
+  if (project.access_mode !== 'public' && (managedAccessCount ?? 0) === 0)
     redirect(`/projects/${projectId}?notice=private-runner-required`)
   if ((pending ?? 0) > 0) redirect(`/projects/${projectId}?notice=already-running`)
   const plan: PlanId =

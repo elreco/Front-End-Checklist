@@ -6,6 +6,8 @@ import { isIP } from 'node:net'
 const MAX_REDIRECTS = 5
 const MAX_HTML_BYTES = 2 * 1024 * 1024
 const DEFAULT_TIMEOUT_MS = 10_000
+const SIGN_IN_PATH_PATTERN =
+  /(?:^|\/)(?:auth\/)?(?:log-?in|sign-?in|session|sso)(?:\/|$)/i
 
 interface PublicAddress {
   address: string
@@ -73,6 +75,53 @@ function normalizeRequestHeaders(input: Record<string, string> = {}): Record<str
     headers[name] = value
   }
   return headers
+}
+
+function isExplicitSignInPage(url: URL): boolean {
+  return SIGN_IN_PATH_PATTERN.test(url.pathname)
+}
+
+function isSignInRedirect(requestedUrl: URL, destination: URL): boolean {
+  return (
+    requestedUrl.origin === destination.origin &&
+    !isExplicitSignInPage(requestedUrl) &&
+    isExplicitSignInPage(destination)
+  )
+}
+
+function looksLikeSignInHtml(html: string): boolean {
+  const sample = html.slice(0, 250_000)
+  const hasPasswordField = /<input\b[^>]*\btype\s*=\s*["']?password\b/i.test(sample)
+  const hasSignInLanguage =
+    /\b(?:log\s*in|sign\s*in|connexion|se connecter|authenticate|single sign-on|continue with)\b/i.test(
+      sample
+    )
+  return hasPasswordField && hasSignInLanguage
+}
+
+async function rejectKnownAccessBarrier(
+  response: AuditHttpResponse,
+  noun: 'page' | 'resource'
+): Promise<void> {
+  if (response.headers.get('cf-mitigated')?.toLowerCase() === 'challenge') {
+    await response.discard()
+    throw new Error(`The site returned a Cloudflare challenge instead of the ${noun}`)
+  }
+  if (
+    response.headers.has('x-vercel-challenge-token') ||
+    ((response.status === 401 || response.status === 403) &&
+      response.headers.get('server')?.toLowerCase().includes('vercel'))
+  ) {
+    await response.discard()
+    throw new Error(`Vercel deployment protection blocked the ${noun}`)
+  }
+  if (
+    response.status === 401 &&
+    response.headers.get('www-authenticate')?.trim().toLowerCase().startsWith('basic')
+  ) {
+    await response.discard()
+    throw new Error(`HTTP Basic authentication is required to open the ${noun}`)
+  }
 }
 
 function ipv4Number(address: string): number | undefined {
@@ -366,6 +415,7 @@ export async function fetchPublicHtml(
   const startedAt = performance.now()
   const timeoutSignal = AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS)
   let target = await resolvePublicTarget(rawUrl, timeoutSignal)
+  const requestedUrl = target.url
   const initialOrigin = target.url.origin
   const customHeaders = normalizeRequestHeaders(options.headers)
   for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
@@ -380,10 +430,7 @@ export async function fetchPublicHtml(
           requestHeaders
         )
       : await requestPinned(target, timeoutSignal, accept, requestHeaders)
-    if (response.headers.get('cf-mitigated')?.toLowerCase() === 'challenge') {
-      await response.discard()
-      throw new Error('The site returned a Cloudflare challenge instead of the page')
-    }
+    await rejectKnownAccessBarrier(response, 'page')
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       if (redirect === MAX_REDIRECTS) {
         await response.discard()
@@ -392,7 +439,10 @@ export async function fetchPublicHtml(
       const location = response.headers.get('location')
       await response.discard()
       if (!location) throw new Error('Redirect is missing a Location header')
-      target = await resolvePublicTarget(new URL(location, target.url).toString(), timeoutSignal)
+      const destination = new URL(location, target.url)
+      if (isSignInRedirect(requestedUrl, destination))
+        throw new Error('The page redirected to a sign-in screen')
+      target = await resolvePublicTarget(destination.toString(), timeoutSignal)
       continue
     }
     if (response.status < 200 || response.status >= 300) {
@@ -406,6 +456,8 @@ export async function fetchPublicHtml(
     }
     const html = await response.readHtml()
     if (!html.trim()) throw new Error('HTML response is empty')
+    if (!isExplicitSignInPage(requestedUrl) && looksLikeSignInHtml(html))
+      throw new Error('The page returned a sign-in screen')
     return {
       url: target.url.toString(),
       html,
@@ -436,10 +488,7 @@ async function fetchPublicResource(rawUrl: string, options: SafeFetchOptions, im
           requestHeaders
         )
       : await requestPinned(target, timeoutSignal, accept, requestHeaders)
-    if (response.headers.get('cf-mitigated')?.toLowerCase() === 'challenge') {
-      await response.discard()
-      throw new Error('The site returned a Cloudflare challenge instead of the resource')
-    }
+    await rejectKnownAccessBarrier(response, 'resource')
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       if (redirect === MAX_REDIRECTS) {
         await response.discard()

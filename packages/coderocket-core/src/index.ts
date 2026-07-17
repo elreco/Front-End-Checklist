@@ -4,6 +4,12 @@ export {
   selectProductionHtmlRules
 } from './automation-profile'
 export { compareFindings, fingerprintFinding, normalizeAuditPath } from './diff'
+export {
+  type DiscoveredPage,
+  discoverPublicPagePaths,
+  type PageDiscoverySource,
+  type PublicPageDiscovery
+} from './page-discovery'
 export { getPlanEntitlements, PLAN_ENTITLEMENTS } from './plans'
 export {
   buildProjectPageUrl,

@@ -2,6 +2,11 @@ import { getRulesetVersion } from '@coderocket/core'
 import { calculateWebsiteLevel, calculateWebsiteStability } from '@coderocket/core/website-level'
 import { getRuleDocumentationUrlBySlug } from './docs'
 import { formatAuditDate, formatRelativeTime } from './format'
+import type {
+  ManagedAccessKind,
+  ManagedAccessScope,
+  ManagedAccessStatus
+} from './managed-access'
 import {
   resolveAccessMode,
   resolveCheckStage,
@@ -208,7 +213,8 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     { data: activeJob },
     { data: subscription },
     { count: apiTokenCount },
-    { count: ciRuns }
+    { count: ciRuns },
+    { data: managedAccess }
   ] = await Promise.all([
     supabase
       .from('cr_projects')
@@ -252,7 +258,13 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
       .select('id', { count: 'exact', head: true })
       .eq('project_id', projectId)
       .eq('owner_id', auth.user.id)
-      .eq('trigger', 'ci')
+      .eq('trigger', 'ci'),
+    supabase
+      .from('cr_project_access_connections')
+      .select('kind,scope,status,display_label,last_verified_at,last_error')
+      .eq('project_id', projectId)
+      .eq('owner_id', auth.user.id)
+      .maybeSingle()
   ])
   if (!project) return null
   const storedAudits = audits ?? []
@@ -414,7 +426,40 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
         : 'free',
     apiTokenConfigured: (apiTokenCount ?? 0) > 0,
     ciRuns: ciRuns ?? 0,
+    managedAccess:
+      managedAccess &&
+      isManagedAccessKind(managedAccess.kind) &&
+      isManagedAccessScope(managedAccess.scope) &&
+      isManagedAccessStatus(managedAccess.status)
+        ? {
+            displayLabel: managedAccess.display_label,
+            kind: managedAccess.kind,
+            lastError: managedAccess.last_error ?? undefined,
+            lastVerifiedAt: managedAccess.last_verified_at ?? undefined,
+            scope: managedAccess.scope,
+            status: managedAccess.status
+          }
+        : undefined,
     level,
     stability
   }
+}
+
+function isManagedAccessKind(value: unknown): value is ManagedAccessKind {
+  return [
+    'vercel',
+    'cloudflare',
+    'basic_auth',
+    'bearer_token',
+    'session_cookie',
+    'custom_headers'
+  ].includes(String(value))
+}
+
+function isManagedAccessScope(value: unknown): value is ManagedAccessScope {
+  return value === 'all' || value === 'authenticated'
+}
+
+function isManagedAccessStatus(value: unknown): value is ManagedAccessStatus {
+  return value === 'configured' || value === 'verified' || value === 'failed'
 }

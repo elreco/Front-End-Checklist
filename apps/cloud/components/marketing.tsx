@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { FaqAccordion } from '@/components/faq-accordion'
 import { AuditDemo } from '@/components/homepage-audit-demo'
 import { HomepageLevels } from '@/components/homepage-levels'
+import { HomepageSiteForm } from '@/components/homepage-site-form'
 import { DecisionRules, UseCases } from '@/components/homepage-use-cases'
 
 const ruleCount = loadRules().length
@@ -58,16 +59,7 @@ export function Hero() {
           from a secure environment you control. CodeRocket tells you in plain language what changed
           and what it could not verify.
         </p>
-        <div className="mt-9 flex flex-wrap justify-center gap-3">
-          <CodeRocketButton asChild size="lg">
-            <Link href="/onboarding">
-              Check my website free <ArrowRight aria-hidden />
-            </Link>
-          </CodeRocketButton>
-          <CodeRocketButton asChild size="lg" variant="outline">
-            <Link href="#live-example">See what gets checked</Link>
-          </CodeRocketButton>
-        </div>
+        <HomepageSiteForm />
         <p className="mt-5 text-muted text-xs uppercase tracking-[.12em]">
           Free · 1 website · 5 important pages · no credit card
         </p>

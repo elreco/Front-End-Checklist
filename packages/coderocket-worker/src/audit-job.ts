@@ -5,11 +5,12 @@ import {
   buildProjectPageUrl,
   type CheckProgressStage,
   compareFindings,
+  fetchPublicText,
   getRulesetVersion,
   type PageAuditResult,
   resolveProjectSocialImage
 } from '@coderocket/core'
-import { createServiceClient, persistAudit } from '@coderocket/db'
+import { createServiceClient, decryptAccessHeaders, persistAudit } from '@coderocket/db'
 
 const PAGE_CONCURRENCY = 4
 
@@ -28,6 +29,8 @@ export class JobCancelledError extends Error {
     this.name = 'JobCancelledError'
   }
 }
+
+type AccessHeaderResolver = (url: string) => Record<string, string> | undefined
 
 /** Persist owner-visible job progress while refusing work cancelled during execution. */
 async function updateProgress(
@@ -59,7 +62,11 @@ async function updateProgress(
 }
 
 /** Audit configured pages in bounded concurrent batches with durable progress updates. */
-async function auditProjectPages(job: WorkerJob, urls: string[]): Promise<PageAuditResult[]> {
+async function auditProjectPages(
+  job: WorkerJob,
+  urls: string[],
+  resolveHeaders: AccessHeaderResolver
+): Promise<PageAuditResult[]> {
   const pages: PageAuditResult[] = []
   for (let offset = 0; offset < urls.length; offset += PAGE_CONCURRENCY) {
     const batch = urls.slice(offset, offset + PAGE_CONCURRENCY)
@@ -70,7 +77,11 @@ async function auditProjectPages(job: WorkerJob, urls: string[]): Promise<PageAu
       total: urls.length,
       message: `Checking ${pageNames}`
     })
-    pages.push(...(await Promise.all(batch.map(url => auditPage(url)))))
+    pages.push(
+      ...(await Promise.all(
+        batch.map(url => auditPage(url, { requestHeaders: resolveHeaders(url) }))
+      ))
+    )
     await updateProgress(job, {
       stage: 'checking_pages',
       current: pages.length,
@@ -106,12 +117,30 @@ export async function processAuditJob(
 
   const { data: project, error } = await db
     .from('cr_projects')
-    .select('id,owner_id,name,production_url,page_paths,baseline_reset_at')
+    .select(
+      'id,owner_id,name,production_url,page_paths,authenticated_page_paths,access_mode,baseline_reset_at'
+    )
     .eq('id', job.project_id)
     .eq('owner_id', job.owner_id)
     .is('archived_at', null)
     .single()
   if (error || !project) throw new Error('Project is unavailable')
+  const { data: accessConnection, error: accessConnectionError } = await db
+    .from('cr_project_access_connections')
+    .select('id,encrypted_headers,scope')
+    .eq('project_id', project.id)
+    .eq('owner_id', project.owner_id)
+    .maybeSingle()
+  if (accessConnectionError) throw new Error(accessConnectionError.message)
+  const accessHeaders = accessConnection
+    ? decryptAccessHeaders(accessConnection.encrypted_headers)
+    : undefined
+  const authenticatedPaths = new Set<string>(project.authenticated_page_paths ?? [])
+  const resolveHeaders: AccessHeaderResolver = url => {
+    if (!accessHeaders) return undefined
+    if (accessConnection?.scope === 'all') return accessHeaders
+    return authenticatedPaths.has(new URL(url).pathname) ? accessHeaders : undefined
+  }
   const pageUrls = project.page_paths.map((path: string) =>
     buildProjectPageUrl(project.production_url, path)
   )
@@ -121,8 +150,11 @@ export async function processAuditJob(
     total: pageUrls.length,
     message: 'Preparing a safe connection to your website'
   })
-  const pages = await auditProjectPages(job, pageUrls)
-  const socialImageUrl = await resolveProjectSocialImage(pages)
+  const pages = await auditProjectPages(job, pageUrls, resolveHeaders)
+  const homePageUrl = pageUrls.find(url => new URL(url).pathname === '/')
+  const socialImageUrl = await resolveProjectSocialImage(pages, {
+    headers: homePageUrl ? resolveHeaders(homePageUrl) : undefined
+  })
   if (socialImageUrl !== undefined)
     await db
       .from('cr_projects')
@@ -135,8 +167,27 @@ export async function processAuditJob(
     total: pages.length,
     message: 'Checking how search engines can read the website'
   })
-  const infrastructureFindings = await auditSiteInfrastructure(project.production_url)
+  const infrastructureFindings = await auditSiteInfrastructure(project.production_url, {
+    fetchText: url => fetchPublicText(url, { headers: resolveHeaders(url) })
+  })
   if (pages[0]) pages[0].findings.push(...infrastructureFindings)
+  if (accessConnection) {
+    const applicablePages =
+      accessConnection.scope === 'all'
+        ? pages
+        : pages.filter(page => authenticatedPaths.has(new URL(page.url).pathname))
+    const failedPage = applicablePages.find(page => !page.reachable)
+    await db
+      .from('cr_project_access_connections')
+      .update({
+        last_error: failedPage?.error?.slice(0, 500) ?? null,
+        last_verified_at: failedPage ? null : new Date().toISOString(),
+        status: failedPage ? 'failed' : 'verified',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', accessConnection.id)
+      .eq('owner_id', project.owner_id)
+  }
   await updateProgress(job, {
     stage: 'comparing',
     current: pages.length,
