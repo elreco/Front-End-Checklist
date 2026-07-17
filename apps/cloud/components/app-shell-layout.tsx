@@ -119,7 +119,7 @@ export function AppShellLayout({
     >
       <aside
         className={`hidden border-border border-r bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col ${
-          collapsed ? 'lg:p-3' : 'lg:p-4'
+          collapsed ? 'lg:px-3 lg:pb-3' : 'lg:px-4 lg:pb-4'
         }`}
       >
         <TooltipProvider delayDuration={250}>
