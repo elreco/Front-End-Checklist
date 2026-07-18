@@ -6,6 +6,7 @@ import type { ManagedAccessKind, ManagedAccessScope, ManagedAccessStatus } from 
 import {
   resolveAccessMode,
   resolveCheckStage,
+  resolveDocumentProof,
   resolveEvidence,
   resolveGate,
   resolveWorkflowStatus
@@ -66,7 +67,19 @@ const demoProject: ProjectDetail = {
       url: 'https://acme.example/',
       reachable: true,
       httpStatus: 200,
-      durationMs: 420
+      durationMs: 420,
+      finalUrl: 'https://acme.example/',
+      document: {
+        byteLength: 48_320,
+        fetchedAt: '2026-07-16T10:42:00.000Z',
+        htmlOutline:
+          '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>Acme Storefront</title>\n<link rel="stylesheet" href="/assets/app.css">\n</head>\n<body>\n<header>\n</header>\n<main>\n</main>\n</body>\n</html>',
+        sha256: '9b60bcf65e52f5a5057a24e11fc99ce39834979b519ad44326ca997a0d45f19c',
+        cacheStatus: 'Vercel: HIT · Age: 37s',
+        contentType: 'text/html',
+        etag: '"acme-home-v4"',
+        title: 'Acme Storefront'
+      }
     }
   ],
   audits: [demoAudit],
@@ -304,7 +317,9 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
       fetchOccurrenceBatch(0),
       supabase
         .from('cr_audit_pages')
-        .select('url,normalized_path,reachable,http_status,duration_ms,error')
+        .select(
+          'url,normalized_path,reachable,http_status,duration_ms,error,final_url,document_proof'
+        )
         .eq('audit_id', latestAudit.id)
         .eq('owner_id', auth.user.id)
         .order('normalized_path')
@@ -355,6 +370,8 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
       path: page.normalized_path,
       url: page.url,
       reachable: page.reachable,
+      finalUrl: page.final_url ?? undefined,
+      document: resolveDocumentProof(page.document_proof),
       httpStatus: page.http_status ?? undefined,
       durationMs: page.duration_ms ?? undefined,
       error: page.error ?? undefined

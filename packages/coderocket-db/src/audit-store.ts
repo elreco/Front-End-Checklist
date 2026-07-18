@@ -45,6 +45,8 @@ export async function persistAudit(options: PersistAuditOptions): Promise<string
       reachable: page.reachable,
       http_status: page.httpStatus ?? null,
       duration_ms: page.durationMs ?? null,
+      final_url: page.finalUrl ?? null,
+      document_proof: page.document ?? {},
       error: page.error ?? null
     })),
     p_findings: options.comparison.findings.map(finding => ({

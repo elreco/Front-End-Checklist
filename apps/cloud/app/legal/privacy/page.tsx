@@ -50,11 +50,12 @@ export default function PrivacyPage() {
 
       <h2>4. Website content and AI guidance</h2>
       <p>
-        Public checks retrieve only configured HTTPS pages and save the evidence needed to explain a
-        result. When a user explicitly requests an AI explanation, bounded finding evidence and the
-        relevant rule context are sent to the configured AI provider. Common credential patterns are
-        removed first. Passwords, CI access tokens, cookies, and secret headers must not be included
-        in support or AI requests.
+        Public checks retrieve only configured HTTPS pages and save the bounded evidence needed to
+        explain a result. A document receipt may include response metadata, a fingerprint, and a
+        redacted structural HTML outline, but not the complete page source. When a user explicitly
+        requests an AI explanation, bounded finding evidence and the relevant rule context are sent
+        to the configured AI provider. Common credential patterns are removed first. Passwords, CI
+        access tokens, cookies, and secret headers must not be included in support or AI requests.
       </p>
 
       <h2>5. Service providers</h2>

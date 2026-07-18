@@ -211,22 +211,22 @@ input:focus-visible {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-2px);
+    transform: translateY(-1.5px);
   }
 }
 @keyframes cr-level-medal-sheen {
   0%,
-  68% {
+  72% {
     opacity: 0;
     transform: translateX(0);
   }
-  76% {
-    opacity: 0.3;
+  80% {
+    opacity: 0.26;
   }
-  88%,
+  91%,
   100% {
     opacity: 0;
-    transform: translateX(125px);
+    transform: translateX(340px);
   }
 }
 @keyframes cr-level-medal-spark {
@@ -276,10 +276,10 @@ input:focus-visible {
   animation: cr-level-arrive 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .cr-level-medal-live {
-  animation: cr-level-medal-float 4.8s ease-in-out 800ms infinite;
+  animation: cr-level-medal-float 5.8s ease-in-out 800ms infinite;
 }
 .cr-level-medal-sheen {
-  animation: cr-level-medal-sheen 5.6s ease-in-out 1s infinite;
+  animation: cr-level-medal-sheen 6.8s ease-in-out 1s infinite;
   will-change: transform, opacity;
 }
 .cr-level-medal-spark {

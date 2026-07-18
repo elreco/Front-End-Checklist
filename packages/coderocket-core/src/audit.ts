@@ -3,9 +3,10 @@ import { loadRules } from '@frontendchecklist/rules'
 import { executeReviewCode } from '@repo/mcp/tools/review-code'
 import { PRODUCTION_HTML_RULE_SLUGS, selectProductionHtmlRules } from './automation-profile'
 import { normalizeAuditPath } from './diff'
+import { createDocumentProof } from './document-proof'
 import { fetchPublicHtml } from './safe-fetch'
-import { extractSocialImageUrl } from './social-metadata'
-import type { AuditFindingInput, FindingCategory } from './types'
+import { extractSiteImageUrls, extractSocialImageUrl } from './social-metadata'
+import type { AuditFindingInput, DocumentProof, FindingCategory } from './types'
 
 const AUDIT_ENGINE_VERSION = 'coderocket-engine-4'
 const RULES = loadRules()
@@ -29,6 +30,8 @@ export interface PageAuditResult {
   httpStatus?: number
   durationMs?: number
   finalUrl?: string
+  document?: DocumentProof
+  siteImageUrls?: string[]
   socialImageUrl?: string
   error?: string
 }
@@ -37,6 +40,7 @@ export interface AuditPageOptions {
   requestHeaders?: Record<string, string>
 }
 
+/** Map upstream checklist categories to CodeRocket's product-facing health categories. */
 function toHealthCategory(category: string): FindingCategory {
   if (category === 'seo') return 'search'
   if (category === 'accessibility') return 'accessibility'
@@ -45,6 +49,7 @@ function toHealthCategory(category: string): FindingCategory {
   return 'quality'
 }
 
+/** Build deterministic findings from measurable HTTP response evidence. */
 function responseFindings(options: {
   path: string
   durationMs: number
@@ -157,6 +162,8 @@ export async function auditPage(
     const requestedUrl = new URL(url)
     const requestedPath = normalizeAuditPath(requestedUrl.pathname)
     const source = await fetchPublicHtml(url, { headers: options.requestHeaders })
+    const siteImageUrls =
+      requestedUrl.pathname === '/' ? extractSiteImageUrls(source.html, source.url) : undefined
     if (PRODUCTION_HTML_RULES.length === 0)
       throw new Error('No automated Front-End Checklist rules are available')
     const result = executeReviewCode(
@@ -169,7 +176,9 @@ export async function auditPage(
       reachable: true,
       httpStatus: source.status,
       durationMs: source.durationMs,
+      document: createDocumentProof(source),
       socialImageUrl: extractSocialImageUrl(source.html, source.url),
+      siteImageUrls,
       findings: [
         ...result.issues.map(issue => ({
           pagePath: requestedPath,

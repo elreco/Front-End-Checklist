@@ -1,11 +1,12 @@
 'use client'
 
 import type { DiscoveredPage } from '@coderocket/core'
-import { Check, FileUp, LoaderCircle, Radar, Search } from '@repo/design-system/icons'
+import { Check, Radar } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import type { ChangeEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { getEnteredPages, getImportedPages, mergeEnteredPages } from '@/lib/onboarding-pages'
+import { OnboardingPageDiscoveryOptions } from './onboarding-page-discovery-options'
 
 interface PageCandidate {
   path: string
@@ -127,7 +128,7 @@ export function OnboardingPageDiscovery({
 
   return (
     <section
-      className="max-w-2xl border border-border bg-surface p-4"
+      className="max-w-3xl border border-border bg-surface p-4"
       aria-labelledby="add-pages-faster"
     >
       <div className="flex items-start gap-3">
@@ -136,56 +137,33 @@ export function OnboardingPageDiscovery({
         </span>
         <div>
           <h3 className="font-heading font-semibold" id="add-pages-faster">
-            Add pages faster
+            Choose how to find your pages
           </h3>
           <p className="mt-1 text-muted text-xs leading-5">
-            Find public pages from the sitemap and home page, or import a file from your project.
-            Nothing is added until you review it.
+            Both methods create a review list below. Your “Pages to watch” list changes only after
+            you select the paths and click “Add selected”.
           </p>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <CodeRocketButton
-          disabled={cloudDiscoveryBlocked || !validSiteUrl || status === 'loading'}
-          onClick={discoverPages}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          {status === 'loading' ? (
-            <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />
-          ) : (
-            <Search aria-hidden />
-          )}
-          {status === 'loading' ? 'Looking for pages…' : 'Find public pages'}
-        </CodeRocketButton>
-        <CodeRocketButton
-          disabled={!validSiteUrl}
-          onClick={() => fileInput.current?.click()}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <FileUp aria-hidden /> Import sitemap or routes
-        </CodeRocketButton>
-        <input
-          accept=".xml,.txt,.csv,.json,application/xml,text/xml,text/plain,text/csv,application/json"
-          hidden
-          onChange={importPages}
-          ref={fileInput}
-          type="file"
-        />
-      </div>
-      {!validSiteUrl ? (
-        <p className="mt-3 text-muted text-xs">
-          Enter a valid HTTPS address in the previous step first.
-        </p>
-      ) : cloudDiscoveryBlocked ? (
-        <p className="mt-3 text-muted text-xs leading-5">
-          The cloud cannot inspect this protected site. Importing a file happens in your browser and
-          is the fastest safe option.
-        </p>
-      ) : null}
+      <OnboardingPageDiscoveryOptions
+        cloudDiscoveryBlocked={cloudDiscoveryBlocked}
+        loading={status === 'loading'}
+        onDiscover={discoverPages}
+        onImport={() => fileInput.current?.click()}
+        validSiteUrl={validSiteUrl}
+      />
+      <label className="sr-only" htmlFor="route-file-import">
+        Choose an XML, TXT, CSV, or JSON sitemap or route file
+      </label>
+      <input
+        accept=".xml,.txt,.csv,.json,application/xml,text/xml,text/plain,text/csv,application/json"
+        aria-label="Choose an XML, TXT, CSV, or JSON sitemap or route file"
+        hidden
+        id="route-file-import"
+        onChange={importPages}
+        ref={fileInput}
+        type="file"
+      />
       {message ? (
         <p
           className="mt-3 border border-border bg-background px-3 py-2 text-muted text-xs leading-5"
@@ -251,6 +229,7 @@ export function OnboardingPageDiscovery({
   )
 }
 
+/** Return whether page discovery can safely target the entered HTTPS origin. */
 function isValidSiteUrl(value: string): boolean {
   try {
     return new URL(value.trim()).protocol === 'https:'
@@ -259,18 +238,21 @@ function isValidSiteUrl(value: string): boolean {
   }
 }
 
+/** Read a safe API error message without assuming the response shape. */
 function readError(value: unknown): string {
   if (value && typeof value === 'object' && 'error' in value && typeof value.error === 'string')
     return value.error
   return 'Page discovery could not be completed.'
 }
 
+/** Extract validated public-page candidates from an unknown API response. */
 function readDiscoveredPages(value: unknown): DiscoveredPage[] {
   if (!value || typeof value !== 'object' || !('pages' in value) || !Array.isArray(value.pages))
     return []
   return value.pages.filter(isDiscoveredPage)
 }
 
+/** Narrow an unknown candidate to the page-discovery response contract. */
 function isDiscoveredPage(value: unknown): value is DiscoveredPage {
   if (!value || typeof value !== 'object') return false
   if (!('path' in value) || typeof value.path !== 'string') return false

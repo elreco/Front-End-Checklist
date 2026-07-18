@@ -4,6 +4,7 @@ export {
   selectProductionHtmlRules
 } from './automation-profile'
 export { compareFindings, fingerprintFinding, normalizeAuditPath } from './diff'
+export { createDocumentProof } from './document-proof'
 export {
   type DiscoveredPage,
   discoverPublicPagePaths,
@@ -30,7 +31,11 @@ export {
 } from './safe-fetch'
 export { auditSubmissionSchema, type ValidAuditSubmission } from './schemas'
 export { auditSiteInfrastructure } from './site-infrastructure'
-export { extractSocialImageUrl, resolveProjectSocialImage } from './social-metadata'
+export {
+  extractSiteImageUrls,
+  extractSocialImageUrl,
+  resolveProjectSocialImage
+} from './social-metadata'
 export type {
   AuditComparison,
   AuditEnvironment,
@@ -40,6 +45,7 @@ export type {
   AuditSubmission,
   AuditTrigger,
   CheckProgressStage,
+  DocumentProof,
   FindingCategory,
   FindingEvidence,
   FindingEvidenceKind,

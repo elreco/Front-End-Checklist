@@ -1,6 +1,7 @@
 import type {
   AuditStatus,
   CheckProgressStage,
+  DocumentProof,
   FindingCategory,
   FindingEvidence,
   FindingPriority,
@@ -60,8 +61,10 @@ export interface ProjectCheckProgress {
 }
 
 export interface ProjectPageCheck {
+  document?: DocumentProof
   durationMs?: number
   error?: string
+  finalUrl?: string
   httpStatus?: number
   path: string
   reachable: boolean

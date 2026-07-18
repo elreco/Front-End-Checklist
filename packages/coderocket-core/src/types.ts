@@ -33,6 +33,18 @@ export interface FindingEvidence {
   expected?: string
 }
 
+export interface DocumentProof {
+  byteLength: number
+  fetchedAt: string
+  htmlOutline: string
+  sha256: string
+  cacheStatus?: string
+  contentType?: string
+  etag?: string
+  lastModified?: string
+  title?: string
+}
+
 export interface PlanEntitlements {
   projects: number
   pagesPerProject: number
@@ -82,6 +94,8 @@ export interface AuditSubmission {
     httpStatus?: number
     durationMs?: number
     finalUrl?: string
+    document?: DocumentProof
+    siteImageUrls?: string[]
     socialImageUrl?: string
     error?: string
   }>

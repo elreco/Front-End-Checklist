@@ -1,5 +1,6 @@
 import type {
   CheckProgressStage,
+  DocumentProof,
   FindingEvidence,
   GateStatus,
   SiteAccessMode
@@ -20,6 +21,29 @@ export function resolveEvidence(value: unknown): FindingEvidence | undefined {
     summary: value.summary,
     observed: typeof value.observed === 'string' ? value.observed : undefined,
     expected: typeof value.expected === 'string' ? value.expected : undefined
+  }
+}
+
+/** Normalize a bounded stored document receipt without trusting database JSON. */
+export function resolveDocumentProof(value: unknown): DocumentProof | undefined {
+  if (!isUnknownRecord(value)) return undefined
+  if (
+    typeof value.byteLength !== 'number' ||
+    typeof value.fetchedAt !== 'string' ||
+    typeof value.htmlOutline !== 'string' ||
+    typeof value.sha256 !== 'string'
+  )
+    return undefined
+  return {
+    byteLength: value.byteLength,
+    fetchedAt: value.fetchedAt,
+    htmlOutline: value.htmlOutline,
+    sha256: value.sha256,
+    cacheStatus: typeof value.cacheStatus === 'string' ? value.cacheStatus : undefined,
+    contentType: typeof value.contentType === 'string' ? value.contentType : undefined,
+    etag: typeof value.etag === 'string' ? value.etag : undefined,
+    lastModified: typeof value.lastModified === 'string' ? value.lastModified : undefined,
+    title: typeof value.title === 'string' ? value.title : undefined
   }
 }
 

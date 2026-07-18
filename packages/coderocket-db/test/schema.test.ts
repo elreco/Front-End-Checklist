@@ -226,6 +226,18 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('stores redacted document receipts without adding raw HTML columns', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607180001_audit_document_proofs.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /add column if not exists final_url text/)
+    assert.match(sql, /add column if not exists document_proof jsonb/)
+    assert.match(sql, /Never full HTML/)
+    assert.doesNotMatch(sql, /html_source|raw_html|document_html/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
   it('bills only paid AI overage through an idempotent Stripe outbox job', async () => {
     const sql = await readFile(
       new URL('../supabase/migrations/202607170001_ai_usage_billing.sql', import.meta.url),
