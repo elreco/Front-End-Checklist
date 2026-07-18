@@ -21,10 +21,19 @@ describe('CodeRocket CLI arguments', () => {
     )
     assert.equal(options.environment, 'preview')
     assert.equal(options.sha, 'abc')
+    assert.equal(options.browserCheck, false)
     assert.deepEqual(options.urls, [
       'https://preview.example.com/',
       'https://preview.example.com/checkout'
     ])
+  })
+
+  it('enables the real browser only for explicitly prepared runners', () => {
+    const options = parseArguments(['audit', 'https://app.example.com', '--token', 'secret'], {
+      CODEROCKET_BROWSER_CHECK: 'true'
+    })
+
+    assert.equal(options.browserCheck, true)
   })
 
   it('rejects non-HTTPS targets', () => {

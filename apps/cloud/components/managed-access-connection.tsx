@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Copy, LoaderCircle, Network, ShieldCheck, Trash2 } from '@repo/design-system/icons'
+import { Check, Copy, LoaderCircle, Network, ShieldCheck } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { toast } from '@repo/design-system/ui/coderocket-toast'
 import { useRouter } from 'next/navigation'
@@ -19,6 +19,7 @@ import {
   managedAccessMethodOptions
 } from './managed-access-connection-helpers'
 import { ManagedAccessFields } from './managed-access-fields'
+import { ManagedAccessStatus } from './managed-access-status'
 
 /** Connect simple protected-site access directly to the cloud checker, without CI by default. */
 export function ManagedAccessConnection({
@@ -49,6 +50,13 @@ export function ManagedAccessConnection({
         : latestPages.filter(page => !page.reachable).map(page => page.path),
     [authenticatedPages, latestPages]
   )
+  const suggestedLoginPage = useMemo(
+    () =>
+      latestPages
+        .flatMap(page => page.error?.match(/sign-in screen at (\/[^\s]*)/i)?.[1] ?? [])
+        .at(0),
+    [latestPages]
+  )
   const requestText = useMemo(
     () =>
       `Could you help connect protected-page access for ${siteUrl} in CodeRocket? Please create a dedicated, revocable automation credential or install the secure runner. Do not send a personal password or normal browser session.`,
@@ -57,64 +65,15 @@ export function ManagedAccessConnection({
 
   if (connection && !addingLayer)
     return (
-      <section className="border border-success bg-success/10 p-5">
-        <div className="flex items-start gap-3">
-          <ShieldCheck aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-success" />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold">Page access connected</p>
-            <p className="mt-1 text-muted text-sm leading-6">
-              {connection.displayLabel} is stored encrypted and used only for this monitored site.
-              {connection.status === 'failed'
-                ? ' The latest check could not confirm it, so reconnect it or use the secure runner.'
-                : ' Automatic cloud checks can now open the protected pages.'}
-            </p>
-            {connection.lastError ? (
-              <p className="mt-2 text-danger text-xs">{connection.lastError}</p>
-            ) : null}
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <CodeRocketButton
-            disabled={busy}
-            onClick={() => setAddingLayer(true)}
-            size="sm"
-            type="button"
-          >
-            Add another access layer
-          </CodeRocketButton>
-          <CodeRocketButton
-            disabled={busy}
-            onClick={() => router.refresh()}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Check connection status
-          </CodeRocketButton>
-          <CodeRocketButton
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true)
-              const response = await fetch(`/api/projects/${projectId}/managed-access`, {
-                method: 'DELETE'
-              })
-              setBusy(false)
-              if (!response.ok) {
-                toast.error('The connection could not be revoked')
-                return
-              }
-              toast.success('Page access revoked')
-              router.refresh()
-            }}
-            size="sm"
-            type="button"
-            variant="ghost"
-          >
-            {busy ? <LoaderCircle aria-hidden className="animate-spin" /> : <Trash2 aria-hidden />}
-            Revoke access
-          </CodeRocketButton>
-        </div>
-      </section>
+      <ManagedAccessStatus
+        connection={connection}
+        onChange={replace => {
+          setAddingLayer(true)
+          setKind(replace ? (recommendedKind ?? connection.kind) : null)
+          setShowMethods(!replace || !recommendedKind)
+        }}
+        projectId={projectId}
+      />
     )
 
   if (barrier === 'private_network' || barrier === 'interactive_challenge')
@@ -156,10 +115,13 @@ export function ManagedAccessConnection({
       })
       return
     }
-    toast.success('Page access connected', {
-      description: body.queued
-        ? 'A fresh website check has started automatically.'
-        : 'The connection is ready for the next check.'
+    toast.success(body.status === 'configured' ? 'Test account saved' : 'Page access connected', {
+      description:
+        body.status === 'configured'
+          ? 'CodeRocket is signing in and checking the protected pages now.'
+          : body.queued
+            ? 'A fresh website check has started automatically.'
+            : 'The connection is ready for the next check.'
     })
     router.refresh()
   }
@@ -173,8 +135,9 @@ export function ManagedAccessConnection({
         {kind ? getManagedAccessMethodTitle(kind) : 'How is this site protected?'}
       </h3>
       <p className="mt-2 text-muted text-sm leading-6">
-        CodeRocket tests the connection before saving it. The access value is encrypted, restricted
-        to this website, and can be revoked here at any time.
+        {kind === 'browser_login'
+          ? 'Enter a dedicated test account. CodeRocket will open the normal sign-in page, then check only the pages marked as signed in.'
+          : 'CodeRocket tests the connection before saving it. The access value is encrypted, restricted to this website, and can be revoked here at any time.'}
       </p>
 
       {showMethods || !kind ? (
@@ -210,7 +173,11 @@ export function ManagedAccessConnection({
 
       {kind ? (
         <form className="mt-5 space-y-4" onSubmit={submitConnection}>
-          <ManagedAccessFields kind={kind} />
+          <ManagedAccessFields
+            kind={kind}
+            siteUrl={siteUrl}
+            suggestedLoginPage={suggestedLoginPage}
+          />
           {kind === 'session_cookie' ? (
             <div className="flex flex-wrap gap-2">
               <CodeRocketButton
@@ -230,7 +197,13 @@ export function ManagedAccessConnection({
               ) : (
                 <ShieldCheck aria-hidden />
               )}
-              {busy ? 'Testing access…' : 'Test and connect'}
+              {busy
+                ? kind === 'browser_login'
+                  ? 'Starting secure check…'
+                  : 'Testing access…'
+                : kind === 'browser_login'
+                  ? 'Save and check sign-in'
+                  : 'Test and connect'}
             </CodeRocketButton>
             <CodeRocketButton
               onClick={() => setShowMethods(value => !value)}

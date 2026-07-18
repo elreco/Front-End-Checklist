@@ -26,21 +26,32 @@ const MAX_OUTLINE_LENGTH = 6000
 
 /** Build a bounded, redacted receipt for the exact server document used by an audit. */
 export function createDocumentProof(options: {
+  analyzedHtml?: string
   fetchedAt: string
   headers: Record<string, string>
   html: string
 }): DocumentProof {
-  const { fetchedAt, headers, html } = options
+  const { analyzedHtml, fetchedAt, headers, html } = options
   const title = extractSafeTitle(html)
   const contentType = readHeader(headers, 'content-type')?.split(';')[0]?.trim()
   const etag = readHeader(headers, 'etag')
   const lastModified = readHeader(headers, 'last-modified')
   const cacheStatus = getCacheStatus(headers)
+  const renderedDocument =
+    analyzedHtml && analyzedHtml !== html
+      ? {
+          analysisMode: 'rendered_dom' as const,
+          renderedByteLength: new TextEncoder().encode(analyzedHtml).byteLength,
+          renderedHtmlOutline: buildSafeHtmlOutline(analyzedHtml, extractSafeTitle(analyzedHtml)),
+          renderedSha256: createHash('sha256').update(analyzedHtml).digest('hex')
+        }
+      : { analysisMode: 'server_html' as const }
   return {
     byteLength: new TextEncoder().encode(html).byteLength,
     fetchedAt,
     htmlOutline: buildSafeHtmlOutline(html, title),
     sha256: createHash('sha256').update(html).digest('hex'),
+    ...renderedDocument,
     ...(title ? { title } : {}),
     ...(contentType ? { contentType } : {}),
     ...(etag ? { etag } : {}),

@@ -36,8 +36,9 @@ export function ProjectTechnicalDetails({
             <div>
               <p className="font-semibold text-sm">Documents received</p>
               <p className="mt-1 max-w-2xl text-muted text-xs leading-5">
-                These are the server documents used for this check. CodeRocket stores a fingerprint
-                and a redacted HTML outline, never the complete page source.
+                CodeRocket records what the server returned and, for JavaScript apps, what appeared
+                after the page opened in a real browser. Only fingerprints and redacted outlines are
+                stored, never the complete page source.
               </p>
             </div>
           </div>
@@ -92,6 +93,14 @@ function PageDocumentProof({ page }: { page: ProjectPageCheck }) {
               <DocumentFact label="Received" value={formatProofDate(proof.fetchedAt)} />
               <DocumentFact label="Size" value={formatBytes(proof.byteLength)} />
               <DocumentFact label="Content type" value={proof.contentType ?? 'HTML'} />
+              <DocumentFact
+                label="Checked from"
+                value={
+                  proof.analysisMode === 'rendered_dom'
+                    ? 'Real browser after page load'
+                    : 'Server HTML'
+                }
+              />
               <DocumentFact label="Fingerprint" mono value={proof.sha256.slice(0, 16)} />
               {page.finalUrl && page.finalUrl !== page.url ? (
                 <DocumentFact label="Final URL" mono value={page.finalUrl} />
@@ -102,9 +111,15 @@ function PageDocumentProof({ page }: { page: ProjectPageCheck }) {
                 <DocumentFact label="Last modified" value={proof.lastModified} />
               ) : null}
             </dl>
+            {proof.renderedSha256 ? (
+              <div className="mt-4 border border-signal bg-signal/10 p-3 text-xs leading-5">
+                This page changed after JavaScript ran. Findings use the browser-rendered page; the
+                original server response remains available below for comparison.
+              </div>
+            ) : null}
             <details className="group/source mt-4 border border-border bg-background">
               <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-3 py-2 font-semibold text-xs marker:content-none">
-                View safe HTML outline
+                View received server HTML
                 <ChevronDown
                   aria-hidden
                   className="ml-auto h-4 w-4 text-muted transition-transform group-open/source:rotate-180 motion-reduce:transition-none"
@@ -120,6 +135,26 @@ function PageDocumentProof({ page }: { page: ProjectPageCheck }) {
                 </pre>
               </div>
             </details>
+            {proof.renderedHtmlOutline ? (
+              <details className="group/rendered mt-2 border border-border bg-background">
+                <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-3 py-2 font-semibold text-xs marker:content-none">
+                  View page after JavaScript
+                  <ChevronDown
+                    aria-hidden
+                    className="ml-auto h-4 w-4 text-muted transition-transform group-open/rendered:rotate-180 motion-reduce:transition-none"
+                  />
+                </summary>
+                <div className="border-border border-t p-3">
+                  <p className="mb-3 text-muted text-xs leading-5">
+                    This is the redacted structure CodeRocket actually checked after the page
+                    finished opening in the browser.
+                  </p>
+                  <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all border border-border bg-surface-raised p-3 font-mono text-[10px] leading-5">
+                    <code>{proof.renderedHtmlOutline}</code>
+                  </pre>
+                </div>
+              </details>
+            ) : null}
           </>
         ) : (
           <p className="text-muted text-xs leading-5">

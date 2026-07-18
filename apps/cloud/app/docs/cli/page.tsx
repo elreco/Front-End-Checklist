@@ -103,7 +103,7 @@ export default function CliDocumentationPage() {
             [
               '02',
               'Guided connection',
-              'Paste one dedicated Vercel, Cloudflare, preview, token, or test-session value. CodeRocket tests it before saving.'
+              'For a normal app login, enter a dedicated test account. Hosting and developer credentials stay in advanced options.'
             ],
             [
               '03',
@@ -119,8 +119,8 @@ export default function CliDocumentationPage() {
           ))}
         </ol>
         <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
-          Use a dedicated, revocable credential rather than a personal password or normal browser
-          session. Changing the monitored domain revokes the connection automatically.
+          Use a dedicated, revocable test account rather than a personal account. Changing the
+          monitored domain revokes the connection automatically.
         </p>
       </section>
 
@@ -133,10 +133,10 @@ export default function CliDocumentationPage() {
           Use the secure runner only when the cloud cannot reach the site.
         </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
-          A VPN, private network, client certificate, CAPTCHA, MFA, or multi-step browser session
+          A VPN, private network, client certificate, CAPTCHA, MFA, or organization-controlled SSO
           must remain inside an environment that already has access. Generate a project token, store
-          it as a CI secret, and run the check there. Public sites and supported hosting protections
-          do not need this setup.
+          it as a CI secret, and run the real-browser check there. Public sites and normal test
+          accounts do not need this setup.
         </p>
         <div className="mt-6">
           <DocsCodeBlock language="bash">{`coderocket audit https://preview.example.com \\
@@ -180,9 +180,9 @@ export default function CliDocumentationPage() {
 }`}</DocsCodeBlock>
         </div>
         <p className="mt-4 max-w-3xl text-muted text-sm leading-6">
-          Use a dedicated, least-privileged test account. The secure runner reads returned HTML and
-          response headers; it does not inspect repository source files, execute page JavaScript, or
-          automate a multi-step sign-in, MFA, or CAPTCHA journey.
+          Use a dedicated, least-privileged test account. The secure runner opens pages in an
+          isolated Chromium browser and executes page JavaScript. It does not inspect repository
+          source files or try to solve MFA, CAPTCHA, or an interactive SSO approval.
         </p>
         <p className="mt-3 max-w-3xl text-muted text-sm leading-6">
           Protection layers can be combined. A private application may require a self-hosted runner

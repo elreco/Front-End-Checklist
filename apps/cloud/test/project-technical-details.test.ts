@@ -36,7 +36,7 @@ describe('project technical details', () => {
     assert.match(html, /Technical details/)
     assert.match(html, /Documents received/)
     assert.match(html, /never the complete page source/)
-    assert.match(html, /View safe HTML outline/)
+    assert.match(html, /View received server HTML/)
     assert.match(html, /Cloudflare: HIT/)
     assert.match(html, /aaaaaaaaaaaaaaaa/)
     assert.doesNotMatch(html, /a{64}/)

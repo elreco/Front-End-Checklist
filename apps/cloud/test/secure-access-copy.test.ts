@@ -64,9 +64,10 @@ describe('secure access handoff copy', () => {
     assert.match(guidance, /cannot solve CAPTCHA/)
   })
 
-  it('does not pretend the HTML runner covers browser-only applications', () => {
+  it('explains what the browser runner can and cannot automate', () => {
     const copy = buildSecureAccessCopy({ ...base, accessMethods: ['browser_session'] })
-    assert.match(copy.developerInstructions, /does not execute JavaScript/)
-    assert.match(copy.providerRequest, /must not report them as fully covered/)
+    assert.match(copy.developerInstructions, /JavaScript is executed/)
+    assert.match(copy.developerInstructions, /CAPTCHA, MFA, and interactive SSO/)
+    assert.match(copy.providerRequest, /dedicated reusable browser session/)
   })
 })

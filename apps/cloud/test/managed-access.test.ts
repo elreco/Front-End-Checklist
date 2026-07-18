@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import {
+  buildManagedAccessPayload,
+  getRecommendedManagedAccessKind,
+  managedAccessKindIsPageSession
+} from '../components/managed-access-connection-helpers'
 import { diagnoseAccessBarrier, getManagedAccessLabel } from '../lib/managed-access'
 
 describe('managed access diagnosis', () => {
@@ -54,7 +59,36 @@ describe('managed access diagnosis', () => {
   })
 
   it('uses labels that do not expose secret material', () => {
+    assert.equal(getManagedAccessLabel('browser_login'), 'Dedicated test account')
     assert.equal(getManagedAccessLabel('session_cookie'), 'Dedicated test session')
     assert.equal(getManagedAccessLabel('custom_headers'), 'Custom access headers')
+  })
+
+  it('recommends the guided browser login for a normal application sign-in', () => {
+    assert.equal(getRecommendedManagedAccessKind('application_sign_in'), 'browser_login')
+    assert.equal(managedAccessKindIsPageSession('browser_login'), true)
+    assert.equal(managedAccessKindIsPageSession('cloudflare'), false)
+  })
+
+  it('keeps a test account scoped to the selected signed-in pages', () => {
+    const formData = new FormData()
+    formData.set('loginPage', 'https://example.com/login')
+    formData.set('username', 'health-check@example.com')
+    formData.set('password', 'dedicated-test-secret')
+
+    assert.deepEqual(
+      buildManagedAccessPayload('browser_login', 'authenticated', formData, [
+        '/dashboard',
+        '/account'
+      ]),
+      {
+        kind: 'browser_login',
+        loginPage: 'https://example.com/login',
+        password: 'dedicated-test-secret',
+        paths: ['/dashboard', '/account'],
+        scope: 'authenticated',
+        username: 'health-check@example.com'
+      }
+    )
   })
 })

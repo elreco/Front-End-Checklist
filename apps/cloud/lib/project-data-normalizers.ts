@@ -35,6 +35,10 @@ export function resolveDocumentProof(value: unknown): DocumentProof | undefined 
   )
     return undefined
   return {
+    analysisMode:
+      value.analysisMode === 'rendered_dom' || value.analysisMode === 'server_html'
+        ? value.analysisMode
+        : undefined,
     byteLength: value.byteLength,
     fetchedAt: value.fetchedAt,
     htmlOutline: value.htmlOutline,
@@ -43,6 +47,11 @@ export function resolveDocumentProof(value: unknown): DocumentProof | undefined 
     contentType: typeof value.contentType === 'string' ? value.contentType : undefined,
     etag: typeof value.etag === 'string' ? value.etag : undefined,
     lastModified: typeof value.lastModified === 'string' ? value.lastModified : undefined,
+    renderedByteLength:
+      typeof value.renderedByteLength === 'number' ? value.renderedByteLength : undefined,
+    renderedHtmlOutline:
+      typeof value.renderedHtmlOutline === 'string' ? value.renderedHtmlOutline : undefined,
+    renderedSha256: typeof value.renderedSha256 === 'string' ? value.renderedSha256 : undefined,
     title: typeof value.title === 'string' ? value.title : undefined
   }
 }

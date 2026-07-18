@@ -4,11 +4,11 @@ import { executeReviewCode } from '@repo/mcp/tools/review-code'
 import { PRODUCTION_HTML_RULE_SLUGS, selectProductionHtmlRules } from './automation-profile'
 import { normalizeAuditPath } from './diff'
 import { createDocumentProof } from './document-proof'
-import { fetchPublicHtml } from './safe-fetch'
+import { fetchPublicHtml, type SafeHtmlResponse } from './safe-fetch'
 import { extractSiteImageUrls, extractSocialImageUrl } from './social-metadata'
 import type { AuditFindingInput, DocumentProof, FindingCategory } from './types'
 
-const AUDIT_ENGINE_VERSION = 'coderocket-engine-4'
+const AUDIT_ENGINE_VERSION = 'coderocket-engine-5'
 const RULES = loadRules()
 const PRODUCTION_HTML_RULES = selectProductionHtmlRules(RULES)
 const RULE_CATEGORIES = new Map(RULES.map(rule => [rule.slug, rule.primaryCategory]))
@@ -37,6 +37,7 @@ export interface PageAuditResult {
 }
 
 export interface AuditPageOptions {
+  loadPage?: (url: string) => Promise<SafeHtmlResponse & { renderedHtml?: string }>
   requestHeaders?: Record<string, string>
 }
 
@@ -161,13 +162,16 @@ export async function auditPage(
   try {
     const requestedUrl = new URL(url)
     const requestedPath = normalizeAuditPath(requestedUrl.pathname)
-    const source = await fetchPublicHtml(url, { headers: options.requestHeaders })
+    const source: SafeHtmlResponse & { renderedHtml?: string } = options.loadPage
+      ? await options.loadPage(url)
+      : await fetchPublicHtml(url, { headers: options.requestHeaders })
+    const analyzedHtml = source.renderedHtml ?? source.html
     const siteImageUrls =
-      requestedUrl.pathname === '/' ? extractSiteImageUrls(source.html, source.url) : undefined
+      requestedUrl.pathname === '/' ? extractSiteImageUrls(analyzedHtml, source.url) : undefined
     if (PRODUCTION_HTML_RULES.length === 0)
       throw new Error('No automated Front-End Checklist rules are available')
     const result = executeReviewCode(
-      { code: source.html, focus: ['html', 'accessibility', 'seo', 'images'], minPriority: 'low' },
+      { code: analyzedHtml, focus: ['html', 'accessibility', 'seo', 'images'], minPriority: 'low' },
       PRODUCTION_HTML_RULES
     )
     return {
@@ -176,7 +180,7 @@ export async function auditPage(
       reachable: true,
       httpStatus: source.status,
       durationMs: source.durationMs,
-      document: createDocumentProof(source),
+      document: createDocumentProof({ ...source, analyzedHtml }),
       socialImageUrl: extractSocialImageUrl(source.html, source.url),
       siteImageUrls,
       findings: [
@@ -190,7 +194,9 @@ export async function auditPage(
           source: 'frontend_checklist' as const,
           evidence: {
             kind: 'html' as const,
-            summary: 'CodeRocket found this directly in the HTML returned by the monitored URL.',
+            summary: source.renderedHtml
+              ? 'CodeRocket found this in the page after opening it in a real browser.'
+              : 'CodeRocket found this directly in the HTML returned by the monitored URL.',
             observed: issue.issue,
             expected: 'The linked Front-End Checklist rule should pass'
           }

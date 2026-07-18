@@ -17,6 +17,12 @@ export interface ManagedAccessMethodOption {
 
 export const managedAccessMethodOptions: ManagedAccessMethodOption[] = [
   {
+    icon: UserRound,
+    kind: 'browser_login',
+    label: 'A test account',
+    summary: 'Some pages show the normal sign-in form for the website or app.'
+  },
+  {
     icon: Cloud,
     kind: 'vercel',
     label: 'Vercel preview',
@@ -31,14 +37,14 @@ export const managedAccessMethodOptions: ManagedAccessMethodOption[] = [
   {
     icon: KeyRound,
     kind: 'basic_auth',
-    label: 'Preview password',
-    summary: 'The browser asks for a username and password before opening the site.'
+    label: 'A password before the site opens',
+    summary: 'A small browser prompt appears before any page is displayed.'
   },
   {
     icon: UserRound,
     kind: 'session_cookie',
-    label: 'Application sign-in',
-    summary: 'Selected pages require a dedicated test session or access token.'
+    label: 'An existing session',
+    summary: 'Developer option for an already-created cookie or access token.'
   },
   {
     icon: Router,
@@ -55,13 +61,13 @@ export function getRecommendedManagedAccessKind(
   if (barrier === 'vercel') return 'vercel'
   if (barrier === 'cloudflare') return 'cloudflare'
   if (barrier === 'basic_auth') return 'basic_auth'
-  if (barrier === 'application_sign_in') return 'session_cookie'
+  if (barrier === 'application_sign_in') return 'browser_login'
   return null
 }
 
 /** Distinguish page-scoped application sessions from origin-wide infrastructure access. */
 export function managedAccessKindIsPageSession(kind: ManagedAccessKind | null): boolean {
-  return kind === 'session_cookie' || kind === 'bearer_token'
+  return kind === 'browser_login' || kind === 'session_cookie' || kind === 'bearer_token'
 }
 
 /** Return the plain-language label used above the selected access form. */
@@ -80,6 +86,15 @@ export function buildManagedAccessPayload(
   function value(name: string): string {
     return String(formData.get(name) ?? '')
   }
+  if (kind === 'browser_login')
+    return {
+      kind,
+      loginPage: value('loginPage'),
+      password: value('password'),
+      paths: authenticatedPaths,
+      scope,
+      username: value('username')
+    }
   if (kind === 'vercel') return { kind, scope, secret: value('secret') }
   if (kind === 'cloudflare')
     return {

@@ -215,6 +215,19 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('supports an encrypted dedicated test account without adding plaintext columns', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607180002_browser_login_connections.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /'browser_login'/)
+    assert.match(sql, /credentials remain inside encrypted_headers/)
+    assert.doesNotMatch(
+      sql.toLowerCase(),
+      /password\s+(?:text|varchar)|username\s+(?:text|varchar)/
+    )
+  })
+
   it('stores only bounded HTTPS social preview image URLs on monitored sites', async () => {
     const sql = await readFile(
       new URL('../supabase/migrations/202607170003_project_social_images.sql', import.meta.url),

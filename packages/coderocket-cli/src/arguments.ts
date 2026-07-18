@@ -12,6 +12,7 @@ export interface CliOptions {
   requestHeaders?: Record<string, string>
   authenticatedRequestHeaders?: Record<string, string>
   authenticatedUrls: string[]
+  browserCheck: boolean
 }
 
 /** Return the value immediately following one command-line flag. */
@@ -72,7 +73,8 @@ export function parseArguments(args: string[], environment: NodeJS.ProcessEnv): 
     ),
     authenticatedUrls: targets
       .filter(target => target.authenticated)
-      .map(target => target.url.toString())
+      .map(target => target.url.toString()),
+    browserCheck: environment.CODEROCKET_BROWSER_CHECK === 'true'
   }
 }
 

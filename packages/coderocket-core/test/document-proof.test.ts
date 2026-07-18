@@ -53,4 +53,19 @@ describe('document proof', () => {
     assert.match(proof.htmlOutline, /outline truncated/)
     assert.doesNotMatch(proof.htmlOutline, /secret/)
   })
+
+  it('records a separate fingerprint when the browser renders more than the server response', () => {
+    const proof = createDocumentProof({
+      analyzedHtml:
+        '<html><head><title>Dashboard</title></head><body><main><button>Save</button></main></body></html>',
+      fetchedAt: '2026-07-18T10:00:00.000Z',
+      headers: { 'content-type': 'text/html' },
+      html: '<html><head><title>Dashboard</title></head><body><div id="root"></div></body></html>'
+    })
+
+    assert.equal(proof.analysisMode, 'rendered_dom')
+    assert.match(proof.renderedSha256 ?? '', /^[a-f0-9]{64}$/)
+    assert.notEqual(proof.renderedSha256, proof.sha256)
+    assert.match(proof.renderedHtmlOutline ?? '', /<button>/)
+  })
 })

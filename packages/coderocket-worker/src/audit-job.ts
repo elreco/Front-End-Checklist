@@ -10,6 +10,8 @@ import {
   type PageAuditResult,
   resolveProjectSocialImage
 } from '@coderocket/core'
+import { BrowserAuditSession } from '@coderocket/core/browser'
+import { readBrowserLoginCredential } from '@coderocket/core/browser-login'
 import { createServiceClient, decryptAccessHeaders, persistAudit } from '@coderocket/db'
 
 const PAGE_CONCURRENCY = 4
@@ -65,7 +67,9 @@ async function updateProgress(
 async function auditProjectPages(
   job: WorkerJob,
   urls: string[],
-  resolveHeaders: AccessHeaderResolver
+  resolveHeaders: AccessHeaderResolver,
+  browser: BrowserAuditSession,
+  authenticatedPaths: Set<string>
 ): Promise<PageAuditResult[]> {
   const pages: PageAuditResult[] = []
   for (let offset = 0; offset < urls.length; offset += PAGE_CONCURRENCY) {
@@ -79,7 +83,13 @@ async function auditProjectPages(
     })
     pages.push(
       ...(await Promise.all(
-        batch.map(url => auditPage(url, { requestHeaders: resolveHeaders(url) }))
+        batch.map(url =>
+          auditPage(url, {
+            loadPage: pageUrl =>
+              browser.loadPage(pageUrl, authenticatedPaths.has(new URL(pageUrl).pathname)),
+            requestHeaders: resolveHeaders(url)
+          })
+        )
       ))
     )
     await updateProgress(job, {
@@ -127,17 +137,23 @@ export async function processAuditJob(
   if (error || !project) throw new Error('Project is unavailable')
   const { data: accessConnections, error: accessConnectionError } = await db
     .from('cr_project_access_connections')
-    .select('id,encrypted_headers,scope')
+    .select('id,encrypted_headers,kind,scope')
     .eq('project_id', project.id)
     .eq('owner_id', project.owner_id)
   if (accessConnectionError) throw new Error(accessConnectionError.message)
   const allPageHeaders: Record<string, string> = {}
   const authenticatedPageHeaders: Record<string, string> = {}
+  let browserLogin: ReturnType<typeof readBrowserLoginCredential>
   for (const connection of accessConnections ?? []) {
-    const headers = decryptAccessHeaders(connection.encrypted_headers)
+    const values = decryptAccessHeaders(connection.encrypted_headers)
+    if (connection.kind === 'browser_login') {
+      browserLogin = readBrowserLoginCredential(values)
+      if (!browserLogin) throw new Error('The saved test account is incomplete')
+      continue
+    }
     Object.assign(
       connection.scope === 'authenticated' ? authenticatedPageHeaders : allPageHeaders,
-      headers
+      values
     )
   }
   const authenticatedPaths = new Set<string>(project.authenticated_page_paths ?? [])
@@ -156,7 +172,18 @@ export async function processAuditJob(
     total: pageUrls.length,
     message: 'Preparing a safe connection to your website'
   })
-  const pages = await auditProjectPages(job, pageUrls, resolveHeaders)
+  const browser = new BrowserAuditSession({
+    authenticatedHeaders: authenticatedPageHeaders,
+    login: browserLogin,
+    publicHeaders: allPageHeaders,
+    siteUrl: project.production_url
+  })
+  let pages: PageAuditResult[]
+  try {
+    pages = await auditProjectPages(job, pageUrls, resolveHeaders, browser, authenticatedPaths)
+  } finally {
+    await browser.close()
+  }
   const homePageUrl = pageUrls.find(url => new URL(url).pathname === '/')
   const socialImageUrl = await resolveProjectSocialImage(pages, {
     headers: homePageUrl ? resolveHeaders(homePageUrl) : undefined

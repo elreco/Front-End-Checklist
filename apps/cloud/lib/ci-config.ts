@@ -101,8 +101,11 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Prepare the private browser
+        run: npx playwright-core@1.60.0 install --with-deps chromium
       - name: Check protected website HTML
         env:
+          CODEROCKET_BROWSER_CHECK: "true"
           CODEROCKET_TOKEN: \${{ secrets.CODEROCKET_TOKEN }}
           CODEROCKET_SITE_HEADERS_JSON: \${{ secrets.CODEROCKET_SITE_HEADERS_JSON }}
           CODEROCKET_AUTH_HEADERS_JSON: \${{ secrets.CODEROCKET_AUTH_HEADERS_JSON }}
@@ -116,7 +119,10 @@ function buildGitLabJob(command: string): string {
   return `coderocket-secure-check:
   image: node:22
   script:
+    - npx playwright-core@1.60.0 install --with-deps chromium
     - ${command}
+  variables:
+    CODEROCKET_BROWSER_CHECK: "true"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "web"'
@@ -133,6 +139,8 @@ pipelines:
       - step:
           name: Check website HTML
           script:
+            - npx playwright-core@1.60.0 install --with-deps chromium
+            - export CODEROCKET_BROWSER_CHECK=true
             - ${command}
 `
 }
@@ -140,6 +148,7 @@ pipelines:
 /** Add provider-neutral secret guidance to the raw audit command. */
 function buildGenericJob(command: string): string {
   return `# Store CODEROCKET_TOKEN in your CI platform's protected secret store.
+# Install Chromium once, then set CODEROCKET_BROWSER_CHECK=true.
 # Add CODEROCKET_SITE_HEADERS_JSON for edge or infrastructure headers sent to every page.
 # Add CODEROCKET_AUTH_HEADERS_JSON for the dedicated session sent only to authenticated pages.
 ${command}

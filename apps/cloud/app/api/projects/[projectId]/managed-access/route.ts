@@ -1,4 +1,5 @@
 import { buildProjectPageUrl, fetchPublicHtml } from '@coderocket/core'
+import { writeBrowserLoginCredential } from '@coderocket/core/browser-login'
 import { decryptAccessHeaders, encryptAccessHeaders } from '@coderocket/db'
 import { z } from 'zod'
 import { getManagedAccessLabel, type ManagedAccessScope } from '@/lib/managed-access'
@@ -6,6 +7,14 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 const scopeSchema = z.enum(['all', 'authenticated'])
 const accessInputSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('browser_login'),
+    loginPage: z.string().trim().min(1).max(2048),
+    password: z.string().min(1).max(4096),
+    paths: z.array(z.string().trim().min(1).max(2048)).max(50).default([]),
+    scope: z.literal('authenticated').default('authenticated'),
+    username: z.string().trim().min(1).max(1024)
+  }),
   z.object({
     kind: z.literal('vercel'),
     scope: scopeSchema.default('all'),
@@ -72,7 +81,17 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     return Response.json({ error: 'The monitored site could not be loaded.' }, { status: 500 })
   if (!project) return Response.json({ error: 'Monitored site not found.' }, { status: 404 })
 
-  const newHeaders = buildAccessHeaders(input.data)
+  let newValues: Record<string, string>
+  try {
+    newValues = buildAccessValues(input.data, project.production_url)
+  } catch (error) {
+    return Response.json(
+      {
+        error: error instanceof Error ? error.message : 'Check the sign-in page and try again.'
+      },
+      { status: 422 }
+    )
+  }
   const { data: storedConnections, error: existingConnectionError } = await supabase
     .from('cr_project_access_connections')
     .select('display_label,encrypted_headers,kind,scope')
@@ -87,9 +106,10 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   let allPageHeaders: Record<string, string> = {}
   let authenticatedPageHeaders: Record<string, string> = {}
   try {
-    if (existingConnection)
+    if (existingConnection && existingConnection.kind !== 'browser_login')
       existingHeaders = decryptAccessHeaders(existingConnection.encrypted_headers)
-    for (const connection of storedConnections ?? [])
+    for (const connection of storedConnections ?? []) {
+      if (connection.kind === 'browser_login') continue
       if (connection.scope === 'all')
         allPageHeaders = {
           ...allPageHeaders,
@@ -100,10 +120,12 @@ export async function POST(request: Request, context: { params: Promise<{ projec
           ...authenticatedPageHeaders,
           ...decryptAccessHeaders(connection.encrypted_headers)
         }
+    }
   } catch {
     return Response.json({ error: 'Existing page access could not be decrypted.' }, { status: 500 })
   }
-  const scopedHeaders = { ...existingHeaders, ...newHeaders }
+  const scopedValues =
+    input.data.kind === 'browser_login' ? newValues : { ...existingHeaders, ...newValues }
   const effectiveAuthenticatedPages = resolveAuthenticatedPages(
     input.data,
     project.page_paths,
@@ -114,46 +136,51 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     project.page_paths,
     effectiveAuthenticatedPages
   )
-  try {
-    for (const path of paths) {
-      const pathIsAuthenticated = effectiveAuthenticatedPages.includes(path)
-      const verificationHeaders =
-        input.data.scope === 'authenticated'
-          ? { ...allPageHeaders, ...scopedHeaders }
-          : pathIsAuthenticated
-            ? { ...scopedHeaders, ...authenticatedPageHeaders }
-            : scopedHeaders
-      await fetchPublicHtml(buildProjectPageUrl(project.production_url, path), {
-        headers: verificationHeaders
-      })
+  const requiresBrowserCheck = input.data.kind === 'browser_login'
+  if (!requiresBrowserCheck)
+    try {
+      for (const path of paths) {
+        const pathIsAuthenticated = effectiveAuthenticatedPages.includes(path)
+        const verificationHeaders =
+          input.data.scope === 'authenticated'
+            ? { ...allPageHeaders, ...scopedValues }
+            : pathIsAuthenticated
+              ? { ...scopedValues, ...authenticatedPageHeaders }
+              : scopedValues
+        await fetchPublicHtml(buildProjectPageUrl(project.production_url, path), {
+          headers: verificationHeaders
+        })
+      }
+    } catch (error) {
+      return Response.json(
+        {
+          error: explainVerificationFailure(error),
+          verified: false
+        },
+        { status: 422 }
+      )
     }
-  } catch (error) {
-    return Response.json(
-      {
-        error: explainVerificationFailure(error),
-        verified: false
-      },
-      { status: 422 }
-    )
-  }
 
   let encryptedHeaders: string
   try {
-    encryptedHeaders = encryptAccessHeaders(scopedHeaders)
+    encryptedHeaders = encryptAccessHeaders(scopedValues)
   } catch {
     return Response.json(
       { error: 'Secure access storage is not configured on this CodeRocket installation.' },
       { status: 503 }
     )
   }
-  const verifiedAt = new Date().toISOString()
+  const savedAt = new Date().toISOString()
+  const verifiedAt = requiresBrowserCheck ? null : savedAt
   const newLabel = getManagedAccessLabel(input.data.kind)
-  const displayLabel =
-    existingConnection && !existingConnection.display_label.split(' + ').includes(newLabel)
+  const displayLabel = requiresBrowserCheck
+    ? newLabel
+    : existingConnection && !existingConnection.display_label.split(' + ').includes(newLabel)
       ? `${existingConnection.display_label} + ${newLabel}`
       : (existingConnection?.display_label ?? newLabel)
-  const storedKind =
-    existingConnection && existingConnection.kind !== input.data.kind
+  const storedKind = requiresBrowserCheck
+    ? 'browser_login'
+    : existingConnection && existingConnection.kind !== input.data.kind
       ? 'custom_headers'
       : input.data.kind
   const { error: connectionError } = await supabase.from('cr_project_access_connections').upsert(
@@ -166,8 +193,8 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       owner_id: auth.user.id,
       project_id: projectId,
       scope: input.data.scope,
-      status: 'verified',
-      updated_at: verifiedAt
+      status: requiresBrowserCheck ? 'configured' : 'verified',
+      updated_at: savedAt
     },
     { onConflict: 'project_id,scope' }
   )
@@ -182,7 +209,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       authenticated_page_paths: effectiveAuthenticatedPages,
       schedule_enabled: true,
       secure_runner_required: false,
-      updated_at: verifiedAt
+      updated_at: savedAt
     })
     .eq('id', projectId)
     .eq('owner_id', auth.user.id)
@@ -209,7 +236,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       progress_message: 'Waiting for the website checking service',
       progress_stage: 'queued',
       progress_total: project.page_paths.length,
-      progress_updated_at: verifiedAt,
+      progress_updated_at: savedAt,
       project_id: projectId
     })
     queued = !queueError
@@ -218,10 +245,10 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   return Response.json({
     displayLabel,
     kind: storedKind,
-    lastVerifiedAt: verifiedAt,
+    ...(verifiedAt ? { lastVerifiedAt: verifiedAt } : {}),
     queued,
     scope: input.data.scope,
-    status: 'verified'
+    status: requiresBrowserCheck ? 'configured' : 'verified'
   })
 }
 
@@ -263,7 +290,21 @@ export async function DELETE(
 }
 
 /** Convert one validated provider payload into the request headers stored for the worker. */
-function buildAccessHeaders(input: z.infer<typeof accessInputSchema>): Record<string, string> {
+function buildAccessValues(
+  input: z.infer<typeof accessInputSchema>,
+  siteUrl: string
+): Record<string, string> {
+  if (input.kind === 'browser_login') {
+    const loginUrl = new URL(input.loginPage, siteUrl)
+    if (loginUrl.protocol !== 'https:' || loginUrl.origin !== new URL(siteUrl).origin)
+      throw new Error('Use a sign-in page on this monitored website.')
+    loginUrl.hash = ''
+    return writeBrowserLoginCredential({
+      loginUrl: loginUrl.toString(),
+      password: input.password,
+      username: input.username
+    })
+  }
   if (input.kind === 'vercel')
     return {
       'x-vercel-protection-bypass': input.secret,

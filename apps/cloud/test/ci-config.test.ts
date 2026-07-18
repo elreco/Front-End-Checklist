@@ -31,6 +31,8 @@ describe('secure runner configuration', () => {
     assert.match(workflow, /secrets\.CODEROCKET_TOKEN/)
     assert.match(workflow, /secrets\.CODEROCKET_SITE_HEADERS_JSON/)
     assert.match(workflow, /secrets\.CODEROCKET_AUTH_HEADERS_JSON/)
+    assert.match(workflow, /playwright-core@1\.60\.0 install/)
+    assert.match(workflow, /CODEROCKET_BROWSER_CHECK: "true"/)
   })
 
   it('uses a self-hosted GitHub runner for private networks', () => {

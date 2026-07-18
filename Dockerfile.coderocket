@@ -26,7 +26,8 @@ ENV PATH=$PNPM_HOME:$PATH
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV FRONTEND_CHECKLIST_RULES_DIR=/app/packages/content/rules/en
-RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client && rm -rf /var/lib/apt/lists/* \
+ENV CODEROCKET_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+RUN apt-get update && apt-get install -y --no-install-recommends chromium fonts-liberation postgresql-client && rm -rf /var/lib/apt/lists/* \
   && corepack enable \
   && pnpm --version
 WORKDIR /app

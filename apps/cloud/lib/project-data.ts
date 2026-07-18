@@ -2,7 +2,8 @@ import { getRulesetVersion } from '@coderocket/core'
 import { calculateWebsiteLevel, calculateWebsiteStability } from '@coderocket/core/website-level'
 import { getRuleDocumentationUrlBySlug } from './docs'
 import { formatAuditDate, formatRelativeTime } from './format'
-import type { ManagedAccessKind, ManagedAccessScope, ManagedAccessStatus } from './managed-access'
+import type { ManagedAccessStatus } from './managed-access'
+import { isManagedAccessKind, isManagedAccessScope, isManagedAccessStatus } from './managed-access'
 import {
   resolveAccessMode,
   resolveCheckStage,
@@ -483,26 +484,4 @@ function resolveManagedAccess(
       : 'all',
     status
   } satisfies ProjectDetail['managedAccess']
-}
-
-/** Narrow an untrusted database value to a supported managed-access kind. */
-function isManagedAccessKind(value: unknown): value is ManagedAccessKind {
-  return [
-    'vercel',
-    'cloudflare',
-    'basic_auth',
-    'bearer_token',
-    'session_cookie',
-    'custom_headers'
-  ].includes(String(value))
-}
-
-/** Narrow an untrusted database value to a supported access scope. */
-function isManagedAccessScope(value: unknown): value is ManagedAccessScope {
-  return value === 'all' || value === 'authenticated'
-}
-
-/** Narrow an untrusted database value to a public managed-connection status. */
-function isManagedAccessStatus(value: unknown): value is ManagedAccessStatus {
-  return value === 'configured' || value === 'verified' || value === 'failed'
 }

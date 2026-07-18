@@ -34,6 +34,7 @@ export interface FindingEvidence {
 }
 
 export interface DocumentProof {
+  analysisMode?: 'server_html' | 'rendered_dom'
   byteLength: number
   fetchedAt: string
   htmlOutline: string
@@ -42,6 +43,9 @@ export interface DocumentProof {
   contentType?: string
   etag?: string
   lastModified?: string
+  renderedByteLength?: number
+  renderedHtmlOutline?: string
+  renderedSha256?: string
   title?: string
 }
 

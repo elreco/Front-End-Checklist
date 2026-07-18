@@ -120,7 +120,7 @@ export function getAccessGuidance(accessMethods: readonly SecureAccessMethod[]):
     if (method === 'client_certificate')
       return 'run through an organization-managed runner or local proxy that presents the restricted client certificate; CodeRocket does not upload or store the certificate'
     if (method === 'browser_session')
-      return 'plan a browser-runner integration for this project; the current HTML runner can reuse request headers and server-side sessions, but it does not execute JavaScript, complete multi-step forms, or retain an interactive browser session yet'
+      return 'run the generated real-browser check and provide a dedicated reusable session through the protected CI secrets; JavaScript is executed, but CAPTCHA, MFA, and interactive SSO must be completed outside the check'
     return 'replace the interactive bot challenge with a narrowly scoped service identity or automation bypass for the monitored origin; CodeRocket cannot solve CAPTCHA or browser-verification challenges'
   })
   if (guidance.length === 1) {
@@ -179,7 +179,7 @@ function providerAction(accessMethods: readonly SecureAccessMethod[]): string {
     if (method === 'client_certificate')
       return 'Provide an organization-managed runner or proxy that presents a dedicated, revocable client certificate without sharing the certificate with CodeRocket.'
     if (method === 'browser_session')
-      return 'Confirm that these pages require JavaScript rendering or a multi-step browser session. They need CodeRocket browser-runner support; the current HTML runner must not report them as fully covered.'
+      return 'Prepare a dedicated reusable browser session for the generated secure runner. CodeRocket executes JavaScript, but the automated check must not attempt to solve CAPTCHA, MFA, or an interactive SSO approval.'
     return 'Provide a narrowly scoped non-interactive automation policy. CAPTCHA or browser-verification challenges cannot be solved by the CodeRocket HTML checker.'
   })
   return actions.map((action, index) => `${index + 1}. ${action}`).join('\n')

@@ -17,6 +17,7 @@ await build({
   entryPoints: [resolve(packageDirectory, 'src/index.ts')],
   outfile: resolve(outputDirectory, 'index.js'),
   bundle: true,
+  external: ['playwright-core'],
   format: 'esm',
   platform: 'node',
   target: 'node20',

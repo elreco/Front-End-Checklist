@@ -1,4 +1,5 @@
 export type ManagedAccessKind =
+  | 'browser_login'
   | 'vercel'
   | 'cloudflare'
   | 'basic_auth'
@@ -57,10 +58,34 @@ export function diagnoseAccessBarrier(pages: AccessEvidencePage[]): AccessBarrie
 
 /** Provide a non-secret label suitable for status UI and audit logs. */
 export function getManagedAccessLabel(kind: ManagedAccessKind): string {
+  if (kind === 'browser_login') return 'Dedicated test account'
   if (kind === 'vercel') return 'Vercel preview access'
   if (kind === 'cloudflare') return 'Cloudflare Access'
   if (kind === 'basic_auth') return 'Preview username and password'
   if (kind === 'bearer_token') return 'Dedicated access token'
   if (kind === 'session_cookie') return 'Dedicated test session'
   return 'Custom access headers'
+}
+
+/** Narrow an untrusted database value to a supported managed-access kind. */
+export function isManagedAccessKind(value: unknown): value is ManagedAccessKind {
+  return [
+    'browser_login',
+    'vercel',
+    'cloudflare',
+    'basic_auth',
+    'bearer_token',
+    'session_cookie',
+    'custom_headers'
+  ].includes(String(value))
+}
+
+/** Narrow an untrusted database value to a supported access scope. */
+export function isManagedAccessScope(value: unknown): value is ManagedAccessScope {
+  return value === 'all' || value === 'authenticated'
+}
+
+/** Narrow an untrusted database value to a public managed-connection status. */
+export function isManagedAccessStatus(value: unknown): value is ManagedAccessStatus {
+  return value === 'configured' || value === 'verified' || value === 'failed'
 }

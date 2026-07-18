@@ -71,7 +71,7 @@ export async function fetchPublicHtml(
       if (!location) throw new Error('Redirect is missing a Location header')
       const destination = new URL(location, target.url)
       if (isSignInRedirect(requestedUrl, destination))
-        throw new Error('The page redirected to a sign-in screen')
+        throw new Error(`The page redirected to a sign-in screen at ${destination.pathname}`)
       target = await resolvePublicTarget(destination.toString(), timeoutSignal)
       continue
     }

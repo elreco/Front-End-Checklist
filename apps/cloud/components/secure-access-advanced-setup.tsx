@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Copy,
-  KeyRound,
-  LoaderCircle
-} from '@repo/design-system/icons'
+import { CheckCircle2, Copy, KeyRound, LoaderCircle } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { toast } from '@repo/design-system/ui/coderocket-toast'
 import { useState } from 'react'
@@ -72,24 +66,6 @@ export function SecureAccessAdvancedSetup({
       toast.error(`${label} could not be copied`)
     }
   }
-
-  if (accessMethods.includes('browser_session'))
-    return (
-      <section className="border border-warning bg-warning/10 p-5">
-        <div className="flex items-start gap-3">
-          <AlertTriangle aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-          <div>
-            <p className="font-semibold text-sm">A real browser runner is required</p>
-            <p className="mt-1 text-muted text-xs leading-5">
-              Today’s secure runner reads the HTML returned by the server. It cannot yet execute the
-              application, complete a multi-step login, or restore browser storage. CodeRocket will
-              not create a misleading partial setup for this project. Use the copied handoff to
-              document the requirement while browser-runner support is built.
-            </p>
-          </div>
-        </div>
-      </section>
-    )
 
   return (
     <details className="border border-border bg-background">
@@ -163,6 +139,10 @@ export function SecureAccessAdvancedSetup({
         </SetupSection>
 
         <SetupSection number="03" title="Add the generated configuration">
+          <p className="mb-3 text-muted text-sm leading-6">
+            The generated job installs an isolated browser, opens the pages where this runner has
+            access, and sends only the check result back to CodeRocket.
+          </p>
           <div className="relative mt-3">
             <CodeRocketButton
               aria-label="Copy secure runner configuration"

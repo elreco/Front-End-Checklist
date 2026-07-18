@@ -4,7 +4,47 @@ import { CodeRocketInput, CodeRocketTextarea } from '@repo/design-system/ui/code
 import type { ManagedAccessKind } from '@/lib/managed-access'
 
 /** Render only the fields required by the selected managed-access method. */
-export function ManagedAccessFields({ kind }: { kind: ManagedAccessKind }) {
+export function ManagedAccessFields({
+  kind,
+  suggestedLoginPage,
+  siteUrl
+}: {
+  kind: ManagedAccessKind
+  suggestedLoginPage?: string
+  siteUrl: string
+}) {
+  if (kind === 'browser_login')
+    return (
+      <div className="space-y-4">
+        <div className="border border-success bg-success/10 p-4 text-sm leading-6">
+          Use a separate test account with the least access needed. CodeRocket signs in only during
+          a check, keeps the password encrypted, and never displays it again.
+        </div>
+        <AccessField
+          autoComplete="url"
+          defaultValue={new URL(suggestedLoginPage ?? '/login', siteUrl).toString()}
+          help="The page a person normally opens to sign in. Change it if your app uses another address."
+          label="Sign-in page"
+          name="loginPage"
+          type="url"
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <AccessField
+            autoComplete="username"
+            help="Use the email or username of the dedicated test account."
+            label="Test account email or username"
+            name="username"
+          />
+          <AccessField
+            autoComplete="new-password"
+            help="CodeRocket uses it only to open the selected signed-in pages."
+            label="Test account password"
+            name="password"
+            type="password"
+          />
+        </div>
+      </div>
+    )
   if (kind === 'vercel')
     return (
       <AccessField
@@ -93,6 +133,7 @@ export function ManagedAccessFields({ kind }: { kind: ManagedAccessKind }) {
 
 /** Render one consistently labelled secret or identifier field with inline guidance. */
 function AccessField({
+  defaultValue,
   help,
   label,
   name,
@@ -100,10 +141,11 @@ function AccessField({
   autoComplete
 }: {
   autoComplete: string
+  defaultValue?: string
   help: string
   label: string
   name: string
-  type?: 'password' | 'text'
+  type?: 'password' | 'text' | 'url'
 }) {
   const helpId = `${name}-access-help`
   const fieldId = `${name}-managed-access-field`
@@ -113,6 +155,7 @@ function AccessField({
       <CodeRocketInput
         aria-describedby={helpId}
         autoComplete={autoComplete}
+        defaultValue={defaultValue}
         id={fieldId}
         name={name}
         required

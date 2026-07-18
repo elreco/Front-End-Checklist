@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { auditPage, getRulesetVersion } from '@coderocket/core'
+import { BrowserAuditSession } from '@coderocket/core/browser'
 import { parseArguments } from './arguments'
 
 /** Run the CLI and return its documented process exit code. */
@@ -10,15 +11,33 @@ export async function run(args = process.argv.slice(2)): Promise<0 | 1 | 2> {
   try {
     const options = parseArguments(args, process.env)
     const authenticatedUrls = new Set(options.authenticatedUrls)
-    const pages = await Promise.all(
-      options.urls.map(url =>
-        auditPage(url, {
-          requestHeaders: authenticatedUrls.has(url)
-            ? { ...options.requestHeaders, ...options.authenticatedRequestHeaders }
-            : options.requestHeaders
+    const browser = options.browserCheck
+      ? new BrowserAuditSession({
+          authenticatedHeaders: options.authenticatedRequestHeaders,
+          publicHeaders: options.requestHeaders,
+          siteUrl: options.url
         })
+      : undefined
+    let pages: Awaited<ReturnType<typeof auditPage>>[]
+    try {
+      pages = await Promise.all(
+        options.urls.map(url =>
+          auditPage(url, {
+            ...(browser
+              ? {
+                  loadPage: (pageUrl: string) =>
+                    browser.loadPage(pageUrl, authenticatedUrls.has(url))
+                }
+              : {}),
+            requestHeaders: authenticatedUrls.has(url)
+              ? { ...options.requestHeaders, ...options.authenticatedRequestHeaders }
+              : options.requestHeaders
+          })
+        )
       )
-    )
+    } finally {
+      await browser?.close()
+    }
     const response = await fetch(options.apiUrl, {
       method: 'POST',
       headers: {
