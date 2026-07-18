@@ -4,15 +4,14 @@ import {
   BrainCircuit,
   CheckCircle2,
   Cloud,
-  LockKeyhole,
-  ShieldCheck
+  LockKeyhole
 } from '@repo/design-system/icons'
 import { Badge } from '@repo/design-system/ui/badge'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import type { ProjectDetail } from '@/lib/project-data'
 import { getProjectRecoveryKind } from '@/lib/project-recovery'
 import { UpgradeLink } from './plan-limit-upsell'
-import { ProjectActionStep, ProjectCoverageMetric } from './project-action-center-parts'
+import { ProjectActionStep, ProjectCoverageSummary } from './project-action-center-parts'
 import { ProjectCliSetup } from './project-cli-setup'
 import { ProjectPreviewProtectionCard } from './project-preview-protection-card'
 /** Shows next actions, monitoring coverage, integrations, and contextual plan value. */
@@ -192,26 +191,14 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
         ) : null}
       </section>
       <ProjectPreviewProtectionCard />
-      <section className="h-full border border-border bg-background p-5">
-        <div className="flex items-center gap-2">
-          <ShieldCheck aria-hidden className="h-5 w-5 text-success" />
-          <h2 className="font-heading font-semibold text-lg">What is covered</h2>
-        </div>
-        <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
-          <ProjectCoverageMetric label="Pages" value={String(project.pages.length)} />
-          <ProjectCoverageMetric
-            label="Frequency"
-            value={project.plan === 'free' ? 'Weekly' : 'Daily'}
-          />
-          <ProjectCoverageMetric
-            label="History"
-            value={
-              project.plan === 'free' ? '30 days' : project.plan === 'solo' ? '90 days' : '1 year'
-            }
-          />
-          <ProjectCoverageMetric label="Alerts" value="Important changes" />
-        </dl>
-      </section>
+      <ProjectCoverageSummary
+        alerts="Important changes"
+        frequency={project.plan === 'free' ? 'Weekly' : 'Daily'}
+        history={
+          project.plan === 'free' ? '30 days' : project.plan === 'solo' ? '90 days' : '1 year'
+        }
+        pages={String(project.pages.length)}
+      />
 
       {project.plan === 'free' ? (
         <section className="border border-accent bg-surface p-5 md:col-span-2 xl:col-span-3">
