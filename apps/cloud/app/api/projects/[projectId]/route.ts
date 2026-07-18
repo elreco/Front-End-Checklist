@@ -7,15 +7,19 @@ import {
   type PlanId
 } from '@coderocket/core'
 import { z } from 'zod'
-import {
-  normalizeEditablePagePaths,
-  projectConfigurationChanged
-} from '@/lib/project-configuration'
+import { normalizeEditablePagePaths } from '@/lib/project-configuration'
+import { projectConfigurationChanged } from '@/lib/project-configuration-changes'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 const configurationSchema = z.object({
   authenticatedPages: z.array(z.string().trim().min(1).max(2048)).max(50).default([]),
   checkNow: z.boolean().optional().default(true),
+  emailAlerts: z.object({
+    checkFailures: z.boolean(),
+    enabled: z.boolean(),
+    newProblems: z.boolean()
+  }),
+  name: z.string().trim().min(1).max(120),
   pages: z.array(z.string().trim().min(1).max(2048)).min(1).max(50),
   secureRunnerRequired: z.boolean().optional(),
   url: z.string().trim().min(1).max(2048)
@@ -40,7 +44,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
 
   const { data: project, error: projectError } = await supabase
     .from('cr_projects')
-    .select('id,production_url,page_paths,authenticated_page_paths,secure_runner_required')
+    .select(
+      'id,name,production_url,page_paths,authenticated_page_paths,secure_runner_required,access_mode,email_alerts_enabled,alert_on_new_problems,alert_on_check_failures'
+    )
     .eq('id', projectId)
     .eq('owner_id', auth.user.id)
     .is('archived_at', null)
@@ -49,12 +55,33 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     return Response.json({ error: 'The monitored site could not be loaded.' }, { status: 500 })
   if (!project) return Response.json({ error: 'Monitored site not found.' }, { status: 404 })
 
-  const normalized = await normalizeConfiguration(
-    input.data.url,
-    input.data.pages,
-    input.data.authenticatedPages,
-    input.data.secureRunnerRequired ?? project.secure_runner_required
-  )
+  const requestedMonitoring = {
+    authenticatedPages: input.data.authenticatedPages,
+    pages: input.data.pages,
+    secureRunnerRequired: input.data.secureRunnerRequired ?? project.secure_runner_required,
+    url: input.data.url
+  }
+  const storedMonitoring = {
+    authenticatedPages: project.authenticated_page_paths ?? [],
+    pages: project.page_paths,
+    secureRunnerRequired: project.secure_runner_required,
+    url: project.production_url
+  }
+  const normalized: Awaited<ReturnType<typeof normalizeConfiguration>> =
+    projectConfigurationChanged(storedMonitoring, requestedMonitoring)
+      ? await normalizeConfiguration(
+          requestedMonitoring.url,
+          requestedMonitoring.pages,
+          requestedMonitoring.authenticatedPages,
+          requestedMonitoring.secureRunnerRequired
+        )
+      : {
+          success: true,
+          accessMode: resolveAccessMode(project.access_mode),
+          authenticatedPages: storedMonitoring.authenticatedPages,
+          pages: storedMonitoring.pages,
+          url: storedMonitoring.url
+        }
   if (!normalized.success) return Response.json({ error: normalized.error }, { status: 422 })
 
   const [{ data: subscription }, { count: activeChecks }, { data: managedAccess }] =
@@ -79,19 +106,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     ])
   const plan = resolvePlan(subscription?.plan_id)
   const limits = getPlanEntitlements(plan)
-  if (normalized.pages.length > limits.pagesPerProject)
-    return Response.json(
-      {
-        error: `${plan === 'free' ? 'The free plan' : `The ${plan} plan`} allows up to ${limits.pagesPerProject} monitored pages per site.`
-      },
-      { status: 422 }
-    )
-  if ((activeChecks ?? 0) > 0)
-    return Response.json(
-      { error: 'Wait for the current check to finish before changing its URLs.' },
-      { status: 409 }
-    )
-
   const siteUrlChanged = project.production_url !== normalized.url
   const managedConnections = managedAccess ?? []
   const hasUsableManagedAccess =
@@ -99,18 +113,31 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     managedConnections.every(connection => connection.status === 'verified') &&
     !siteUrlChanged
   const secureRunnerRequired = normalized.accessMode !== 'public' && !hasUsableManagedAccess
-  const changed = projectConfigurationChanged(
-    {
-      authenticatedPages: project.authenticated_page_paths ?? [],
-      pages: project.page_paths,
-      secureRunnerRequired: project.secure_runner_required,
-      url: project.production_url
-    },
-    {
-      ...normalized,
-      secureRunnerRequired
-    }
-  )
+  const monitoringChanged = projectConfigurationChanged(storedMonitoring, {
+    ...normalized,
+    secureRunnerRequired
+  })
+  if (monitoringChanged && normalized.pages.length > limits.pagesPerProject)
+    return Response.json(
+      {
+        error: `${plan === 'free' ? 'The free plan' : `The ${plan} plan`} allows up to ${limits.pagesPerProject} monitored pages per site.`
+      },
+      { status: 422 }
+    )
+  if ((activeChecks ?? 0) > 0 && monitoringChanged)
+    return Response.json(
+      {
+        error:
+          'The name and email alerts can be saved now, but wait for the current check to finish before changing pages or access.'
+      },
+      { status: 409 }
+    )
+  const settingsChanged =
+    project.name !== input.data.name ||
+    project.email_alerts_enabled !== input.data.emailAlerts.enabled ||
+    project.alert_on_new_problems !== input.data.emailAlerts.newProblems ||
+    project.alert_on_check_failures !== input.data.emailAlerts.checkFailures
+  const changed = monitoringChanged || settingsChanged
   if (changed) {
     const changedAt = new Date().toISOString()
     if (siteUrlChanged && managedConnections.length > 0)
@@ -122,13 +149,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     const { error } = await supabase
       .from('cr_projects')
       .update({
-        access_mode: normalized.accessMode,
-        authenticated_page_paths: normalized.authenticatedPages,
-        baseline_reset_at: changedAt,
-        page_paths: normalized.pages,
-        production_url: normalized.url,
-        schedule_enabled: normalized.accessMode === 'public' || hasUsableManagedAccess,
-        secure_runner_required: secureRunnerRequired,
+        alert_on_check_failures: input.data.emailAlerts.checkFailures,
+        alert_on_new_problems: input.data.emailAlerts.newProblems,
+        email_alerts_enabled: input.data.emailAlerts.enabled,
+        name: input.data.name,
+        ...(monitoringChanged
+          ? {
+              access_mode: normalized.accessMode,
+              authenticated_page_paths: normalized.authenticatedPages,
+              baseline_reset_at: changedAt,
+              page_paths: normalized.pages,
+              production_url: normalized.url,
+              schedule_enabled: normalized.accessMode === 'public' || hasUsableManagedAccess,
+              secure_runner_required: secureRunnerRequired
+            }
+          : {}),
         ...(siteUrlChanged ? { social_image_url: null } : {}),
         updated_at: changedAt
       })
@@ -136,11 +171,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
       .eq('owner_id', auth.user.id)
       .is('archived_at', null)
     if (error)
-      return Response.json({ error: 'The monitored URLs could not be saved.' }, { status: 500 })
+      return Response.json({ error: 'The site settings could not be saved.' }, { status: 500 })
   }
 
   const shouldQueue =
-    input.data.checkNow && (normalized.accessMode === 'public' || hasUsableManagedAccess)
+    monitoringChanged &&
+    input.data.checkNow &&
+    (normalized.accessMode === 'public' || hasUsableManagedAccess)
   const queueResult = shouldQueue
     ? await queueConfigurationCheck({
         ownerId: auth.user.id,
@@ -155,6 +192,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     accessMode: normalized.accessMode,
     authenticatedPages: normalized.authenticatedPages,
     changed,
+    emailAlerts: input.data.emailAlerts,
+    monitoringChanged,
+    name: input.data.name,
     queued: queueResult.queued,
     checkWarning: queueResult.warning,
     pages: normalized.pages,
@@ -266,6 +306,9 @@ function updateDemoConfiguration(
       accessMode,
       authenticatedPages,
       changed: true,
+      emailAlerts: input.emailAlerts,
+      monitoringChanged: input.checkNow,
+      name: input.name,
       queued: input.checkNow && accessMode === 'public',
       pages,
       secureRunnerRequired: accessMode !== 'public',
@@ -330,4 +373,9 @@ async function queueConfigurationCheck({
 /** Normalize a stored subscription value to the public plan contract. */
 function resolvePlan(value: unknown): PlanId {
   return value === 'solo' || value === 'agency' ? value : 'free'
+}
+
+/** Normalize a persisted access value without trusting database text at the API boundary. */
+function resolveAccessMode(value: unknown): 'private' | 'protected' | 'public' {
+  return value === 'private' || value === 'protected' ? value : 'public'
 }

@@ -1,11 +1,15 @@
 'use client'
 
-import type { DiscoveredPage } from '@coderocket/core'
 import { Check, Radar } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import type { ChangeEvent } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { getEnteredPages, getImportedPages, mergeEnteredPages } from '@/lib/onboarding-pages'
+import {
+  isValidPageDiscoveryUrl,
+  readDiscoveredPages,
+  readPageDiscoveryError
+} from '@/lib/page-discovery-response'
 import { OnboardingPageDiscoveryOptions } from './onboarding-page-discovery-options'
 
 interface PageCandidate {
@@ -30,13 +34,15 @@ export function OnboardingPageDiscovery({
   siteUrl
 }: OnboardingPageDiscoveryProps) {
   const fileInput = useRef<HTMLInputElement>(null)
+  const headingId = useId()
+  const inputId = useId()
   const [candidates, setCandidates] = useState<PageCandidate[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [status, setStatus] = useState<'idle' | 'loading'>('idle')
   const [message, setMessage] = useState<string>()
   const currentPages = getEnteredPages(pagesValue)
   const remainingSlots = Math.max(0, pagesPerProject - currentPages.length)
-  const validSiteUrl = isValidSiteUrl(siteUrl)
+  const validSiteUrl = isValidPageDiscoveryUrl(siteUrl)
 
   useEffect(() => {
     setCandidates([])
@@ -55,7 +61,7 @@ export function OnboardingPageDiscovery({
         method: 'POST'
       })
       const body: unknown = await response.json()
-      if (!response.ok) throw new Error(readError(body))
+      if (!response.ok) throw new Error(readPageDiscoveryError(body))
       const pages = readDiscoveredPages(body)
       showCandidates(
         pages.map(page => ({ path: page.path, source: page.source })),
@@ -127,16 +133,13 @@ export function OnboardingPageDiscovery({
   }
 
   return (
-    <section
-      className="max-w-3xl border border-border bg-surface p-4"
-      aria-labelledby="add-pages-faster"
-    >
+    <section className="max-w-3xl border border-border bg-surface p-4" aria-labelledby={headingId}>
       <div className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-signal text-signal">
           <Radar aria-hidden className="h-4 w-4" />
         </span>
         <div>
-          <h3 className="font-heading font-semibold" id="add-pages-faster">
+          <h3 className="font-heading font-semibold" id={headingId}>
             Choose how to find your pages
           </h3>
           <p className="mt-1 text-muted text-xs leading-5">
@@ -152,14 +155,14 @@ export function OnboardingPageDiscovery({
         onImport={() => fileInput.current?.click()}
         validSiteUrl={validSiteUrl}
       />
-      <label className="sr-only" htmlFor="route-file-import">
+      <label className="sr-only" htmlFor={inputId}>
         Choose an XML, TXT, CSV, or JSON sitemap or route file
       </label>
       <input
         accept=".xml,.txt,.csv,.json,application/xml,text/xml,text/plain,text/csv,application/json"
         aria-label="Choose an XML, TXT, CSV, or JSON sitemap or route file"
         hidden
-        id="route-file-import"
+        id={inputId}
         onChange={importPages}
         ref={fileInput}
         type="file"
@@ -227,35 +230,4 @@ export function OnboardingPageDiscovery({
       ) : null}
     </section>
   )
-}
-
-/** Return whether page discovery can safely target the entered HTTPS origin. */
-function isValidSiteUrl(value: string): boolean {
-  try {
-    return new URL(value.trim()).protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
-/** Read a safe API error message without assuming the response shape. */
-function readError(value: unknown): string {
-  if (value && typeof value === 'object' && 'error' in value && typeof value.error === 'string')
-    return value.error
-  return 'Page discovery could not be completed.'
-}
-
-/** Extract validated public-page candidates from an unknown API response. */
-function readDiscoveredPages(value: unknown): DiscoveredPage[] {
-  if (!value || typeof value !== 'object' || !('pages' in value) || !Array.isArray(value.pages))
-    return []
-  return value.pages.filter(isDiscoveredPage)
-}
-
-/** Narrow an unknown candidate to the page-discovery response contract. */
-function isDiscoveredPage(value: unknown): value is DiscoveredPage {
-  if (!value || typeof value !== 'object') return false
-  if (!('path' in value) || typeof value.path !== 'string') return false
-  if (!('source' in value)) return false
-  return value.source === 'homepage' || value.source === 'sitemap'
 }

@@ -1,10 +1,16 @@
+import type { SiteAccessMode } from '@coderocket/core'
 import type { PlanId } from '@/lib/upgrade'
+import type { ProjectEmailAlerts } from './project-data-types'
 
 export interface ProjectSiteEditorProps {
+  accessMode: SiteAccessMode
+  alertEmail?: string
   authenticatedPages: string[]
   checking?: boolean
+  emailAlerts: ProjectEmailAlerts
   maxPages: number
   managedAccessConnected?: boolean
+  name: string
   pages: string[]
   plan: PlanId
   problemPaths?: string[]
@@ -20,6 +26,9 @@ export interface ProjectConfigurationSaveResponse {
   authenticatedPages: string[]
   changed: boolean
   checkWarning?: string
+  emailAlerts: ProjectEmailAlerts
+  monitoringChanged: boolean
+  name: string
   pages: string[]
   queued: boolean
   secureRunnerRequired: boolean
@@ -29,10 +38,12 @@ export interface ProjectConfigurationSaveResponse {
 /** Keep the destructive domain-replacement action explicit in the submit label. */
 export function getProjectEditorSubmitLabel(options: {
   checkAfterSave: boolean
+  monitoringChanged: boolean
   originChanged: boolean
   saving: boolean
 }): string {
   if (options.saving) return 'Saving…'
+  if (!options.monitoringChanged) return 'Save settings'
   if (options.originChanged)
     return options.checkAfterSave ? 'Replace address and check' : 'Replace address'
   return options.checkAfterSave ? 'Save and check again' : 'Save changes'
@@ -53,12 +64,15 @@ export function isProjectConfigurationSaveResponse(
   value: unknown
 ): value is ProjectConfigurationSaveResponse {
   if (!isUnknownRecord(value)) return false
+  if (!isProjectEmailAlerts(value.emailAlerts)) return false
   return (
     typeof value.changed === 'boolean' &&
     (value.accessMode === 'public' ||
       value.accessMode === 'protected' ||
       value.accessMode === 'private') &&
     typeof value.queued === 'boolean' &&
+    typeof value.monitoringChanged === 'boolean' &&
+    typeof value.name === 'string' &&
     typeof value.secureRunnerRequired === 'boolean' &&
     typeof value.url === 'string' &&
     Array.isArray(value.pages) &&
@@ -69,11 +83,21 @@ export function isProjectConfigurationSaveResponse(
   )
 }
 
+/** Narrow one settings payload to the three supported email alert preferences. */
+function isProjectEmailAlerts(value: unknown): value is ProjectEmailAlerts {
+  return (
+    isUnknownRecord(value) &&
+    typeof value.enabled === 'boolean' &&
+    typeof value.newProblems === 'boolean' &&
+    typeof value.checkFailures === 'boolean'
+  )
+}
+
 /** Extract a safe API message from an unknown response payload. */
 export function readProjectConfigurationError(value: unknown): string {
   return isUnknownRecord(value) && typeof value.error === 'string'
     ? value.error
-    : 'The monitored URLs could not be updated.'
+    : 'The site settings could not be updated.'
 }
 
 /** Narrow an unknown JSON value to an object without a type assertion. */

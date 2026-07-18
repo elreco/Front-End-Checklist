@@ -10,7 +10,12 @@ export function SiteDirectoryRow({ project }: { project: DashboardProject }) {
   return (
     <li className="cr-card-link relative grid gap-4 p-5 transition-colors hover:bg-surface-raised sm:p-6 lg:grid-cols-[minmax(260px,1fr)_160px_100px_110px_150px] lg:items-center">
       <div className="flex min-w-0 items-center gap-4">
-        <SiteVisual imageUrl={project.socialImageUrl} name={project.name} size="row" />
+        <SiteVisual
+          imageUrl={project.socialImageUrl}
+          name={project.name}
+          pending={project.isChecking}
+          size="row"
+        />
         <div className="min-w-0">
           <h3 className="truncate font-heading font-semibold text-lg">
             <Link

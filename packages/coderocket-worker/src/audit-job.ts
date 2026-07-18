@@ -13,6 +13,7 @@ import {
 import { BrowserAuditSession } from '@coderocket/core/browser'
 import { readBrowserLoginCredential } from '@coderocket/core/browser-login'
 import { createServiceClient, decryptAccessHeaders, persistAudit } from '@coderocket/db'
+import { allowsEmailAlert } from './email-policy'
 
 const PAGE_CONCURRENCY = 4
 
@@ -128,7 +129,7 @@ export async function processAuditJob(
   const { data: project, error } = await db
     .from('cr_projects')
     .select(
-      'id,owner_id,name,production_url,page_paths,authenticated_page_paths,access_mode,baseline_reset_at'
+      'id,owner_id,name,production_url,page_paths,authenticated_page_paths,access_mode,baseline_reset_at,email_alerts_enabled,alert_on_new_problems,alert_on_check_failures'
     )
     .eq('id', job.project_id)
     .eq('owner_id', job.owner_id)
@@ -316,12 +317,22 @@ export async function processAuditJob(
     pages,
     startedAt
   })
-  if (comparison.gate === 'failed' && comparison.blockingRegressions > 0)
+  const emailPreferences = {
+    checkFailures: project.alert_on_check_failures,
+    enabled: project.email_alerts_enabled,
+    newProblems: project.alert_on_new_problems
+  }
+  if (
+    allowsEmailAlert(emailPreferences, 'new_problems') &&
+    comparison.gate === 'failed' &&
+    comparison.blockingRegressions > 0
+  )
     await db.from('cr_jobs').insert({
       owner_id: project.owner_id,
       project_id: project.id,
       kind: 'email',
       payload: {
+        alertKind: 'new_problems',
         auditId,
         project: project.name,
         headline: 'Your website needs attention',
@@ -333,12 +344,17 @@ export async function processAuditJob(
     recentAudits?.[0]?.gate_status === 'inconclusive' &&
     recentAudits?.[1]?.gate_status === 'inconclusive' &&
     recentAudits?.[2]?.gate_status !== 'inconclusive'
-  if (thirdConsecutiveIncompleteCheck && comparison.blockingRegressions === 0)
+  if (
+    allowsEmailAlert(emailPreferences, 'check_failures') &&
+    thirdConsecutiveIncompleteCheck &&
+    comparison.blockingRegressions === 0
+  )
     await db.from('cr_jobs').insert({
       owner_id: project.owner_id,
       project_id: project.id,
       kind: 'email',
       payload: {
+        alertKind: 'check_failures',
         auditId,
         project: project.name,
         headline: 'CodeRocket could not check your website',

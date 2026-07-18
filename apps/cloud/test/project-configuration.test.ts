@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import {
-  normalizeEditablePagePaths,
-  projectConfigurationChanged
-} from '../lib/project-configuration'
+import { normalizeEditablePagePaths } from '../lib/project-configuration'
+import { projectConfigurationChanged } from '../lib/project-configuration-changes'
 import { getPageHttpStatus, getProjectRecoveryKind } from '../lib/project-recovery'
 import { getProjectEditorSubmitLabel } from '../lib/project-site-editor'
 
@@ -113,9 +111,22 @@ test('makes a different-domain replacement explicit in the submit action', () =>
   assert.equal(
     getProjectEditorSubmitLabel({
       checkAfterSave: true,
+      monitoringChanged: true,
       originChanged: true,
       saving: false
     }),
     'Replace address and check'
+  )
+})
+
+test('keeps email-only saves separate from fresh website checks', () => {
+  assert.equal(
+    getProjectEditorSubmitLabel({
+      checkAfterSave: false,
+      monitoringChanged: false,
+      originChanged: false,
+      saving: false
+    }),
+    'Save settings'
   )
 })

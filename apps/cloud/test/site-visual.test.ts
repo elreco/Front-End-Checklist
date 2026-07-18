@@ -19,6 +19,20 @@ describe('site visual', () => {
     assert.match(html, />ES</)
   })
 
+  it('shows a progress state while the preview image is still being checked', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(SiteVisual, {
+        name: 'Example Studio',
+        pending: true,
+        size: 'detail'
+      })
+    )
+
+    assert.match(html, /Checking for preview image…/)
+    assert.match(html, /animate-spin/)
+    assert.doesNotMatch(html, /No preview image found/)
+  })
+
   it('prioritizes an above-the-fold detail preview with stable dimensions', () => {
     const html = renderToStaticMarkup(
       React.createElement(SiteVisual, {

@@ -4,7 +4,7 @@ import {
   getWebsiteLevelNextStep,
   getWebsiteLevelPresentation
 } from '@/lib/website-level-presentation'
-import { WebsiteLevelMedal } from './website-level-medal'
+import { WebsiteLevelEmptyMedal, WebsiteLevelMedal } from './website-level-medal'
 
 const RANKED_LEVELS: Array<Exclude<WebsiteLevel, 'unverified' | 'needs_attention'>> = [
   'bronze',
@@ -49,35 +49,8 @@ export function WebsiteLevelMark({
         size={size}
       />
     )
-  const presentation = getWebsiteLevelPresentation(level)
-  const sizeClassName = size === 'sm' ? 'h-14 w-12' : size === 'md' ? 'h-28 w-24' : 'h-32 w-28'
   return (
-    <div
-      aria-label={`${presentation.label} website health level`}
-      className={`relative flex shrink-0 items-center justify-center border ${sizeClassName} ${presentation.borderClassName} ${presentation.backgroundClassName} ${presentation.textClassName} ${animate ? 'cr-level-arrive' : ''}`}
-      role="img"
-    >
-      <svg aria-hidden className="absolute inset-1" viewBox="0 0 100 100">
-        <circle
-          cx="50"
-          cy="50"
-          fill="none"
-          opacity="0.34"
-          r="43"
-          stroke="currentColor"
-          strokeDasharray="2 8"
-          strokeWidth="1.5"
-        />
-        <path
-          d="M50 8 82 26 92 61 68 88 32 88 8 61 18 26Z"
-          fill="none"
-          opacity="0.7"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-      </svg>
-      <span className={`font-mono font-semibold ${size === 'sm' ? 'text-sm' : 'text-xl'}`}>—</span>
-    </div>
+    <WebsiteLevelEmptyMedal animate={animate} animationDelayMs={animationDelayMs} size={size} />
   )
 }
 

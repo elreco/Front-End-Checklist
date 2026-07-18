@@ -71,11 +71,19 @@ export interface ProjectPageCheck {
   url: string
 }
 
+export interface ProjectEmailAlerts {
+  checkFailures: boolean
+  enabled: boolean
+  newProblems: boolean
+}
+
 export interface ProjectDetail {
   id: string
   name: string
   url: string
   socialImageUrl?: string
+  alertEmail?: string
+  emailAlerts: ProjectEmailAlerts
   accessMode: SiteAccessMode
   authenticatedPages: string[]
   pages: string[]

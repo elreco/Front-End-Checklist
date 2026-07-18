@@ -58,8 +58,8 @@ export default async function SettingsPage() {
               <h2 className="font-heading font-semibold text-lg">Useful alerts only</h2>
             </div>
             <p className="mt-3 text-muted text-sm leading-6">
-              CodeRocket emails you only when a new urgent or important problem appears, or when a
-              website repeatedly cannot be checked.
+              New sites alert you only about important problems and repeated check failures. You can
+              change or disable these emails from each site’s settings.
             </p>
           </div>
           <div className="border border-border bg-background p-5">

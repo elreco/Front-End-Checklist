@@ -53,9 +53,13 @@ export function ProjectAccessRecovery({
           <div className="mt-4 flex flex-wrap gap-2">
             {shouldEditFirst ? (
               <ProjectSiteEditor
+                accessMode={project.accessMode}
+                alertEmail={project.alertEmail}
                 authenticatedPages={project.authenticatedPages}
+                emailAlerts={project.emailAlerts}
                 managedAccessConnected={project.managedAccess?.status === 'verified'}
                 maxPages={getPlanEntitlements(project.plan).pagesPerProject}
+                name={project.name}
                 pages={project.pages}
                 plan={project.plan}
                 problemPaths={unavailablePages.map(page => page.path)}
@@ -95,9 +99,13 @@ export function ProjectAccessRecovery({
             ) : null}
             {!shouldEditFirst ? (
               <ProjectSiteEditor
+                accessMode={project.accessMode}
+                alertEmail={project.alertEmail}
                 authenticatedPages={project.authenticatedPages}
+                emailAlerts={project.emailAlerts}
                 managedAccessConnected={project.managedAccess?.status === 'verified'}
                 maxPages={getPlanEntitlements(project.plan).pagesPerProject}
+                name={project.name}
                 pages={project.pages}
                 plan={project.plan}
                 problemPaths={unavailablePages.map(page => page.path)}

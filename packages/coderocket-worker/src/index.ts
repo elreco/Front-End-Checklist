@@ -5,6 +5,7 @@ import { failAiAnalysisJob, processAiAnalysisJob } from './ai-analysis-job'
 import { processAiUsageJob } from './ai-usage-job'
 import { JobCancelledError, processAuditJob, type WorkerJob } from './audit-job'
 import { sendAlertEmail } from './email'
+import { allowsEmailAlert, readEmailAlertKind } from './email-policy'
 import { log } from './log'
 
 const workerId = `fly-${process.env.FLY_MACHINE_ID ?? randomUUID()}`
@@ -20,6 +21,7 @@ process.on('SIGINT', () => {
   log('info', 'worker.stopping', { workerId })
 })
 
+/** Refresh the worker lease signal used by operational health checks. */
 async function heartbeat() {
   await createServiceClient()
     .from('cr_worker_heartbeats')
@@ -30,8 +32,32 @@ async function heartbeat() {
     })
 }
 
+/** Deliver one queued alert only if the site's latest preferences still allow it. */
 async function processEmail(job: WorkerJob) {
   const db = createServiceClient()
+  const alertKind = readEmailAlertKind(job.payload.alertKind)
+  if (job.project_id && alertKind) {
+    const { data: project, error } = await db
+      .from('cr_projects')
+      .select('email_alerts_enabled,alert_on_new_problems,alert_on_check_failures')
+      .eq('id', job.project_id)
+      .eq('owner_id', job.owner_id)
+      .is('archived_at', null)
+      .maybeSingle()
+    if (error) throw new Error(error.message)
+    if (
+      !project ||
+      !allowsEmailAlert(
+        {
+          checkFailures: project.alert_on_check_failures,
+          enabled: project.email_alerts_enabled,
+          newProblems: project.alert_on_new_problems
+        },
+        alertKind
+      )
+    )
+      return
+  }
   const { data: user } = await db.auth.admin.getUserById(job.owner_id)
   if (!user.user?.email) throw new Error('Owner email is unavailable')
   const auditId = String(job.payload.auditId ?? '')
@@ -44,6 +70,7 @@ async function processEmail(job: WorkerJob) {
   })
 }
 
+/** Route one leased job to its bounded worker implementation. */
 async function handle(job: WorkerJob) {
   if (job.payload.kind === 'email') return processEmail(job)
   if (job.payload.kind === 'audit') return processAuditJob(job)
@@ -52,6 +79,7 @@ async function handle(job: WorkerJob) {
   throw new Error(`Unsupported worker job kind: ${String(job.payload.kind)}`)
 }
 
+/** Enqueue due work, claim one job, and persist its terminal or retry state. */
 async function tick() {
   const db = createServiceClient()
   await heartbeat()
@@ -132,26 +160,39 @@ async function tick() {
       if (job.kind === 'audit' && job.attempts >= 3) {
         const { data: project } = await db
           .from('cr_projects')
-          .select('name')
+          .select('name,email_alerts_enabled,alert_on_new_problems,alert_on_check_failures')
           .eq('id', job.project_id)
           .maybeSingle()
-        await db.from('cr_jobs').insert({
-          owner_id: job.owner_id,
-          project_id: job.project_id,
-          kind: 'email',
-          payload: {
-            project: project?.name ?? 'CodeRocket website',
-            headline: 'Website check failed repeatedly',
-            detail:
-              'CodeRocket could not complete this website check after three attempts. Open the site to inspect the last operational error.'
-          }
-        })
+        if (
+          project &&
+          allowsEmailAlert(
+            {
+              checkFailures: project.alert_on_check_failures,
+              enabled: project.email_alerts_enabled,
+              newProblems: project.alert_on_new_problems
+            },
+            'check_failures'
+          )
+        )
+          await db.from('cr_jobs').insert({
+            owner_id: job.owner_id,
+            project_id: job.project_id,
+            kind: 'email',
+            payload: {
+              alertKind: 'check_failures',
+              project: project.name,
+              headline: 'Website check failed repeatedly',
+              detail:
+                'CodeRocket could not complete this website check after three attempts. Open the site to inspect the last operational error.'
+            }
+          })
       }
       log('error', 'job.failed', { jobId: job.id, attempt: job.attempts, message })
     }
   }
 }
 
+/** Run the worker loop until the hosting platform requests a graceful stop. */
 async function main() {
   log('info', 'worker.started', { workerId })
   while (!stopping) {

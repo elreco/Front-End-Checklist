@@ -40,10 +40,14 @@ export function ProjectPrimaryAction({
   if (recoveryKind === 'address' || recoveryKind === 'pages')
     return (
       <ProjectSiteEditor
+        accessMode={project.accessMode}
+        alertEmail={project.alertEmail}
         authenticatedPages={project.authenticatedPages}
         checking={project.checking}
+        emailAlerts={project.emailAlerts}
         managedAccessConnected={project.managedAccess?.status === 'verified'}
         maxPages={getPlanEntitlements(project.plan).pagesPerProject}
+        name={project.name}
         pages={project.pages}
         plan={project.plan}
         problemPaths={unavailablePages.map(page => page.path)}

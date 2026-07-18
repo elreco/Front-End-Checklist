@@ -17,6 +17,7 @@ interface ProjectPageFieldsProps {
   pages: string[]
   plan: PlanId
   problemPaths: string[]
+  showAccessToggles?: boolean
 }
 
 /** Edit the monitored page list and reveal plan capacity only when it becomes relevant. */
@@ -31,7 +32,8 @@ export function ProjectPageFields({
   onUpdate,
   pages,
   plan,
-  problemPaths
+  problemPaths,
+  showAccessToggles = false
 }: ProjectPageFieldsProps) {
   return (
     <fieldset>
@@ -79,21 +81,23 @@ export function ProjectPageFields({
               >
                 <Trash2 aria-hidden />
               </CodeRocketButton>
-              <label className="col-span-2 flex cursor-pointer items-start gap-2 px-1 py-1 text-xs">
-                <input
-                  checked={requiresSignIn}
-                  className="mt-0.5 h-4 w-4 accent-signal"
-                  disabled={!page.trim()}
-                  onChange={() => onAccessToggle(page)}
-                  type="checkbox"
-                />
-                <span>
-                  <span className="font-semibold text-foreground">Sign-in required</span>
-                  <span className="ml-1 text-muted">
-                    — apply the dedicated test session only to this page.
+              {showAccessToggles ? (
+                <label className="col-span-2 flex cursor-pointer items-start gap-2 px-1 py-1 text-xs">
+                  <input
+                    checked={requiresSignIn}
+                    className="mt-0.5 h-4 w-4 accent-signal"
+                    disabled={!page.trim()}
+                    onChange={() => onAccessToggle(page)}
+                    type="checkbox"
+                  />
+                  <span>
+                    <span className="font-semibold text-foreground">Sign-in required</span>
+                    <span className="ml-1 text-muted">
+                      — apply the dedicated test session only to this page.
+                    </span>
                   </span>
-                </span>
-              </label>
+                </label>
+              ) : null}
               {needsAttention ? (
                 <p className="col-span-2 px-1 text-danger text-xs">
                   This address failed in the latest check.

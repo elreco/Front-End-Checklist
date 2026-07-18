@@ -37,7 +37,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
       <section className="border border-border bg-surface p-5 sm:p-6">
         {project.activeCheck ? (
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-            <SiteVisual imageUrl={project.socialImageUrl} name={project.name} size="detail" />
+            <SiteVisual
+              imageUrl={project.socialImageUrl}
+              name={project.name}
+              pending
+              size="detail"
+            />
             <div className="min-w-0 flex-1">
               <WebsiteCheckProgress
                 initial={project.activeCheck}

@@ -54,6 +54,12 @@ const demoProject: ProjectDetail = {
   name: 'Acme Storefront',
   url: 'https://acme.example',
   socialImageUrl: '/social-card.png',
+  alertEmail: 'alex@northstar.studio',
+  emailAlerts: {
+    checkFailures: true,
+    enabled: true,
+    newProblems: true
+  },
   accessMode: 'public',
   authenticatedPages: [],
   pages: ['/', '/pricing', '/contact', '/products', '/checkout'],
@@ -229,7 +235,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     supabase
       .from('cr_projects')
       .select(
-        'id,name,production_url,social_image_url,page_paths,authenticated_page_paths,secure_runner_required,access_mode,schedule_enabled,next_audit_at,baseline_reset_at'
+        'id,name,production_url,social_image_url,page_paths,authenticated_page_paths,secure_runner_required,access_mode,schedule_enabled,next_audit_at,baseline_reset_at,email_alerts_enabled,alert_on_new_problems,alert_on_check_failures'
       )
       .eq('id', projectId)
       .eq('owner_id', auth.user.id)
@@ -421,6 +427,12 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     name: project.name,
     url: project.production_url,
     socialImageUrl: project.social_image_url ?? undefined,
+    alertEmail: auth.user.email ?? undefined,
+    emailAlerts: {
+      checkFailures: project.alert_on_check_failures,
+      enabled: project.email_alerts_enabled,
+      newProblems: project.alert_on_new_problems
+    },
     accessMode: resolveAccessMode(project.access_mode),
     authenticatedPages: project.authenticated_page_paths ?? [],
     pages: project.page_paths,

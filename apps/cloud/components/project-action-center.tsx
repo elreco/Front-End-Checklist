@@ -192,7 +192,7 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
       </section>
       <ProjectPreviewProtectionCard />
       <ProjectCoverageSummary
-        alerts="Important changes"
+        alerts={getAlertCoverageLabel(project.emailAlerts)}
         frequency={project.plan === 'free' ? 'Weekly' : 'Daily'}
         history={
           project.plan === 'free' ? '30 days' : project.plan === 'solo' ? '90 days' : '1 year'
@@ -228,6 +228,13 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
       ) : null}
     </aside>
   )
+}
+
+/** Summarize the site's active email events without exposing delivery implementation. */
+function getAlertCoverageLabel(emailAlerts: ProjectDetail['emailAlerts']): string {
+  if (!emailAlerts.enabled || (!emailAlerts.newProblems && !emailAlerts.checkFailures)) return 'Off'
+  if (emailAlerts.newProblems && emailAlerts.checkFailures) return 'Important changes'
+  return emailAlerts.newProblems ? 'New problems' : 'Check failures'
 }
 
 /** Describe the active website reachability contract and its recovery state. */

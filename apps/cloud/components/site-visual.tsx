@@ -1,6 +1,6 @@
 'use client'
 
-import { Globe2 } from '@repo/design-system/icons'
+import { Globe2, LoaderCircle } from '@repo/design-system/icons'
 import { useState } from 'react'
 
 const sizeClasses = {
@@ -19,15 +19,22 @@ const imageDimensions = {
 export function SiteVisual({
   imageUrl,
   name,
+  pending = false,
   size
 }: {
   imageUrl?: string
   name: string
+  pending?: boolean
   size: keyof typeof sizeClasses
 }) {
   const [failedUrl, setFailedUrl] = useState<string>()
   const dimensions = imageDimensions[size]
-  const fallbackLabel = failedUrl ? 'Preview unavailable' : 'No preview image found'
+  const loading = pending && !imageUrl && !failedUrl
+  const fallbackLabel = failedUrl
+    ? 'Preview unavailable'
+    : loading
+      ? 'Checking for preview image…'
+      : 'No preview image found'
 
   return (
     <div
@@ -52,7 +59,14 @@ export function SiteVisual({
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[linear-gradient(135deg,var(--cr-surface-raised),var(--cr-background))] px-2 text-center">
           <span className="flex items-center justify-center">
-            <Globe2 aria-hidden className="h-5 w-5 text-signal" />
+            {loading ? (
+              <LoaderCircle
+                aria-hidden
+                className="h-5 w-5 animate-spin text-signal motion-reduce:animate-none"
+              />
+            ) : (
+              <Globe2 aria-hidden className="h-5 w-5 text-signal" />
+            )}
             <span className="ml-2 font-heading font-semibold text-foreground-subtle text-sm">
               {getInitials(name)}
             </span>

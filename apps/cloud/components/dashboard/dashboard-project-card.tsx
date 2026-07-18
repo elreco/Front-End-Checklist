@@ -9,7 +9,12 @@ import { WebsiteLevelBadge } from '../website-level'
 export function DashboardProjectCard({ project }: { project: DashboardProject }) {
   return (
     <article className="cr-card-link relative overflow-hidden border border-border bg-surface hover:border-accent hover:bg-surface-raised">
-      <SiteVisual imageUrl={project.socialImageUrl} name={project.name} size="card" />
+      <SiteVisual
+        imageUrl={project.socialImageUrl}
+        name={project.name}
+        pending={project.isChecking}
+        size="card"
+      />
       <div className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">

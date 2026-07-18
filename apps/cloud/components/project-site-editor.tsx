@@ -1,9 +1,8 @@
 'use client'
 
-import { AlertTriangle, Globe2, LoaderCircle, Pencil } from '@repo/design-system/icons'
+import { AlertTriangle, Globe2, LoaderCircle, Radar, Settings2 } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
-import { toast } from '@repo/design-system/ui/coderocket-toast'
 import {
   Dialog,
   DialogClose,
@@ -15,200 +14,121 @@ import {
   DialogTrigger
 } from '@repo/design-system/ui/dialog'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { type FormEvent, useId, useState } from 'react'
-import {
-  getProjectEditorSubmitLabel,
-  isProjectConfigurationSaveResponse,
-  type ProjectSiteEditorProps,
-  readProjectConfigurationError,
-  safeHttpsOrigin
-} from '@/lib/project-site-editor'
+import { useId } from 'react'
+import { getEnteredPages } from '@/lib/onboarding-pages'
+import { getProjectEditorSubmitLabel, type ProjectSiteEditorProps } from '@/lib/project-site-editor'
+import { OnboardingPageDiscovery } from './onboarding-page-discovery'
+import { ProjectAccessSettings } from './project-access-settings'
+import { ProjectEmailAlertSettings } from './project-email-alert-settings'
 import { ProjectPageFields } from './project-page-fields'
+import { useProjectSiteSettings } from './use-project-site-settings'
 
-/** Edit a monitored website without discarding its saved history or integrations. */
-export function ProjectSiteEditor({
-  authenticatedPages: initialAuthenticatedPages,
-  checking = false,
-  maxPages,
-  managedAccessConnected = false,
-  pages: initialPages,
-  plan,
-  problemPaths = [],
-  projectId,
-  secureRunnerRequired: initialSecureRunnerRequired,
-  siteUrl,
-  triggerLabel = 'Edit URLs',
-  variant = 'outline'
-}: ProjectSiteEditorProps) {
-  const router = useRouter()
-  const formId = useId()
+/** Edit one monitored site's identity, pages, access, and alert preferences. */
+export function ProjectSiteEditor(props: ProjectSiteEditorProps) {
   const fieldId = useId()
-  const [open, setOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [url, setUrl] = useState(siteUrl)
-  const [pages, setPages] = useState(initialPages)
-  const [authenticatedPages, setAuthenticatedPages] = useState(initialAuthenticatedPages)
-  const [secureRunnerRequired, setSecureRunnerRequired] = useState(initialSecureRunnerRequired)
-  const [error, setError] = useState('')
-  const currentOrigin = safeHttpsOrigin(siteUrl)
-  const nextOrigin = safeHttpsOrigin(url)
-  const originChanged = Boolean(nextOrigin && currentOrigin && nextOrigin !== currentOrigin)
-  const checkAfterSave =
-    !secureRunnerRequired && (authenticatedPages.length === 0 || managedAccessConnected)
-
-  /** Reset draft values whenever the dialog starts a new editing session. */
-  function changeOpen(nextOpen: boolean) {
-    setOpen(nextOpen)
-    if (!nextOpen) return
-    setUrl(siteUrl)
-    setPages(initialPages)
-    setAuthenticatedPages(initialAuthenticatedPages)
-    setSecureRunnerRequired(initialSecureRunnerRequired)
-    setError('')
-  }
-
-  /** Update one controlled page path without changing the order of the monitored pages. */
-  function updatePage(index: number, value: string) {
-    setPages(current => {
-      const previousPage = current[index]
-      if (previousPage && authenticatedPages.includes(previousPage))
-        setAuthenticatedPages(paths =>
-          paths.map(path => (path === previousPage ? value : path)).filter(Boolean)
-        )
-      return current.map((page, pageIndex) => (pageIndex === index ? value : page))
-    })
-    setError('')
-  }
-
-  /** Remove one page while preserving at least one monitored URL. */
-  function removePage(index: number) {
-    if (pages.length === 1) {
-      setError('Keep at least one page to monitor.')
-      return
-    }
-    const removedPage = pages[index]
-    setPages(current => current.filter((_, pageIndex) => pageIndex !== index))
-    if (removedPage) setAuthenticatedPages(current => current.filter(path => path !== removedPage))
-  }
-
-  /** Switch one page between anonymous and dedicated signed-in rendering. */
-  function togglePageAccess(page: string) {
-    if (!page.trim()) return
-    setAuthenticatedPages(current =>
-      current.includes(page) ? current.filter(path => path !== page) : [...current, page]
-    )
-  }
-
-  /** Validate and persist the URL configuration, then refresh the project summary. */
-  async function saveConfiguration(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError('')
-    if (!nextOrigin) {
-      setError('Use a secure website address beginning with https://.')
-      return
-    }
-    if (pages.some(page => !page.trim())) {
-      setError('Every page needs a path or full URL.')
-      return
-    }
-    setSaving(true)
-    try {
-      const response = await fetch(`/api/projects/${projectId}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          url,
-          pages,
-          authenticatedPages,
-          secureRunnerRequired,
-          checkNow: checkAfterSave
-        })
-      })
-      const payload: unknown = await response.json()
-      if (!response.ok || !isProjectConfigurationSaveResponse(payload))
-        throw new Error(readProjectConfigurationError(payload))
-      setOpen(false)
-      toast.success(payload.changed ? 'Monitored URLs updated' : 'URLs already up to date', {
-        description: payload.queued
-          ? 'A fresh check has started. This result will be the new comparison starting point.'
-          : (payload.checkWarning ??
-            (checkAfterSave
-              ? 'The changes are saved. Start a fresh check when you are ready.'
-              : 'The changes are saved. Connect page access once to start complete checks.'))
-      })
-      router.refresh()
-    } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : 'The monitored URLs could not be updated.'
-      )
-    } finally {
-      setSaving(false)
-    }
-  }
+  const formId = useId()
+  const settings = useProjectSiteSettings(props)
+  const triggerLabel = props.triggerLabel ?? 'Site settings'
+  const variant = props.variant ?? 'outline'
 
   return (
-    <Dialog onOpenChange={changeOpen} open={open}>
+    <Dialog onOpenChange={settings.changeOpen} open={settings.open}>
       <DialogTrigger asChild>
-        <CodeRocketButton disabled={checking} size="sm" type="button" variant={variant}>
-          <Pencil aria-hidden /> {checking ? 'Check in progress' : triggerLabel}
+        <CodeRocketButton size="sm" type="button" variant={variant}>
+          <Settings2 aria-hidden /> {triggerLabel}
         </CodeRocketButton>
       </DialogTrigger>
       <DialogContent
-        className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col gap-0 overflow-hidden rounded-none bg-surface p-0"
+        className="flex max-h-[calc(100dvh-2rem)] max-w-3xl flex-col gap-0 overflow-hidden rounded-none bg-surface p-0"
         showClose
       >
-        <DialogHeader className="shrink-0 border-border border-b p-6 pr-14">
+        <DialogHeader className="shrink-0 border-border border-b p-5 pr-14 sm:p-6 sm:pr-14">
           <div className="flex items-start gap-4">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-signal bg-background text-signal">
-              <Globe2 aria-hidden className="h-5 w-5" />
+              <Settings2 aria-hidden className="h-5 w-5" />
             </span>
             <div>
               <p className="font-mono text-[10px] text-signal uppercase tracking-[.14em]">
-                Website settings
+                Monitored website
               </p>
-              <DialogTitle className="mt-2 font-heading text-2xl">Edit monitored URLs</DialogTitle>
+              <DialogTitle className="mt-2 font-heading text-2xl">Site settings</DialogTitle>
               <DialogDescription className="mt-2 max-w-xl leading-6">
-                Correct the website address or choose different pages. Saved reports and check
-                history will stay available.
+                Manage what CodeRocket watches, how protected pages are reached, and when this site
+                sends an email alert.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         <form
-          className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-6"
+          className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-5 sm:p-6"
           id={formId}
-          onSubmit={saveConfiguration}
+          onSubmit={settings.saveSettings}
         >
-          <label className="block font-semibold text-sm" htmlFor={`${fieldId}-url`}>
-            Website address
-            <CodeRocketInput
-              autoComplete="url"
-              id={`${fieldId}-url`}
-              onChange={event => {
-                setUrl(event.target.value)
-                setError('')
-              }}
-              required
-              type="url"
-              value={url}
-            />
-            <span className="mt-2 block font-normal text-muted text-xs leading-5">
-              Use the public HTTPS origin. Page-specific paths belong in the list below.
-            </span>
-          </label>
+          <section aria-labelledby={`${fieldId}-website-details`}>
+            <div className="flex items-start gap-3">
+              <Globe2 aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-signal" />
+              <div>
+                <h3
+                  className="font-heading font-semibold text-lg"
+                  id={`${fieldId}-website-details`}
+                >
+                  Website details
+                </h3>
+                <p className="mt-1 text-muted text-xs leading-5">
+                  The name is for your workspace. The address controls where every monitored path is
+                  checked.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="block font-semibold text-sm" htmlFor={`${fieldId}-name`}>
+                Website name
+                <CodeRocketInput
+                  id={`${fieldId}-name`}
+                  maxLength={120}
+                  onChange={event => {
+                    settings.setName(event.target.value)
+                    settings.setError('')
+                  }}
+                  required
+                  value={settings.name}
+                />
+              </label>
+              <label className="block font-semibold text-sm" htmlFor={`${fieldId}-url`}>
+                Website address
+                <CodeRocketInput
+                  autoComplete="url"
+                  disabled={props.checking}
+                  id={`${fieldId}-url`}
+                  onChange={event => {
+                    settings.setUrl(event.target.value)
+                    settings.setError('')
+                  }}
+                  required
+                  type="url"
+                  value={settings.url}
+                />
+              </label>
+            </div>
+          </section>
 
-          {originChanged ? (
+          {props.checking ? (
+            <p className="border border-signal bg-signal/10 p-3 text-muted text-xs leading-5">
+              A check is running. You can still update the name and email alerts; pages, address,
+              and access will unlock when it finishes.
+            </p>
+          ) : null}
+
+          {settings.originChanged ? (
             <div className="border border-warning bg-background p-4">
               <div className="flex items-start gap-3">
                 <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 <div>
                   <p className="font-semibold text-sm">This is a different website address</p>
                   <p className="mt-1 text-muted text-xs leading-5">
-                    Existing history will remain visible, but the next completed check becomes a
-                    fresh starting point. If this is an unrelated website, keep the histories
-                    separate.
+                    Existing history stays available, but the next completed check becomes a fresh
+                    starting point. Keep unrelated websites in separate entries.
                   </p>
                   <Link
                     className="mt-2 inline-block font-mono text-signal text-xs hover:text-accent"
@@ -221,64 +141,105 @@ export function ProjectSiteEditor({
             </div>
           ) : null}
 
-          <ProjectPageFields
-            authenticatedPages={authenticatedPages}
-            fieldId={fieldId}
-            initialPages={initialPages}
-            maxPages={maxPages}
-            onAdd={() => setPages(current => [...current, ''])}
-            onAccessToggle={togglePageAccess}
-            onRemove={removePage}
-            onUpdate={updatePage}
-            pages={pages}
-            plan={plan}
-            problemPaths={problemPaths}
+          <fieldset aria-labelledby={`${fieldId}-pages`} disabled={props.checking}>
+            <legend className="sr-only">Pages to watch</legend>
+            <div className="flex items-start gap-3">
+              <Radar aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-signal" />
+              <div>
+                <h3 className="font-heading font-semibold text-lg" id={`${fieldId}-pages`}>
+                  Pages to watch
+                </h3>
+                <p className="mt-1 text-muted text-xs leading-5">
+                  Use the same discovery and import tools available when a site is first added, or
+                  edit individual paths below.
+                </p>
+              </div>
+            </div>
+            <details className="mt-4 border border-border bg-background">
+              <summary className="cursor-pointer p-4 font-semibold text-sm transition-colors hover:bg-surface-raised">
+                Find or import more pages — optional
+              </summary>
+              <div className="border-border border-t p-4">
+                <OnboardingPageDiscovery
+                  cloudDiscoveryBlocked={
+                    settings.secureRunnerRequired || settings.accessMode === 'private'
+                  }
+                  onPagesChange={value => settings.replacePages(getEnteredPages(value))}
+                  pagesPerProject={props.maxPages}
+                  pagesValue={settings.pages.join('\n')}
+                  siteUrl={settings.url}
+                />
+              </div>
+            </details>
+            <div className="mt-5">
+              <ProjectPageFields
+                authenticatedPages={settings.authenticatedPages}
+                fieldId={fieldId}
+                initialPages={props.pages}
+                maxPages={props.maxPages}
+                onAdd={() => settings.setPages(current => [...current, ''])}
+                onAccessToggle={settings.togglePageAccess}
+                onRemove={settings.removePage}
+                onUpdate={settings.updatePage}
+                pages={settings.pages}
+                plan={props.plan}
+                problemPaths={props.problemPaths ?? []}
+                showAccessToggles={settings.accessMode === 'protected'}
+              />
+            </div>
+          </fieldset>
+
+          <fieldset disabled={props.checking}>
+            <legend className="sr-only">Page access</legend>
+            <ProjectAccessSettings
+              accessMode={settings.accessMode}
+              onAccessModeChange={settings.changeAccessMode}
+              onSecureRunnerRequiredChange={settings.setSecureRunnerRequired}
+              secureRunnerRequired={settings.secureRunnerRequired}
+            />
+          </fieldset>
+
+          <ProjectEmailAlertSettings
+            alertEmail={props.alertEmail}
+            onChange={settings.changeEmailAlerts}
+            settings={settings.emailAlerts}
           />
 
-          <label className="flex cursor-pointer items-start gap-3 border border-border bg-background p-4 text-sm">
-            <input
-              checked={secureRunnerRequired}
-              className="mt-0.5 h-4 w-4 accent-signal"
-              onChange={event => setSecureRunnerRequired(event.target.checked)}
-              type="checkbox"
-            />
-            <span>
-              <span className="block font-semibold">
-                This site needs a private network or secure runner
-              </span>
-              <span className="mt-1 block text-muted text-xs leading-5">
-                Enable this only for a VPN, private network, client certificate, CAPTCHA, or
-                browser-only login. Vercel, Cloudflare, preview passwords, tokens, and simple test
-                sessions can use the guided cloud connection instead.
-              </span>
-            </span>
-          </label>
-
-          {error ? (
+          {settings.error ? (
             <p className="border border-danger bg-background p-3 text-danger text-sm" role="alert">
-              {error}
+              {settings.error}
             </p>
           ) : null}
 
           <div className="border border-border bg-background p-4 text-muted text-xs leading-5">
-            URL changes never rewrite old reports. The first complete result after saving becomes
-            the reference for future comparisons.
+            Name and email changes apply immediately. Address, page, or access changes start a fresh
+            check when CodeRocket can reach the site. Old reports are never rewritten.
           </div>
         </form>
 
         <DialogFooter className="shrink-0 border-border border-t bg-background p-4 sm:items-center sm:justify-between">
           <DialogClose asChild>
-            <CodeRocketButton disabled={saving} size="sm" type="button" variant="ghost">
+            <CodeRocketButton disabled={settings.saving} size="sm" type="button" variant="ghost">
               Cancel
             </CodeRocketButton>
           </DialogClose>
-          <CodeRocketButton disabled={saving} form={formId} size="sm" type="submit">
-            {saving ? (
+          <CodeRocketButton
+            disabled={settings.saving || !settings.hasChanges}
+            form={formId}
+            size="sm"
+            type="submit"
+          >
+            {settings.saving ? (
               <LoaderCircle aria-hidden className="animate-spin" />
             ) : (
-              <Globe2 aria-hidden />
+              <Settings2 aria-hidden />
             )}
-            {getProjectEditorSubmitLabel({ checkAfterSave, originChanged, saving })}
+            {getProjectEditorSubmitLabel({
+              checkAfterSave: settings.checkAfterSave,
+              monitoringChanged: settings.monitoringChanged,
+              originChanged: settings.originChanged,
+              saving: settings.saving
+            })}
           </CodeRocketButton>
         </DialogFooter>
       </DialogContent>
