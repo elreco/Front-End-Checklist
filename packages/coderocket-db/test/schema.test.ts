@@ -427,6 +427,54 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('pauses an authorised import around one encrypted interactive browser handoff', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607200011_interactive_browser_handoff.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /create table public\.cr_builder_browser_handoffs/)
+    assert.match(sql, /'waiting_for_access'/)
+    assert.match(sql, /encrypted_session text/)
+    assert.match(sql, /run_after,\s+progress_stage/)
+    assert.match(sql, /create or replace function public\.cr_begin_builder_browser_handoff/)
+    assert.match(sql, /create or replace function public\.cr_confirm_builder_browser_handoff/)
+    assert.match(sql, /create or replace function public\.cr_cancel_builder_browser_handoff/)
+    assert.match(sql, /set run_after = now\(\)/)
+    assert.match(sql, /to service_role/)
+    assert.match(sql, /consumed_cost_microeur = consumed_cost_microeur \+ actual_cost/)
+    assert.match(sql, /source_mode = 'owned'/)
+    assert.match(sql, /AES-GCM envelope/)
+    assert.doesNotMatch(sql.toLowerCase(), /password\s+(?:text|varchar)|token\s+(?:text|varchar)/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('applies an optional creation request only after the faithful first version is durable', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607200012_initial_creation_instruction.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /add column initial_instruction text/)
+    assert.match(sql, /initial_instruction_handled_at/)
+    assert.match(
+      sql,
+      /cr_request_site_import\(\s*p_source_url text,[\s\S]+p_initial_instruction text/
+    )
+    assert.match(sql, /site_id := public\.cr_request_site_import/)
+    assert.match(sql, /create or replace function public\.cr_queue_initial_site_instruction/)
+    assert.match(sql, /source_site\.status not in \('ready', 'published'\)/)
+    assert.match(sql, /creation_credits_used = creation_credits_used \+ credit_cost/)
+    assert.match(sql, /'site_edit'/)
+    assert.match(sql, /'Initial guided website change'/)
+    assert.match(sql, /to service_role/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
   it('refunds imports claimed by an incompatible worker before provider work starts', async () => {
     const sql = await readFile(
       new URL(

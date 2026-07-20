@@ -26,14 +26,23 @@ export default async function BillingPage() {
   const context = await getAppShellContext()
   const account = await getBillingAccountData(context.plan, context.limits.aiCreditsPerMonth)
   const nextPlan = getNextPlan(context.plan)
-  const benefits = [
-    `${context.limits.projects} monitored ${context.limits.projects === 1 ? 'site' : 'sites'}`,
-    `${context.limits.pagesPerProject} pages per site`,
-    `${context.limits.schedule} automatic checks`,
-    `${context.limits.retentionDays} days of history`,
-    `${context.limits.onDemandRunsPerMonth} extra checks each month`,
-    `${context.limits.aiCreditsPerMonth.toLocaleString('en-GB')} included AI credits`
-  ]
+  const benefits =
+    context.plan === 'free'
+      ? [
+          'Explore the website-creation demo',
+          'Monitor 1 existing website and 5 important pages',
+          'Automatic check every week',
+          '10 extra checks each month',
+          '30 days of history and private reports'
+        ]
+      : [
+          `${context.builderLimits.sites} created and hosted ${context.builderLimits.sites === 1 ? 'website' : 'websites'}`,
+          `${context.builderLimits.creationCreditsPerMonth} creation credits each month`,
+          `${context.builderLimits.hostedVisitsPerMonth.toLocaleString('en-GB')} hosted visits each month`,
+          `First versions start from up to ${context.builderLimits.pagesPerImport} useful page types`,
+          `Monitor ${context.limits.projects} existing websites every day`,
+          `${context.limits.retentionDays} days of monitoring history`
+        ]
 
   return (
     <ProductShell eyebrow="Your subscription" title="Plan & billing">

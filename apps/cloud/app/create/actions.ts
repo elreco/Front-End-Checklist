@@ -3,7 +3,11 @@
 import { assertPublicHttpsUrl, type SiteSourceMode } from '@coderocket/core'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { deriveWebsiteName, normalizeWebsiteDraft } from '@/lib/website-draft'
+import {
+  deriveWebsiteName,
+  normalizeInitialSiteInstruction,
+  normalizeWebsiteDraft
+} from '@/lib/website-draft'
 
 /** Validate, reserve the bounded import budget, and enqueue one website recreation. */
 export async function createBuilderSite(formData: FormData) {
@@ -19,6 +23,10 @@ export async function createBuilderSite(formData: FormData) {
   const name = requestedName || deriveWebsiteName(sourceUrl)
   if (name.length < 1 || name.length > 120)
     redirect(`/create?url=${encodeURIComponent(sourceUrl)}&notice=invalid-name`)
+  const rawInstruction = String(formData.get('initialInstruction') ?? '').trim()
+  const initialInstruction = normalizeInitialSiteInstruction(rawInstruction)
+  if (rawInstruction && !initialInstruction)
+    redirect(`/create?url=${encodeURIComponent(sourceUrl)}&notice=invalid-instruction`)
   const sourceMode = readSourceMode(formData.get('sourceMode'))
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
@@ -27,7 +35,8 @@ export async function createBuilderSite(formData: FormData) {
   const { data, error } = await supabase.rpc('cr_request_site_import', {
     p_source_url: sourceUrl,
     p_name: name,
-    p_source_mode: sourceMode
+    p_source_mode: sourceMode,
+    p_initial_instruction: initialInstruction ?? ''
   })
   if (error) {
     const message = error.message.toLowerCase()

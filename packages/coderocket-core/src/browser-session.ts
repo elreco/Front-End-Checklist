@@ -8,6 +8,7 @@ import {
   type Route
 } from 'playwright-core'
 import type { BrowserLoginCredential } from './browser-login-credentials'
+import { sendCustomCdpCommand } from './browserless-cdp'
 import { assertPublicHttpsUrl, type SafeHtmlResponse } from './safe-fetch'
 import { assertHtmlIsRequestedPage, isSignInRedirect } from './safe-fetch-access'
 import {
@@ -30,6 +31,7 @@ export interface BrowserAuditSessionOptions {
   authenticatedHeaders?: Record<string, string>
   login?: BrowserLoginCredential
   publicHeaders?: Record<string, string>
+  remoteBrowserEndpoint?: string
   siteUrl: string
 }
 
@@ -41,6 +43,7 @@ export class BrowserAuditSession {
   private readonly authenticatedHeaders: Record<string, string>
   private readonly login?: BrowserLoginCredential
   private readonly publicHeaders: Record<string, string>
+  private readonly remoteBrowserEndpoint?: string
   private readonly siteOrigin: string
   private readonly validatedOrigins = new Map<string, Promise<void>>()
   private browser?: Browser
@@ -56,6 +59,18 @@ export class BrowserAuditSession {
       ...(options.authenticatedHeaders ?? {})
     }
     this.login = options.login
+    this.remoteBrowserEndpoint = options.remoteBrowserEndpoint
+  }
+
+  /** Close the owner-facing stream before automated capture resumes in the same remote browser. */
+  async finishInteractiveHandoff(liveUrlId: string): Promise<void> {
+    if (!this.remoteBrowserEndpoint) return
+    const context = await this.getAuthenticatedContext()
+    const page = context.pages()[0] ?? (await context.newPage())
+    const cdp = await context.newCDPSession(page)
+    await sendCustomCdpCommand(cdp, 'Browserless.closeLiveURL', { liveURLId: liveUrlId }).catch(
+      () => undefined
+    )
   }
 
   /** Load one page after executing JavaScript, using a signed-in context only when requested. */
@@ -169,6 +184,10 @@ export class BrowserAuditSession {
   /** Start one hardened browser process per audit rather than one process per page. */
   private async getBrowser(): Promise<Browser> {
     if (this.browser) return this.browser
+    if (this.remoteBrowserEndpoint) {
+      this.browser = await chromium.connectOverCDP(this.remoteBrowserEndpoint)
+      return this.browser
+    }
     const configuredPath = process.env.CODEROCKET_CHROMIUM_EXECUTABLE_PATH
     const systemPath = configuredPath ?? '/usr/bin/chromium'
     this.browser = await chromium.launch({
@@ -182,12 +201,14 @@ export class BrowserAuditSession {
   /** Create a context whose network requests remain public and whose secrets stay same-origin. */
   private async createContext(headers: Record<string, string>): Promise<BrowserContext> {
     const browser = await this.getBrowser()
-    const context = await browser.newContext({
-      ignoreHTTPSErrors: false,
-      javaScriptEnabled: true,
-      serviceWorkers: 'block',
-      userAgent: 'CodeRocket Website Check/1.0'
-    })
+    const context = this.remoteBrowserEndpoint
+      ? (browser.contexts()[0] ?? (await browser.newContext()))
+      : await browser.newContext({
+          ignoreHTTPSErrors: false,
+          javaScriptEnabled: true,
+          serviceWorkers: 'block',
+          userAgent: 'CodeRocket Website Check/1.0'
+        })
     // The TS runtime preserves nested function names with this helper inside browser evaluations.
     await context.addInitScript({
       content: `

@@ -1,4 +1,4 @@
-/** Normalize a landing-page website draft into the HTTPS origin accepted by onboarding. */
+/** Normalize a website draft while preserving the exact page that should seed the project. */
 export function normalizeWebsiteDraft(value: string): string | undefined {
   const trimmed = value.trim()
   if (!trimmed) return undefined
@@ -12,7 +12,9 @@ export function normalizeWebsiteDraft(value: string): string | undefined {
       !isValidWebsiteHostname(url.hostname)
     )
       return undefined
-    return url.origin
+    url.hash = ''
+    url.search = ''
+    return url.pathname === '/' ? url.origin : `${url.origin}${url.pathname}`
   } catch {
     return undefined
   }
@@ -35,4 +37,11 @@ export function deriveWebsiteName(value: string): string {
   } catch {
     return ''
   }
+}
+
+/** Keep one optional plain-language creation request within the builder's safe edit limit. */
+export function normalizeInitialSiteInstruction(value: string): string | undefined {
+  const instruction = value.trim()
+  if (!instruction || instruction.length < 2 || instruction.length > 2000) return undefined
+  return instruction
 }

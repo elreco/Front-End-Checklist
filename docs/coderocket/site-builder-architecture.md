@@ -61,10 +61,74 @@ visible screens and inferred editable structures; it does not copy the original 
 code, users, permissions, payment records, private messages, or backend behaviour.
 
 Common same-origin email-and-password forms are supported. CodeRocket does not bypass SSO, MFA,
-CAPTCHA, passkeys, VPNs, WAF challenges, or external identity providers. A future interactive
-browser handoff may cover some of these cases, but it requires a separately deployed remote-browser
-control plane, explicit session expiry and revocation, audit events, and stronger enterprise access
-controls before it can be presented truthfully.
+CAPTCHA, passkeys, VPNs, WAF challenges, or external identity providers. For an owned source, the
+failed Studio state can instead open a guided Browserless handoff. The owner completes the
+challenge or sign-in directly inside that isolated browser, confirms when the useful page is open,
+and the durable import resumes from the same browser process, IP address, cookies, and storage.
+The live window lasts between four and ten minutes: CodeRocket chooses the longest duration that
+fits the fixed provider-cost allowance rather than exposing pricing or timeout settings to the
+user.
+
+The Browserless API token is never included in the owner-facing live URL. The live URL and
+token-free reconnect endpoint are encrypted with the managed-access AES-GCM envelope. A delayed
+durable job reserves the full import budget before the live session becomes available, but remains
+unclaimable while the owner is interacting, so the normal worker is not held open. The provider
+price per whole browser minute is required in
+`CODEROCKET_BROWSERLESS_COST_MICROEUR_PER_MINUTE`, contributes to settlement, and is bounded so a
+Launch import still fits its reserved margin ceiling.
+
+Once the owner continues, the worker validates the reconnect host against the configured
+Browserless endpoint before attaching the provider token. It closes the interactive stream, checks
+that the requested same-origin page is now available, captures the bounded authorised screens, and
+destroys the remote browser. Expired, failed, cancelled, and completed handoffs clear the encrypted
+session. The owner can stop and destroy the browser before continuing; the unused reservation is
+returned while the elapsed provider time remains metered. The default interface never asks the
+user to paste cookies. The temporary test-account method remains a secondary option for ordinary
+same-origin credentials.
+
+The guided browser shows its navigation and tabs. Newly opened sign-in tabs receive the same public
+HTTPS and private-network request checks as the source tab, which allows common Google, Microsoft,
+magic-link, and other popup-based identity journeys without allowing access to private addresses.
+The user must return to the source website before continuing. Platform passkeys tied to the user's
+physical device still cannot work inside a cloud browser.
+
+## Access recovery ladder
+
+CodeRocket should attempt the least demanding path first and expose only the next useful action.
+The internal ladder is broader than the interface:
+
+| Obstacle | Default recovery | What the user sees |
+| --- | --- | --- |
+| Public HTTPS page | Automatic capture | Creation progress |
+| Temporary failure or unsuitable URL | Retry or choose another same-site page | “Choose the useful page” |
+| Simple same-origin account | Dedicated test account | “Use a temporary test account” |
+| Cloudflare, CAPTCHA, SSO, MFA, magic link | Guided cloud browser | “Open the guided browser” |
+| Cloud browser IP or automation refused | Local browser companion | “Continue from your computer” |
+| Passkey, intranet, VPN-only or localhost | Local browser companion | “Open it in your normal browser” |
+| No live website available | Screenshot or design source | “Start from what you can share” |
+
+The local browser companion is the required fallback for the broadest authorised coverage. It is a
+small Chrome extension using temporary `activeTab` permission. When the owner deliberately starts a
+capture, it should:
+
+- measure the visible DOM, computed layout, responsive states, navigation, and repeated content;
+- capture the visible page and owner-selected additional screens;
+- download public assets or upload bounded copies that the owner explicitly approves;
+- send the same non-executable blueprint shape used by the cloud importer;
+- work on intranet and signed-in pages without exporting cookies, local storage, passwords, or the
+  browser profile;
+- show exactly which pages and assets will be uploaded before submission;
+- disconnect immediately after the capture and retain no background browsing permission.
+
+The companion must not use `chrome.debugger` by default, record browsing history, monitor tabs in
+the background, or transmit raw cookies. `activeTab`, `chrome.scripting`, and
+`chrome.tabs.captureVisibleTab` are sufficient for the normal capture path. A developer-only local
+CLI may later use the same upload protocol for Firefox, Safari, automated test environments, and
+private networks.
+
+“Any website” therefore means any public or explicitly authorised visual source that CodeRocket can
+observe through one of these bounded paths. It does not mean bypassing access controls, copying a
+database or backend, defeating DRM, or cloning information the user is not allowed to use.
 
 ## Safe recreation model
 
@@ -124,6 +188,15 @@ The additive website Studio migrations create:
 - a customer-visible credit account and immutable credit ledger;
 - durable owner-visible website messages and a `site_edit` job;
 - managed collections, bounded records, and a connector catalogue.
+
+The URL-first creation form can also save one optional `initial_instruction`. It does not mutate the
+capture while the source is being studied. After `cr_settle_site_import` has durably stored the
+faithful first revision, the service-only `cr_queue_initial_site_instruction` function queues the
+request as an ordinary `site_edit` job. It therefore receives the same €0.15 provider reservation,
+six-credit customer ceiling, conversation history, failure refund, and immutable version semantics
+as a request sent later from the Studio. If that second reservation cannot be made, the imported
+revision remains ready and the conversation clearly asks the owner to resend the request; no extra
+credits are consumed.
 
 The existing Fly.io worker claims imports with the same leases and retry policy as website checks.
 The worker renews its five-minute lease every minute while it owns a long import. If the process
@@ -187,8 +260,10 @@ Internal plan IDs stay `free`, `solo`, and `agency`; customer labels are Free, L
 | Launch | 1 | 100 | Up to 5 | 20,000 | €6 |
 | Studio | 10 | 600 pooled | Up to 5 each | 250,000 pooled | €40 |
 
-The displayed EUR prices are €29 and €149 per month. Localised price points are stored in
-`apps/cloud/lib/pricing.ts` and must match Stripe.
+The displayed and charged monthly prices use stable EUR, USD, GBP, CAD, AUD, or CHF price points
+selected from the visitor's country. The selected currency is submitted to Checkout explicitly,
+and every subscription item—including optional metered AI usage—supports the same currencies. The
+values in `apps/cloud/lib/pricing.ts` must match the active Stripe `currency_options` exactly.
 
 These ceilings are hard defaults:
 
@@ -223,6 +298,7 @@ collection presets, saves no-secret Stripe and scheduling links, and publishes i
 
 The next bounded additions are:
 
+- screenshot and Figma sources routed through the same creation form and project model;
 - binding managed collection records to editable collection, form, and account components;
 - encrypted OAuth for Stripe Connect, Shopify, and bring-your-own Supabase;
 - isolated generated-code workspaces for features beyond the controlled renderer;

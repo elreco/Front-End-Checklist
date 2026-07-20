@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { deriveWebsiteName, normalizeWebsiteDraft } from '../lib/website-draft'
+import {
+  deriveWebsiteName,
+  normalizeInitialSiteInstruction,
+  normalizeWebsiteDraft
+} from '../lib/website-draft'
 
 describe('CodeRocket landing-page website drafts', () => {
-  it('adds HTTPS and keeps only the website origin', () => {
-    assert.equal(normalizeWebsiteDraft(' example.com/pricing '), 'https://example.com')
+  it('adds HTTPS and preserves the useful starting page without query secrets', () => {
+    assert.equal(normalizeWebsiteDraft(' example.com/pricing '), 'https://example.com/pricing')
     assert.equal(
       normalizeWebsiteDraft('https://www.example.com/contact?source=hero'),
-      'https://www.example.com'
+      'https://www.example.com/contact'
     )
   })
 
@@ -21,5 +25,15 @@ describe('CodeRocket landing-page website drafts', () => {
 
   it('derives an editable website name from the hostname', () => {
     assert.equal(deriveWebsiteName('https://www.front-end-checklist.com'), 'Front end checklist')
+  })
+
+  it('keeps a bounded optional request without preserving accidental whitespace', () => {
+    assert.equal(
+      normalizeInitialSiteInstruction('  Turn this website into a simple online shop.  '),
+      'Turn this website into a simple online shop.'
+    )
+    assert.equal(normalizeInitialSiteInstruction(''), undefined)
+    assert.equal(normalizeInitialSiteInstruction('x'), undefined)
+    assert.equal(normalizeInitialSiteInstruction('x'.repeat(2001)), undefined)
   })
 })

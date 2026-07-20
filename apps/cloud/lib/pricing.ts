@@ -1,22 +1,20 @@
-/** Billing currencies offered by every CodeRocket Stripe price. */
+/** Billing currencies supported by every live CodeRocket Stripe price. */
 export type PricingCurrency = 'AUD' | 'CAD' | 'CHF' | 'EUR' | 'GBP' | 'USD'
 
 type LocalizedPlanPrice = {
-  agency: number
-  agencyAiCap: number
+  launch: number
   locale: string
-  personal: number
-  personalAiCap: number
+  studio: number
 }
 
-/** Stable localized monthly prices and AI spending caps mirrored in Stripe. */
+/** Stable monthly price points mirrored exactly in Stripe currency options. */
 export const LOCALIZED_PRICING: Record<PricingCurrency, LocalizedPlanPrice> = {
-  AUD: { agency: 249, agencyAiCap: 170, locale: 'en-AU', personal: 49, personalAiCap: 34 },
-  CAD: { agency: 219, agencyAiCap: 150, locale: 'en-CA', personal: 45, personalAiCap: 30 },
-  CHF: { agency: 139, agencyAiCap: 95, locale: 'de-CH', personal: 27, personalAiCap: 19 },
-  EUR: { agency: 149, agencyAiCap: 100, locale: 'en-IE', personal: 29, personalAiCap: 20 },
-  GBP: { agency: 129, agencyAiCap: 90, locale: 'en-GB', personal: 25, personalAiCap: 18 },
-  USD: { agency: 169, agencyAiCap: 110, locale: 'en-US', personal: 32, personalAiCap: 22 }
+  AUD: { launch: 49, locale: 'en-AU', studio: 249 },
+  CAD: { launch: 45, locale: 'en-CA', studio: 219 },
+  CHF: { launch: 27, locale: 'de-CH', studio: 139 },
+  EUR: { launch: 29, locale: 'fr-FR', studio: 149 },
+  GBP: { launch: 25, locale: 'en-GB', studio: 129 },
+  USD: { launch: 32, locale: 'en-US', studio: 169 }
 }
 
 const COUNTRY_CURRENCIES: Record<string, PricingCurrency> = {
@@ -25,6 +23,15 @@ const COUNTRY_CURRENCIES: Record<string, PricingCurrency> = {
   CH: 'CHF',
   GB: 'GBP',
   US: 'USD'
+}
+
+const STRIPE_CURRENCIES: Record<PricingCurrency, string> = {
+  AUD: 'aud',
+  CAD: 'cad',
+  CHF: 'chf',
+  EUR: 'eur',
+  GBP: 'gbp',
+  USD: 'usd'
 }
 
 /** Resolve the supported billing currency for a two-letter country code. */
@@ -40,6 +47,23 @@ export function pricingCurrencyFromHeaders(requestHeaders: Pick<Headers, 'get'>)
     requestHeaders.get('x-vercel-ip-country') ??
     requestHeaders.get('cloudfront-viewer-country')
   return pricingCurrencyForCountry(countryCode)
+}
+
+/** Accept only a currency that is supported by every Stripe Checkout line item. */
+export function readPricingCurrency(value: FormDataEntryValue | null): PricingCurrency {
+  if (typeof value !== 'string') return 'EUR'
+  const currency = value.trim().toUpperCase()
+  if (currency === 'AUD') return 'AUD'
+  if (currency === 'CAD') return 'CAD'
+  if (currency === 'CHF') return 'CHF'
+  if (currency === 'GBP') return 'GBP'
+  if (currency === 'USD') return 'USD'
+  return 'EUR'
+}
+
+/** Return the lowercase currency code expected by Stripe Checkout. */
+export function stripeCurrency(currency: PricingCurrency): string {
+  return STRIPE_CURRENCIES[currency]
 }
 
 /** Format a whole-number CodeRocket price with its localized currency symbol. */

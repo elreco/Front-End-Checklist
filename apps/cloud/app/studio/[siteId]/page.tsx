@@ -1,13 +1,16 @@
-import { AlertTriangle } from '@repo/design-system/icons'
 import { notFound } from 'next/navigation'
 import { ProductShell } from '@/components/product-shell'
+import { isBrowserHandoffConfigured } from '@/lib/browser-handoff'
+import { getBuilderAccessRecovery } from '@/lib/builder-access-recovery'
+import { getBuilderBrowserHandoff } from '@/lib/builder-browser-handoff-data'
 import { getBuilderSite } from '@/lib/builder-data'
 import { createPrivateMetadata } from '@/lib/seo'
 import { RetrySiteImportForm } from './retry-site-import-form'
 import { StudioAppLayout } from './studio-app-layout'
+import { StudioBrowserHandoff } from './studio-browser-handoff'
 import { StudioCreationProgress } from './studio-creation-progress'
 import { StudioPreview } from './studio-preview'
-import { StudioPrivateAccessForm } from './studio-private-access-form'
+import { StudioProtectedAccess } from './studio-protected-access'
 import { StudioPublishAction } from './studio-publish-action'
 import { StudioSelectionProvider } from './studio-selection-context'
 import { StudioToolbar } from './studio-toolbar'
@@ -41,6 +44,16 @@ const notices: Record<string, string> = {
   'private-access-failed': 'The test account could not be connected. Nothing was changed.',
   'private-access-started':
     'The test account is connected for this attempt. You can leave this page.',
+  'confirm-authorised-access': 'Confirm that you are allowed to access this website.',
+  'secure-browser-ready': 'Your temporary private browser is ready.',
+  'secure-browser-failed':
+    'The private browser could not be opened. No password or browser session was stored.',
+  'secure-browser-unavailable': 'Private browser access is not available for this website.',
+  'secure-browser-expired': 'That private browser expired. Start another session to try again.',
+  'secure-browser-continued': 'CodeRocket is continuing from the browser session you just opened.',
+  'secure-browser-stopped': 'The temporary browser was closed safely. You can try another way.',
+  'secure-browser-stop-failed':
+    'The temporary browser could not be closed from here. It will still expire automatically.',
   'monthly-limit': 'This recreation cannot start because the protected monthly budget was reached.',
   restored: 'This version is restored as a new private version.',
   'restore-failed': 'That version could not be restored. Your current version is unchanged.'
@@ -53,6 +66,9 @@ const positiveNotices = new Set([
   'data-ready',
   'connection-ready',
   'restored',
+  'secure-browser-ready',
+  'secure-browser-continued',
+  'secure-browser-stopped',
   'private-access-started'
 ])
 
@@ -66,6 +82,8 @@ export default async function StudioPage({
   const [{ siteId }, query] = await Promise.all([params, searchParams])
   const site = await getBuilderSite(siteId)
   if (!site) notFound()
+  const handoff =
+    site.status === 'waiting_for_access' ? await getBuilderBrowserHandoff(siteId) : undefined
   const notice = Array.isArray(query.notice) ? query.notice[0] : query.notice
   const pending = site.status === 'queued' || site.status === 'analyzing'
   const requestedPage = Array.isArray(query.page) ? query.page[0] : query.page
@@ -99,7 +117,9 @@ export default async function StudioPage({
           </p>
         ) : null}
         <div className="min-h-0 flex-1">
-          {pending ? (
+          {site.status === 'waiting_for_access' ? (
+            <StudioBrowserHandoff handoff={handoff} siteId={site.id} />
+          ) : pending ? (
             <div className="h-full overflow-y-auto p-4 sm:p-6">
               <StudioCreationProgress
                 initialMessage={site.statusMessage}
@@ -109,18 +129,14 @@ export default async function StudioPage({
             </div>
           ) : site.status === 'failed' || !site.document ? (
             <section className="h-full overflow-y-auto p-4 sm:p-6">
-              <div className="mx-auto max-w-3xl border border-danger bg-surface p-5 text-center sm:p-7">
-                <AlertTriangle aria-hidden className="mx-auto h-8 w-8 text-danger" />
-                <h2 className="mt-5 font-heading font-semibold text-3xl">
-                  This source could not be recreated
-                </h2>
-                <p className="mt-3 text-muted leading-7">
-                  It may need a sign-in or block automated visitors. Nothing was published, and the
-                  failed attempt did not expose an account.
-                </p>
-                <div className="mt-7">
-                  <StudioPrivateAccessForm siteId={site.id} sourceUrl={site.sourceUrl} />
-                </div>
+              <div className="mx-auto max-w-3xl text-center">
+                <StudioProtectedAccess
+                  browserAvailable={isBrowserHandoffConfigured()}
+                  ownedSource={site.sourceMode === 'owned'}
+                  recovery={getBuilderAccessRecovery(site.error)}
+                  siteId={site.id}
+                  sourceUrl={site.sourceUrl}
+                />
                 <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
                   <span className="text-muted text-sm">No sign-in is needed?</span>
                   <RetrySiteImportForm secondary siteId={site.id} />

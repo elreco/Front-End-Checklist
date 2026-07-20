@@ -19,7 +19,7 @@ export interface BuilderSiteSummary {
   slug: string
   sourceMode: 'owned' | 'inspiration'
   sourceUrl: string
-  status: 'queued' | 'analyzing' | 'ready' | 'failed' | 'published'
+  status: 'queued' | 'analyzing' | 'waiting_for_access' | 'ready' | 'failed' | 'published'
   statusMessage?: string
   updatedAt: string
 }
@@ -413,7 +413,13 @@ export async function recordPublishedBuilderVisit(slug: string): Promise<boolean
 }
 
 function readStatus(value: string): BuilderSiteSummary['status'] {
-  if (value === 'analyzing' || value === 'ready' || value === 'failed' || value === 'published')
+  if (
+    value === 'analyzing' ||
+    value === 'waiting_for_access' ||
+    value === 'ready' ||
+    value === 'failed' ||
+    value === 'published'
+  )
     return value
   return 'queued'
 }

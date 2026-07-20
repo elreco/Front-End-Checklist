@@ -77,18 +77,22 @@ export default async function WebsitesPage({
                     className={`border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[.1em] ${
                       site.status === 'published'
                         ? 'border-success text-success'
-                        : site.status === 'failed'
-                          ? 'border-danger text-danger'
-                          : 'border-border text-muted'
+                        : site.status === 'waiting_for_access'
+                          ? 'border-signal text-signal'
+                          : site.status === 'failed'
+                            ? 'border-danger text-danger'
+                            : 'border-border text-muted'
                     }`}
                   >
                     {site.status === 'published'
                       ? 'Online'
-                      : site.status === 'failed'
-                        ? 'Needs help'
-                        : site.status === 'ready'
-                          ? 'Ready'
-                          : 'Creating'}
+                      : site.status === 'waiting_for_access'
+                        ? 'Needs you'
+                        : site.status === 'failed'
+                          ? 'Needs help'
+                          : site.status === 'ready'
+                            ? 'Ready'
+                            : 'Creating'}
                   </span>
                 </div>
                 <h2 className="mt-6 font-heading font-semibold text-xl">

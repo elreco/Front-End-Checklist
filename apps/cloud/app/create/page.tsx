@@ -15,6 +15,7 @@ const notices: Record<string, string> = {
   'unreachable-url':
     'CodeRocket could not safely reach this address. Check it and try a public HTTPS page.',
   'invalid-name': 'Use a website name between 1 and 120 characters.',
+  'invalid-instruction': 'Keep the optional request between 2 and 2,000 characters.',
   'create-failed': 'The website could not be started. Nothing was charged; please try again.'
 }
 
@@ -31,7 +32,7 @@ export default async function CreateWebsitePage({
   const builderLimits = getBuilderPlanEntitlements(context.plan)
 
   return (
-    <ProductShell eyebrow="No-code website builder" title="Create a website">
+    <ProductShell eyebrow="Start from a real example" title="Create your website">
       {notice && notices[notice] ? (
         <p className="mb-5 border border-danger bg-surface p-4 text-danger" role="alert">
           {notices[notice]}
@@ -71,12 +72,11 @@ export default async function CreateWebsitePage({
         <aside className="space-y-4">
           <div className="border border-border bg-surface p-5 sm:p-6">
             <WandSparkles aria-hidden className="h-5 w-5 text-signal" />
-            <h2 className="mt-4 font-heading font-semibold text-lg">CodeRocket handles</h2>
+            <h2 className="mt-4 font-heading font-semibold text-lg">What happens next</h2>
             <ul className="mt-4 space-y-3 text-muted text-sm leading-6">
-              <li>• Visible sections, wording, links, and images</li>
-              <li>• Colours and a responsive starting layout</li>
-              <li>• Safe version history and a hosted preview</li>
-              <li>• A clear main action for your visitors</li>
+              <li>1. CodeRocket studies the useful design and content patterns.</li>
+              <li>2. It creates one private project with reusable pages and sections.</li>
+              <li>3. You ask for changes in normal words and review each version.</li>
             </ul>
           </div>
           <div className="border border-border bg-background p-5">
@@ -85,8 +85,8 @@ export default async function CreateWebsitePage({
               <div>
                 <p className="font-semibold text-sm">Safe recreation</p>
                 <p className="mt-2 text-muted text-xs leading-5">
-                  The published result is rebuilt from controlled sections. Source scripts, tracking
-                  secrets, forms, and account data are not copied.
+                  Nothing is published automatically. Source scripts, tracking secrets, passwords,
+                  private data, and the original database are never copied into your project.
                 </p>
               </div>
             </div>

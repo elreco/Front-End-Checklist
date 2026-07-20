@@ -14,48 +14,50 @@ const plans: Array<{
   features: string[]
   id: PlanId
   name: string
+  outcome: string
 }> = [
   {
     id: 'free',
     name: 'Free',
-    description: 'Monitor one existing website and explore how CodeRocket works.',
+    outcome: 'Try CodeRocket and monitor a website',
+    description: 'Explore the product before asking CodeRocket to create or host anything.',
     features: [
-      'Explore the complete website studio demo',
-      'Monitor 1 website · 5 important pages',
-      'Weekly automatic health check',
-      '10 extra health checks / month',
-      '30-day history and private reports',
-      'No credit card'
+      'Explore the complete website-creation demo',
+      'Monitor 1 existing website and 5 important pages',
+      'Automatic check every week',
+      '10 extra checks each month',
+      '30 days of history and private reports',
+      'No payment card required'
     ]
   },
   {
     id: 'solo',
     name: 'Launch',
-    description: 'Create and run one professional website without code.',
+    outcome: 'Create and publish one professional website',
+    description: 'For a business, project, shop, portfolio, or SaaS that needs one main website.',
     features: [
-      '1 created and hosted website',
-      '100 creation credits every month',
-      'A first useful version costs 20 credits · up to 5 key page types',
-      'Manual edits are free · guided AI changes cost up to 6 credits',
-      '20,000 hosted visits / month',
-      'Managed data, safe versions, and publishing',
-      'Stripe and scheduling links · managed data included',
-      'Monitor 3 websites daily · 90-day history'
+      'Clone, edit, host, and publish 1 website',
+      'Start from up to 5 useful page types, then add more by asking',
+      'First month includes the first version plus at least 13 guided changes',
+      'Change text, links, and colours yourself without using credits',
+      '20,000 hosted visits each month',
+      'Safe versions, managed data, payments, and scheduling connections',
+      'Monitor 3 existing websites every day with 90 days of history'
     ]
   },
   {
     id: 'agency',
     name: 'Studio',
-    description: 'Create and maintain a small portfolio of client websites.',
+    outcome: 'Manage several websites from one workspace',
+    description: 'For studios, agencies, and teams maintaining a small portfolio of projects.',
     features: [
-      '10 created and hosted websites',
-      '600 shared creation credits every month',
-      'The same clear credit cost for every project',
-      'Credits can build, refine, add pages, or structure data',
-      '250,000 hosted visits / month across the workspace',
-      'Version history, collaboration-ready projects, and publishing',
-      'Monitor 50 websites daily · 365-day history',
-      'Reports without secondary branding'
+      'Clone, edit, host, and publish up to 10 websites',
+      '600 creation credits shared across every project each month',
+      'Use the allowance for first versions, changes, pages, products, and data',
+      '250,000 hosted visits each month across the workspace',
+      'Safe versions, managed data, payments, and scheduling connections',
+      'Monitor 50 existing websites every day with 365 days of history',
+      'Share client-ready reports without secondary branding'
     ]
   }
 ]
@@ -73,7 +75,6 @@ export function PricingCards({
   source,
   websiteDraft
 }: PricingCardsProps) {
-  const localizedPricing = LOCALIZED_PRICING[currency]
   const trackedView = useRef(false)
 
   useEffect(() => {
@@ -89,15 +90,13 @@ export function PricingCards({
   return (
     <div className="grid border-border border-t border-l lg:grid-cols-3">
       {plans.map(plan => {
+        const pricing = LOCALIZED_PRICING[currency]
         const isCurrent = plan.id === currentPlan
         const isFeatured = recommendedPlan ? plan.id === recommendedPlan : plan.id === 'solo'
         const price =
           plan.id === 'free'
             ? formatLocalizedPrice(0, currency)
-            : formatLocalizedPrice(
-                plan.id === 'solo' ? localizedPricing.personal : localizedPricing.agency,
-                currency
-              )
+            : formatLocalizedPrice(plan.id === 'solo' ? pricing.launch : pricing.studio, currency)
         const features = plan.features
         return (
           <article
@@ -116,11 +115,17 @@ export function PricingCards({
                     : 'Monthly plan'}
             </p>
             <h2 className="font-editorial text-4xl">{plan.name}</h2>
-            <p className="mt-2 text-muted">{plan.description}</p>
+            <p className="mt-3 font-heading font-semibold text-lg">{plan.outcome}</p>
+            <p className="mt-2 text-muted text-sm leading-6">{plan.description}</p>
             <p className="mt-8 font-bold font-heading text-4xl">
               {price}
               <span className="font-normal font-sans text-muted text-sm"> / month</span>
             </p>
+            {plan.id === 'free' ? null : (
+              <p className="mt-2 text-muted text-xs">
+                Billed monthly in {currency} · cancel anytime in your billing portal
+              </p>
+            )}
             <ul className="my-9 flex-1 space-y-3">
               {features.map(feature => (
                 <li className="flex gap-3 text-sm" key={feature}>
@@ -150,10 +155,11 @@ export function PricingCards({
                 }
               >
                 <input name="plan" type="hidden" value={plan.id} />
+                <input name="currency" type="hidden" value={currency} />
                 {source ? <input name="source" type="hidden" value={source} /> : null}
                 {websiteDraft ? <input name="website" type="hidden" value={websiteDraft} /> : null}
                 <CodeRocketButton fullWidth type="submit">
-                  Choose {plan.name}
+                  {plan.id === 'solo' ? 'Create one website' : 'Choose Studio'}
                 </CodeRocketButton>
               </form>
             )}

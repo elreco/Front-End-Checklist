@@ -20,11 +20,14 @@ import { applySiteVisualRefinement, applySiteVisualTheme } from '@coderocket/cor
 import { createServiceClient } from '@coderocket/db'
 import { z } from 'zod'
 import type { WorkerJob } from './audit-job'
+import { buildBrowserHandoffEndpoint, estimateBrowserHandoffCostMicroeur } from './browser-handoff'
 import {
   clearBuilderImportAccess,
+  loadBuilderHandoffCostMicroeur,
   loadBuilderImportAccess,
   markBuilderAccessVerified
 } from './site-import-access'
+import { sanitizeSiteImportFailure } from './site-import-failure'
 import { readablePageName, readBuilderPlan, readSourceMode } from './site-import-model'
 import { reportSiteImportCapture, reportSiteImportProgress } from './site-import-progress'
 
@@ -50,7 +53,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
   const startedAt = Date.now()
   const { data: site, error } = await db
     .from('cr_builder_sites')
-    .select('id,owner_id,source_url,source_mode')
+    .select('id,owner_id,source_url,source_mode,initial_instruction,initial_instruction_handled_at')
     .eq('id', job.builder_site_id)
     .eq('owner_id', job.owner_id)
     .is('archived_at', null)
@@ -65,8 +68,20 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
   const pageLimit = getBuilderPlanEntitlements(plan).pagesPerImport
   const reservedCost =
     plan === 'agency' ? STUDIO_IMPORT_RESERVATION_MICROEUR : LAUNCH_IMPORT_RESERVATION_MICROEUR
-  const visualCostBudget = Math.max(0, reservedCost - pageLimit * PAGE_IMPORT_COST_MICROEUR)
   const access = await loadBuilderImportAccess(db, site.id, site.owner_id)
+  const handoffCostMicroeur = access.handoff
+    ? estimateBrowserHandoffCostMicroeur(access.handoff)
+    : 0
+  const handoffCaptureReserveMicroeur = access.handoff
+    ? access.handoff.costMicroeurPerMinute * 2
+    : 0
+  const visualCostBudget = Math.max(
+    0,
+    reservedCost -
+      pageLimit * PAGE_IMPORT_COST_MICROEUR -
+      handoffCostMicroeur -
+      handoffCaptureReserveMicroeur
+  )
   const sourceDescription = access.authenticated ? 'private app' : 'public website'
 
   await reportSiteImportProgress(job, {
@@ -90,8 +105,13 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     .eq('owner_id', site.owner_id)
   if (progressError) throw new Error(progressError.message)
 
-  const browser = new BrowserAuditSession({ login: access.login, siteUrl: site.source_url })
+  const browser = new BrowserAuditSession({
+    login: access.login,
+    remoteBrowserEndpoint: access.handoff ? buildBrowserHandoffEndpoint(access.handoff) : undefined,
+    siteUrl: site.source_url
+  })
   try {
+    if (access.handoff) await browser.finishInteractiveHandoff(access.handoff.liveUrlId)
     const sourceMode = readSourceMode(site.source_mode)
     const authorisedSource = access.authenticated
       ? await browser.loadPage(site.source_url, true)
@@ -256,6 +276,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
       const costBeforePage =
         capturedPages.length * PAGE_IMPORT_COST_MICROEUR +
         visualAiCostMicroeur +
+        (access.handoff ? estimateBrowserHandoffCostMicroeur(access.handoff) : 0) +
         estimateBrowserRuntimeCostMicroeur(startedAt, Date.now())
       if (
         costBeforePage + PAGE_IMPORT_COST_MICROEUR + NEXT_PAGE_RUNTIME_RESERVE_MICROEUR >
@@ -336,6 +357,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     const actualCost =
       capturedPages.length * PAGE_IMPORT_COST_MICROEUR +
       visualAiCostMicroeur +
+      (access.handoff ? estimateBrowserHandoffCostMicroeur(access.handoff) : 0) +
       estimateBrowserRuntimeCostMicroeur(startedAt, Date.now())
     if (actualCost > reservedCost)
       throw new Error('The website study reached its protected cost ceiling')
@@ -359,13 +381,53 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
       p_error: ''
     })
     if (settlementError) throw new Error(settlementError.message)
+    let initialInstructionStatus: 'none' | 'queued' | 'needs_retry' = 'none'
+    if (site.initial_instruction && !site.initial_instruction_handled_at) {
+      const { data: initialJobId, error: initialInstructionError } = await db.rpc(
+        'cr_queue_initial_site_instruction',
+        { p_site_id: site.id }
+      )
+      if (initialInstructionError) {
+        initialInstructionStatus = 'needs_retry'
+        await db.from('cr_builder_messages').insert([
+          {
+            content: site.initial_instruction,
+            credit_cost: 0,
+            owner_id: site.owner_id,
+            role: 'user',
+            site_id: site.id,
+            status: 'failed'
+          },
+          {
+            content:
+              'Your faithful first version is ready, but the extra request could not start automatically. No extra credits were used. Send it again from the Studio.',
+            credit_cost: 0,
+            owner_id: site.owner_id,
+            role: 'assistant',
+            site_id: site.id,
+            status: 'failed'
+          }
+        ])
+        await db
+          .from('cr_builder_sites')
+          .update({ initial_instruction_handled_at: new Date().toISOString() })
+          .eq('id', site.id)
+          .eq('owner_id', site.owner_id)
+      } else {
+        initialInstructionStatus = typeof initialJobId === 'string' ? 'queued' : 'needs_retry'
+      }
+    }
     await db
       .from('cr_builder_sites')
       .update({
         status_message:
-          failedPaths.length > 0
-            ? `${capturedPages.length} useful page types ready · ${failedPaths.length} could not be opened`
-            : `${capturedPages.length} useful page types ready`,
+          initialInstructionStatus === 'queued'
+            ? 'Your first version is ready · applying your extra request'
+            : initialInstructionStatus === 'needs_retry'
+              ? 'Your first version is ready · send the extra request again in the Studio'
+              : failedPaths.length > 0
+                ? `${capturedPages.length} useful page types ready · ${failedPaths.length} could not be opened`
+                : `${capturedPages.length} useful page types ready`,
         updated_at: new Date().toISOString()
       })
       .eq('id', site.id)
@@ -379,9 +441,11 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
       stage: 'completed',
       title: 'Your private version is ready',
       detail:
-        failedPaths.length > 0
-          ? `${capturedPages.length} pages are ready. ${failedPaths.length} unavailable page${failedPaths.length === 1 ? ' was' : 's were'} clearly skipped.`
-          : `${capturedPages.length} page${capturedPages.length === 1 ? ' is' : 's are'} ready to review and edit.`,
+        initialInstructionStatus === 'queued'
+          ? 'The faithful first version is ready. Your optional request is now creating a separate recoverable version.'
+          : failedPaths.length > 0
+            ? `${capturedPages.length} pages are ready. ${failedPaths.length} unavailable page${failedPaths.length === 1 ? ' was' : 's were'} clearly skipped.`
+            : `${capturedPages.length} page${capturedPages.length === 1 ? ' is' : 's are'} ready to review and edit.`,
       total: targets.length
     })
     await clearBuilderImportAccess(db, site.id, site.owner_id, true).catch(() => undefined)
@@ -460,21 +524,28 @@ function readVisualPricing(value: unknown): VisualPricing {
 /** Release a terminal import reservation and expose a safe recovery message to its owner. */
 export async function failSiteImportJob(job: WorkerJob, errorMessage: string): Promise<void> {
   if (!job.builder_site_id) return
-  const { error } = await createServiceClient().rpc('cr_settle_site_import', {
+  const db = createServiceClient()
+  const safeErrorMessage = sanitizeSiteImportFailure(errorMessage)
+  const handoffCostMicroeur = await loadBuilderHandoffCostMicroeur(
+    db,
+    job.builder_site_id,
+    job.owner_id
+  ).catch(() => 0)
+  const { error } = await db.rpc('cr_settle_site_import', {
     p_site_id: job.builder_site_id,
     p_job_id: job.id,
     p_succeeded: false,
     p_site_document: {},
-    p_provider_cost_microeur: FAILED_IMPORT_COST_MICROEUR,
-    p_error: errorMessage
+    p_provider_cost_microeur: FAILED_IMPORT_COST_MICROEUR + handoffCostMicroeur,
+    p_error: safeErrorMessage
   })
   if (error) throw new Error(error.message)
   await clearBuilderImportAccess(
-    createServiceClient(),
+    db,
     job.builder_site_id,
     job.owner_id,
     false,
-    errorMessage
+    safeErrorMessage
   ).catch(() => undefined)
   await reportSiteImportProgress(job, {
     eventKey: 'failed',

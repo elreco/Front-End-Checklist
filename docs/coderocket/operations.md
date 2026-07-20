@@ -31,11 +31,17 @@ never changes the historical tables.
 
 ## Stripe
 
-- Create monthly Launch (€29, internal plan id `solo`) and Studio (€149, internal plan id
-  `agency`) recurring prices.
+- Create monthly Launch and Studio recurring prices with stable EUR, USD, GBP, CAD, AUD, and CHF
+  price points.
+- Keep the values in `apps/cloud/lib/pricing.ts` identical to the `currency_options` on both paid
+  plans and the optional metered AI item. Checkout receives the displayed currency explicitly;
+  never display a local conversion that every line item cannot charge.
 - Keep website creation and hosted-visit overage disabled by default. The database hard-stops at
   the included ceilings documented in `site-builder-architecture.md`.
-- Put their IDs in `STRIPE_SOLO_PRICE_ID` and `STRIPE_AGENCY_PRICE_ID`.
+- Put their IDs in `STRIPE_SOLO_PRICE_ID` and `STRIPE_AGENCY_PRICE_ID`, and put the matching
+  multi-currency metered item in `STRIPE_AI_OVERAGE_PRICE_ID`.
+- Do not enable account-wide promotion codes in CodeRocket Checkout. The Stripe account contains
+  unrelated products, so only explicitly scoped future CodeRocket offers may be accepted.
 - Enable automatic tax and tax ID collection in Checkout.
 - Register `/api/stripe/webhook`; subscribe to subscription create/update/delete and invoice payment failure events.
 - Keep grandfathered subscription IDs in `cr_subscriptions`; webhook updates use the stored paid

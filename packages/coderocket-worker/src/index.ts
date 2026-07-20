@@ -8,7 +8,7 @@ import { sendAlertEmail } from './email'
 import { allowsEmailAlert, readEmailAlertKind } from './email-policy'
 import { log } from './log'
 import { failSiteEditJob, processSiteEditJob } from './site-edit-job'
-import { cleanupExpiredBuilderAccess } from './site-import-access'
+import { BrowserHandoffExpiredError, cleanupExpiredBuilderAccess } from './site-import-access'
 import { failSiteImportJob, processSiteImportJob } from './site-import-job'
 import { cleanupExpiredSiteImportArtifacts, reportSiteImportProgress } from './site-import-progress'
 
@@ -174,16 +174,16 @@ async function tick() {
   const { data, error } = await db.rpc('cr_claim_jobs', { p_worker_id: workerId, p_limit: 1 })
   if (error) throw new Error(error.message)
   for (const job of data ?? []) {
+    const typedJob: WorkerJob = {
+      id: job.id,
+      owner_id: job.owner_id,
+      project_id: job.project_id,
+      builder_site_id: job.builder_site_id,
+      attempts: job.attempts,
+      payload: { ...job.payload, kind: job.kind }
+    }
     const lease = startJobLeaseGuard(job.id)
     try {
-      const typedJob: WorkerJob = {
-        id: job.id,
-        owner_id: job.owner_id,
-        project_id: job.project_id,
-        builder_site_id: job.builder_site_id,
-        attempts: job.attempts,
-        payload: { ...job.payload, kind: job.kind }
-      }
       await handle(typedJob)
       if (!(await lease.stop())) continue
       await db.rpc('cr_finish_job', { p_job_id: job.id, p_worker_id: workerId })
@@ -195,6 +195,25 @@ async function tick() {
         continue
       }
       const message = error instanceof Error ? error.message : 'Unknown worker error'
+      if (error instanceof BrowserHandoffExpiredError && job.kind === 'site_import') {
+        await failSiteImportJob(typedJob, message)
+        await db
+          .from('cr_jobs')
+          .update({
+            status: 'failed',
+            last_error: message,
+            lease_owner: null,
+            lease_expires_at: null,
+            progress_stage: 'completed',
+            progress_message: 'The guided browser expired safely',
+            progress_updated_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', job.id)
+          .eq('lease_owner', workerId)
+        log('info', 'job.guided_browser_expired', { jobId: job.id, kind: job.kind })
+        continue
+      }
       const delay = Math.min(300, 15 * 2 ** Math.max(0, job.attempts - 1))
       if (job.kind === 'audit')
         await db

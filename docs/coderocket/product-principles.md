@@ -38,6 +38,18 @@ Creation surfaces must lead with this URL-to-website journey. Website health, ch
 technical review tools belong under a clearly secondary or optional layer. They must remain
 discoverable without receiving the same visual weight as website creation.
 
+The creation form may show alternative starting sources, but it keeps one hierarchy:
+
+1. **Existing website** is selected and recommended by default.
+2. **Screenshots or a Figma design** enters the same journey when its ingestion pipeline is truly
+   available; until then the interface labels it honestly as upcoming.
+3. **Describe an idea without a source** may become a secondary escape hatch later, but it must not
+   compete with the clone-first promise or turn CodeRocket into an undifferentiated blank builder.
+
+One optional plain-language request may accompany the source. CodeRocket first saves a faithful
+recoverable version, then applies that request as a normal separate version. The form must state any
+visible credit cost before submission.
+
 Configuration is introduced only when the default attempt proves that it is needed. For example,
 protected-page access should appear after CodeRocket detects a blocked page, not as a prerequisite
 for every new website.
