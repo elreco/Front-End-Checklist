@@ -2,20 +2,19 @@ name: CodeRocket CI
 
 on:
   pull_request:
-    branches: [coderocket/main]
+    branches: [main]
     paths:
       - 'apps/cloud/**'
       - 'packages/coderocket-*/**'
-      - 'packages/content/rules/**'
-      - 'packages/design-system/src/coderocket-logo.tsx'
-      - 'packages/mcp/**'
-      - 'packages/rules/**'
+      - 'packages/design-system/**'
+      - 'packages/utils/**'
+      - 'configs/config-typescript/**'
       - 'Dockerfile.coderocket'
       - 'fly.coderocket.toml'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
   push:
-    branches: [coderocket/main]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -32,11 +31,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Lint CodeRocket
-        run: pnpm biome check apps/cloud packages/coderocket-core packages/coderocket-db packages/coderocket-cli packages/coderocket-worker packages/design-system/src/coderocket-logo.tsx
+        run: pnpm lint
       - name: Typecheck CodeRocket
-        run: pnpm turbo typecheck --filter='@coderocket/*' --filter=@coderocketapp/cli
+        run: pnpm typecheck
       - name: Test CodeRocket
-        run: pnpm turbo test:ci --filter='@coderocket/*' --filter=@coderocketapp/cli
+        run: pnpm test:ci
       - name: Build cloud app
         run: pnpm --filter @coderocket/cloud build
       - name: Build deployment image

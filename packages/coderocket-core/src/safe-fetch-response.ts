@@ -5,7 +5,7 @@ import type { PublicAddress, PublicTarget } from './safe-fetch-network'
 
 const MAX_HTML_BYTES = 2 * 1024 * 1024
 
-export interface AuditHttpResponse {
+export interface SafeHttpResponse {
   discard: () => Promise<void>
   headers: Headers
   readBody: () => Promise<string>
@@ -83,7 +83,7 @@ async function readNodeResponse(response: IncomingMessage, headers: Headers): Pr
   return new TextDecoder().decode(bytes)
 }
 
-/** Convert Node response headers into the web Headers interface used by the audit engine. */
+/** Convert Node response headers into the web Headers interface used by the capture engine. */
 function responseHeaders(response: IncomingMessage): Headers {
   const headers = new Headers()
   for (const [name, value] of Object.entries(response.headers)) {
@@ -100,7 +100,7 @@ async function requestPinnedAddress(
   signal: AbortSignal,
   accept: string,
   customHeaders: Record<string, string>
-): Promise<AuditHttpResponse> {
+): Promise<SafeHttpResponse> {
   return await new Promise((resolve, reject) => {
     const hostnameIsIp = isIP(target.url.hostname) !== 0
     const request = httpsRequest(
@@ -144,7 +144,7 @@ async function requestPinned(
   signal: AbortSignal,
   accept: string,
   customHeaders: Record<string, string>
-): Promise<AuditHttpResponse> {
+): Promise<SafeHttpResponse> {
   let lastError: unknown
   const orderedAddresses = [...target.addresses].sort((left, right) => left.family - right.family)
   for (const address of orderedAddresses) {
@@ -165,7 +165,7 @@ async function requestWithFetch(
   request: typeof fetch,
   accept: string,
   customHeaders: Record<string, string>
-): Promise<AuditHttpResponse> {
+): Promise<SafeHttpResponse> {
   const response = await request(target.url, {
     redirect: 'manual',
     headers: {
@@ -187,13 +187,13 @@ async function requestWithFetch(
 }
 
 /** Execute one safe response request through injected fetch or pinned Node HTTPS. */
-export async function requestAuditResponse(
+export async function requestSafeResponse(
   target: PublicTarget,
   signal: AbortSignal,
   accept: string,
   customHeaders: Record<string, string>,
   fetchImplementation?: typeof fetch
-): Promise<AuditHttpResponse> {
+): Promise<SafeHttpResponse> {
   return fetchImplementation
     ? requestWithFetch(target, signal, fetchImplementation, accept, customHeaders)
     : requestPinned(target, signal, accept, customHeaders)

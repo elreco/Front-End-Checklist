@@ -82,6 +82,63 @@ describe('site document', () => {
     assert.equal(document.navigation[0]?.href, 'https://example.com/work')
   })
 
+  it('keeps captured forms, page chrome, and measured image width without inventing copy', () => {
+    const captured = createSiteDocument(
+      {
+        ...source,
+        footerLinks: [{ href: '/privacy', label: 'Privacy' }],
+        footerText: '© Northstar',
+        headerBrandVisible: false,
+        navigation: [{ href: '/login', label: 'Sign in', prominent: true }],
+        sections: [
+          {
+            ...source.sections[0],
+            body: '',
+            form: {
+              action: '/search',
+              controls: [
+                { kind: 'input', label: 'Search', name: 'q', type: 'search' },
+                { kind: 'button', label: 'Find it', name: 'submit', value: 'Find it' }
+              ],
+              method: 'get',
+              style: {
+                buttonBackgroundColor: 'rgba(0, 0, 0, 0)',
+                buttonBorderColor: 'rgb(200, 200, 200)',
+                buttonForegroundColor: 'rgb(20, 20, 20)',
+                buttonHeight: 36,
+                buttonRadius: 4,
+                gap: 8,
+                inputBackgroundColor: 'rgb(255, 255, 255)',
+                inputBorderColor: 'rgb(180, 180, 180)',
+                inputForegroundColor: 'rgb(20, 20, 20)',
+                inputHeight: 44,
+                inputRadius: 8,
+                inputWidth: 640,
+                mobileInputWidth: 342
+              }
+            },
+            heading: '',
+            imageMobileWidth: 180,
+            imageWidth: 272,
+            links: []
+          }
+        ]
+      },
+      'owned'
+    )
+    const bundled = createSiteBundleDocument(captured, [{ document: captured, path: '/' }], 1, [])
+
+    assert.equal(bundled.identity.showInHeader, false)
+    assert.equal(bundled.navigation[0]?.prominent, true)
+    assert.equal(bundled.footer?.links[0]?.href, 'https://example.com/privacy')
+    assert.equal(bundled.pages?.[0]?.title, 'Northstar Studio')
+    assert.equal(bundled.sections[0]?.heading, '')
+    assert.equal(bundled.sections[0]?.body, '')
+    assert.equal(bundled.sections[0]?.imageWidth, 272)
+    assert.equal(bundled.sections[0]?.form?.action, 'https://example.com/search')
+    assert.equal(bundled.sections[0]?.form?.style.buttonBackgroundColor, '#f1f3f4')
+  })
+
   it('keeps repeated visible cards as one structured collection', () => {
     const document = createSiteDocument(
       {
@@ -156,13 +213,21 @@ describe('site document', () => {
       confidence: 'high',
       limitations: [],
       theme: visualTheme,
-      sections: [{ index: 0, layout: 'centered', style: visualStyle }]
+      sections: [
+        {
+          index: 0,
+          layout: 'centered',
+          style: { ...visualStyle, imageAspectRatio: 2.4, imagePosition: 'background' }
+        }
+      ]
     })
     const document = createSiteDocument(refined, 'owned')
 
     assert.equal(document.sections[0]?.heading, source.sections[0]?.heading)
     assert.equal(document.sections[0]?.layout, 'centered')
     assert.equal(document.sections[0]?.visual?.desktop.headingSize, 72)
+    assert.equal(document.sections[0]?.visual?.imageAspectRatio, 1.33)
+    assert.equal(document.sections[0]?.visual?.imagePosition, 'after')
     assert.equal(document.theme.visual?.button.foregroundColor, '#ffffff')
     assert.equal(document.recreation?.visualAnalysis, 'responsive-ai')
   })

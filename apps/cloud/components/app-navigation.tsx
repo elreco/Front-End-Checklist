@@ -1,13 +1,9 @@
 'use client'
 
 import {
-  Activity,
-  BookOpen,
   CreditCard,
-  ExternalLink,
   Gauge,
   Globe2,
-  History,
   Settings,
   WandSparkles
 } from '@repo/design-system/icons'
@@ -20,18 +16,11 @@ interface NavigationItem {
   href: string
   icon: typeof Gauge
   label: string
-  opensNewTab?: boolean
 }
 
 const builderNavigation: NavigationItem[] = [
   { href: '/dashboard', label: 'Overview', icon: Gauge },
   { href: '/websites', label: 'My websites', icon: Globe2 }
-]
-
-const toolNavigation: NavigationItem[] = [
-  { href: '/sites', label: 'Website health', icon: Activity },
-  { href: '/audits', label: 'Check history', icon: History },
-  { href: '/docs', label: 'Help & rules', icon: BookOpen, opensNewTab: true }
 ]
 
 const accountNavigation: NavigationItem[] = [
@@ -41,25 +30,18 @@ const accountNavigation: NavigationItem[] = [
 
 const navigationGroups = [
   { label: 'Website builder', items: builderNavigation },
-  { label: 'Optional tools', items: toolNavigation },
   { label: 'Account', items: accountNavigation }
 ]
 
 /** Match nested product routes to their owning navigation destination. */
 function isCurrentPath(pathname: string, href: string): boolean {
   if (href === '/dashboard' || href === '/create') return pathname === href
-  if (href === '/sites')
-    return (
-      pathname === href || pathname.startsWith('/projects/') || pathname.startsWith('/onboarding')
-    )
   if (href === '/websites') return pathname === href || pathname.startsWith('/studio/')
-  if (href === '/audits' || href === '/docs')
-    return pathname === href || pathname.startsWith(`${href}/`)
   if (href === '/settings') return pathname === href
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-/** Product navigation led by website creation with monitoring grouped as an optional tool. */
+/** Product navigation for cloning, editing, publishing, and account management. */
 export function AppNavigation({
   collapsed = false,
   mobile = false
@@ -95,14 +77,6 @@ export function AppNavigation({
             </Link>
           )
         })}
-        <span aria-hidden className="mx-2 w-px shrink-0 bg-border" />
-        <Link
-          aria-current={isCurrentPath(pathname, '/sites') ? 'page' : undefined}
-          className="inline-flex shrink-0 snap-start items-center gap-2 border border-transparent px-3 py-2 font-mono text-muted text-xs transition-colors hover:border-border hover:bg-surface-raised hover:text-foreground"
-          href="/sites"
-        >
-          <Activity aria-hidden className="h-4 w-4" /> Website health
-        </Link>
       </nav>
     )
 
@@ -137,12 +111,11 @@ export function AppNavigation({
                 {group.label}
               </p>
             )}
-            {group.items.map(({ href, label, icon: Icon, opensNewTab }) => {
+            {group.items.map(({ href, label, icon: Icon }) => {
               const current = isCurrentPath(pathname, href)
               const link = (
                 <Link
                   aria-current={current ? 'page' : undefined}
-                  aria-label={opensNewTab ? `${label} (opens in a new tab)` : undefined}
                   className={`flex min-h-9 items-center border py-2 transition-colors ${
                     collapsed ? 'relative justify-center px-0' : 'gap-2.5 px-2.5'
                   } ${
@@ -151,25 +124,15 @@ export function AppNavigation({
                       : 'border-transparent text-muted hover:border-border hover:bg-surface hover:text-foreground'
                   }`}
                   href={href}
-                  rel={opensNewTab ? 'noreferrer' : undefined}
-                  target={opensNewTab ? '_blank' : undefined}
                 >
                   <Icon aria-hidden className={current ? 'h-4 w-4 text-signal' : 'h-4 w-4'} />
                   {collapsed ? <span className="sr-only">{label}</span> : label}
-                  {opensNewTab ? (
-                    <ExternalLink
-                      aria-hidden
-                      className={
-                        collapsed ? 'absolute top-1.5 right-1.5 h-2.5 w-2.5' : 'ml-auto h-3.5 w-3.5'
-                      }
-                    />
-                  ) : null}
                 </Link>
               )
 
               return (
                 <TooltipHint
-                  content={opensNewTab ? `${label} · opens in a new tab` : label}
+                  content={label}
                   enabled={collapsed}
                   key={href}
                   side="right"

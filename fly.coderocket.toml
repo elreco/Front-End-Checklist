@@ -7,7 +7,7 @@ kill_timeout = "30s"
   dockerfile = "Dockerfile.coderocket"
 
 [deploy]
-  release_command = "pnpm --filter @coderocket/db migrate"
+  release_command = "sh -lc 'cd /app/packages/coderocket-db && exec node --import tsx src/migrate.ts'"
   strategy = "rolling"
 
 [env]
@@ -16,11 +16,10 @@ kill_timeout = "30s"
   NEXT_PUBLIC_SITE_URL = "https://www.coderocket.app"
   NEXT_PUBLIC_GOOGLE_ANALYTICS_ID = "G-0HBMKNN8MQ"
   CODEROCKET_COMMERCIAL_LAUNCH = "true"
-  FRONTEND_CHECKLIST_RULES_DIR = "/app/packages/content/rules/en"
 
 [processes]
-  web = "sh -lc 'node scripts/setup/prepare-coderocket-runtime-env.mjs && node apps/cloud/.next/standalone/apps/cloud/server.js'"
-  worker = "pnpm --filter @coderocket/worker start"
+  web = "sh -lc 'node scripts/setup/prepare-coderocket-runtime-env.mjs && exec node apps/cloud/.next/standalone/apps/cloud/server.js'"
+  worker = "sh -lc 'cd /app/packages/coderocket-worker && exec node --import tsx src/index.ts'"
 
 [http_service]
   internal_port = 3000

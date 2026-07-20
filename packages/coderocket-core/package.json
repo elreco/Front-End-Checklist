@@ -7,16 +7,17 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./audit": "./src/audit.ts",
     "./browser-handoff": "./src/browser-handoff-credentials.ts",
     "./browser": "./src/browser-session.ts",
     "./browser-login": "./src/browser-login-credentials.ts",
+    "./figma-api": "./src/figma-api.ts",
+    "./figma-blueprint": "./src/figma-blueprint.ts",
+    "./figma-source": "./src/figma-source.ts",
     "./safe-fetch": "./src/safe-fetch.ts",
     "./site-edit": "./src/site-edit.ts",
     "./site-connection": "./src/site-connection.ts",
     "./site-document": "./src/site-document.ts",
-    "./site-visual": "./src/site-visual-style.ts",
-    "./website-level": "./src/website-level.ts"
+    "./site-visual": "./src/site-visual-style.ts"
   },
   "scripts": {
     "lint": "biome check .",
@@ -26,9 +27,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@frontendchecklist/rules": "workspace:*",
-    "@repo/mcp": "workspace:*",
-    "@repo/types": "workspace:*",
     "playwright-core": "catalog:",
     "zod": "catalog:"
   },

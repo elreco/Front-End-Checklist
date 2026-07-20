@@ -3,8 +3,6 @@ export type PlanId = 'free' | 'solo' | 'agency'
 export type UpgradeSource =
   | 'billing'
   | 'dashboard_plan'
-  | 'daily_monitoring'
-  | 'page_limit'
   | 'sidebar_plan'
   | 'site_limit'
   | 'website_creation'
@@ -24,24 +22,11 @@ export function getNextPlan(plan: PlanId): Exclude<PlanId, 'free'> | undefined {
   return undefined
 }
 
-/** Describe the extra per-site capacity unlocked by the next plan. */
-export function getPageLimitUpgrade(plan: PlanId) {
-  const targetPlan = getNextPlan(plan)
-  if (!targetPlan) return undefined
-  const currentLimit = pageLimitForPlan(plan)
-  const targetLimit = pageLimitForPlan(targetPlan)
-  return {
-    additionalPages: targetLimit - currentLimit,
-    targetLimit,
-    targetPlan
-  }
-}
-
-/** Mirror the stable page entitlement needed by browser-side upgrade messaging. */
-function pageLimitForPlan(plan: PlanId): number {
-  if (plan === 'free') return 5
-  if (plan === 'solo') return 25
-  return 50
+/** Return the public label used for one builder plan. */
+export function getPlanLabel(plan: PlanId): string {
+  if (plan === 'solo') return 'Launch'
+  if (plan === 'agency') return 'Studio'
+  return 'Free'
 }
 
 /** Build a contextual pricing destination using only non-identifying product state. */
@@ -76,8 +61,6 @@ export function parseUpgradeSource(
   if (
     value === 'billing' ||
     value === 'dashboard_plan' ||
-    value === 'daily_monitoring' ||
-    value === 'page_limit' ||
     value === 'sidebar_plan' ||
     value === 'site_limit' ||
     value === 'website_creation'

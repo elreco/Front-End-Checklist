@@ -5,10 +5,10 @@ import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { useFormStatus } from 'react-dom'
 
 /** Prevent duplicate creations while keeping the action understandable during a slow request. */
-export function SiteCreationSubmit() {
+export function SiteCreationSubmit({ disabled = false }: { disabled?: boolean }) {
   const { pending } = useFormStatus()
   return (
-    <CodeRocketButton className="shrink-0" disabled={pending} size="lg" type="submit">
+    <CodeRocketButton className="shrink-0" disabled={pending || disabled} size="lg" type="submit">
       {pending ? (
         <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />
       ) : null}

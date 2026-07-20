@@ -7,8 +7,8 @@ export const contentType = 'image/png'
 /** Generate the default CodeRocket Open Graph image. */
 export default function OpenGraphImage() {
   return createSocialImage({
-    headline: 'Know when your website',
-    accent: 'needs attention.',
-    kicker: 'Website health monitoring'
+    headline: 'Clone a website.',
+    accent: 'Make it yours.',
+    kicker: 'No-code website creation'
   })
 }

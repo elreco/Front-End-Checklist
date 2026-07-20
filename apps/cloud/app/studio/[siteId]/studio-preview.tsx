@@ -22,11 +22,15 @@ const previewWidths: Record<PreviewViewport, number | string> = {
 export function StudioPreview({
   connections,
   document,
+  readOnly = false,
+  revisionId,
   selectedPath,
   siteId
 }: {
   connections: BuilderConnectionSummary[]
   document: SiteDocument
+  readOnly?: boolean
+  revisionId?: string
   selectedPath: string
   siteId: string
 }) {
@@ -34,7 +38,7 @@ export function StudioPreview({
   const pages: StudioPageOption[] =
     document.pages && document.pages.length > 0
       ? document.pages
-      : [{ path: selectedPath, title: document.sections[0]?.heading ?? document.identity.name }]
+      : [{ path: selectedPath, title: document.sections[0]?.heading || document.identity.name }]
   const { clearSelection, pagePath, selecting, selection, select, setSelecting } =
     useStudioSelection()
   const previewFrame = useRef<HTMLDivElement>(null)
@@ -45,6 +49,10 @@ export function StudioPreview({
     selectedElement.current?.removeAttribute('data-cr-selected')
     selectedElement.current = undefined
   }, [selection])
+
+  useEffect(() => {
+    if (readOnly && selecting) setSelecting(false)
+  }, [readOnly, selecting, setSelecting])
 
   useEffect(() => {
     if (!selecting) return
@@ -74,7 +82,7 @@ export function StudioPreview({
 
   /** Select the closest eligible preview element without following its normal action. */
   function handlePreviewClick(event: MouseEvent<HTMLDivElement>) {
-    if (!selecting) return
+    if (readOnly || !selecting) return
     const target = closestSelectableTarget(event.target)
     if (!target || !event.currentTarget.contains(target)) return
     event.preventDefault()
@@ -84,6 +92,7 @@ export function StudioPreview({
 
   /** Support selection and cancellation from the keyboard. */
   function handlePreviewKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (readOnly) return
     if (event.key === 'Escape' && selecting) {
       event.preventDefault()
       setSelecting(false)
@@ -101,8 +110,10 @@ export function StudioPreview({
       <StudioPreviewToolbar
         clearSelection={clearSelection}
         pages={pages}
+        revisionId={revisionId}
         selectedPath={selectedPath}
         selection={selection}
+        selectionEnabled={!readOnly}
         selecting={selecting}
         setSelecting={setSelecting}
         setViewport={setViewport}

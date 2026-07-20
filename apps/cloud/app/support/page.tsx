@@ -1,9 +1,9 @@
+import { FigmaBrandIcon } from '@repo/design-system/brand-icons'
 import {
   ArrowRight,
-  BookOpen,
   CreditCard,
+  Globe2,
   Mail,
-  Radar,
   ShieldCheck
 } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
@@ -14,17 +14,17 @@ import { createPublicMetadata, SUPPORT_EMAIL } from '@/lib/seo'
 export const metadata: Metadata = createPublicMetadata({
   title: 'Support',
   description:
-    'Get help with CodeRocket website checks, account access, billing, security, protected sites, and client reports.',
+    'Get help with CodeRocket website imports, Figma connections, private access, publishing, accounts, and billing.',
   path: '/support',
-  keywords: ['CodeRocket support', 'website monitoring help']
+  keywords: ['CodeRocket support', 'website cloning help']
 })
 
 const supportTopics = [
   {
-    icon: Radar,
-    title: 'Website checks',
+    icon: Globe2,
+    title: 'Website imports',
     description:
-      'Send the website URL, affected page, and check time. Add the check ID when one is available.'
+      'Send the source URL, the page that did not import as expected, and the name of your CodeRocket project.'
   },
   {
     icon: ShieldCheck,
@@ -33,10 +33,10 @@ const supportTopics = [
       'Never email passwords, cookies, tokens, or secret headers. Describe the access method instead.'
   },
   {
-    icon: CreditCard,
-    title: 'Plans & billing',
+    icon: FigmaBrandIcon,
+    title: 'Figma connections',
     description:
-      'Use the email attached to the CodeRocket account and include the Stripe invoice number.'
+      'Include the Figma file link and the screen name. Never send an access token or account password.'
   }
 ]
 
@@ -53,8 +53,8 @@ export default function SupportPage() {
               Tell us what is blocking you.
             </h1>
             <p className="mt-6 max-w-2xl text-lg text-muted leading-8">
-              We can help with website checks, restricted pages, GitHub, GitLab, or Bitbucket CI,
-              account access, billing, and shared reports.
+              We can help with public or protected website imports, Figma, generated versions,
+              publishing, account access, and billing.
             </p>
           </div>
           <CodeRocketButton asChild size="lg">
@@ -81,15 +81,15 @@ export default function SupportPage() {
 
         <section className="mt-8 grid gap-5 md:grid-cols-2">
           <article className="border border-border bg-surface p-7">
-            <BookOpen aria-hidden className="h-5 w-5 text-accent" />
-            <h2 className="mt-5 font-heading font-semibold text-2xl">Find an answer now</h2>
+            <CreditCard aria-hidden className="h-5 w-5 text-accent" />
+            <h2 className="mt-5 font-heading font-semibold text-2xl">Plans and billing</h2>
             <p className="mt-3 text-muted leading-7">
-              The official guide explains cloud checks, protected-site access, guided resolutions,
-              and every rule in the synchronized reference.
+              Compare website limits, monthly creation credits, hosted visits, and the secure Stripe
+              checkout before choosing a plan.
             </p>
             <CodeRocketButton asChild className="mt-6" variant="outline">
-              <Link href="/docs">
-                Open documentation <ArrowRight aria-hidden />
+              <Link href="/pricing">
+                Compare plans <ArrowRight aria-hidden />
               </Link>
             </CodeRocketButton>
           </article>

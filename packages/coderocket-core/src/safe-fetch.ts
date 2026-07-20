@@ -5,7 +5,7 @@ import {
   rejectKnownAccessBarrier
 } from './safe-fetch-access'
 import { resolvePublicTarget } from './safe-fetch-network'
-import { requestAuditResponse } from './safe-fetch-response'
+import { requestSafeResponse } from './safe-fetch-response'
 
 const MAX_REDIRECTS = 5
 const DEFAULT_TIMEOUT_MS = 10_000
@@ -77,7 +77,7 @@ export async function fetchPublicHtml(
   const customHeaders = normalizeSafeRequestHeaders(options.headers)
   for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
     const requestHeaders = target.url.origin === initialOrigin ? customHeaders : {}
-    const response = await requestAuditResponse(
+    const response = await requestSafeResponse(
       target,
       timeoutSignal,
       'text/html,application/xhtml+xml',
@@ -137,7 +137,7 @@ async function fetchPublicResource(
   for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
     const accept = imageOnly ? 'image/*' : 'text/plain,application/xml,text/xml;q=0.9,*/*;q=0.1'
     const requestHeaders = target.url.origin === initialOrigin ? customHeaders : {}
-    const response = await requestAuditResponse(
+    const response = await requestSafeResponse(
       target,
       timeoutSignal,
       accept,
@@ -213,7 +213,7 @@ export async function fetchPublicImage(
   const customHeaders = normalizeSafeRequestHeaders(options.headers)
   for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
     const requestHeaders = target.url.origin === initialOrigin ? customHeaders : {}
-    const response = await requestAuditResponse(
+    const response = await requestSafeResponse(
       target,
       timeoutSignal,
       'image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9',

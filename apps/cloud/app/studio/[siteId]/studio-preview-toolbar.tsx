@@ -10,6 +10,12 @@ import {
   Tablet,
   X
 } from '@repo/design-system/icons'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@repo/design-system/ui/dropdown-menu'
 import Link from 'next/link'
 import type { ComponentType, SVGProps } from 'react'
 
@@ -37,8 +43,10 @@ const viewportOptions: ViewportOption[] = [
 export function StudioPreviewToolbar({
   clearSelection,
   pages,
+  revisionId,
   selectedPath,
   selection,
+  selectionEnabled = true,
   selecting,
   setSelecting,
   setViewport,
@@ -47,8 +55,10 @@ export function StudioPreviewToolbar({
 }: {
   clearSelection: () => void
   pages: StudioPageOption[]
+  revisionId?: string
   selectedPath: string
   selection?: SiteEditSelection
+  selectionEnabled?: boolean
   selecting: boolean
   setSelecting: (selecting: boolean) => void
   setViewport: (viewport: PreviewViewport) => void
@@ -91,15 +101,18 @@ export function StudioPreviewToolbar({
           Click an element · Esc to cancel
         </p>
       ) : (
-        <details className="group relative min-w-0 justify-self-center">
-          <summary className="flex h-8 w-[min(16rem,36vw)] cursor-pointer list-none items-center justify-center gap-1.5 border border-transparent px-2 text-xs hover:border-border hover:bg-surface-raised group-open:border-border group-open:bg-surface-raised [&::-webkit-details-marker]:hidden">
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger className="group flex h-8 w-[min(16rem,36vw)] min-w-0 cursor-pointer items-center justify-center gap-1.5 justify-self-center border border-transparent px-2 text-xs outline-none transition-colors hover:border-border hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-signal focus-visible:outline-offset-2 data-[state=open]:border-border data-[state=open]:bg-surface-raised">
             <span className="truncate font-medium">{pageLabel(currentPage)}</span>
             <ChevronDown
               aria-hidden
-              className="h-3.5 w-3.5 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none"
+              className="h-3.5 w-3.5 shrink-0 text-muted transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none"
             />
-          </summary>
-          <div className="absolute top-[calc(100%+0.3rem)] left-1/2 z-50 w-[min(22rem,calc(100vw-1rem))] -translate-x-1/2 border border-border bg-surface p-1.5 shadow-lg">
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="center"
+            className="w-[min(22rem,calc(100vw-1rem))] rounded-none bg-surface p-1.5"
+          >
             <div className="flex items-center justify-between gap-3 px-2 py-1.5">
               <p className="font-mono text-[9px] text-muted uppercase tracking-[.16em]">Pages</p>
               <span className="font-mono text-[9px] text-muted">{pages.length}</span>
@@ -108,28 +121,32 @@ export function StudioPreviewToolbar({
               {pages.map(page => {
                 const current = page.path === selectedPath
                 return (
-                  <Link
-                    aria-current={current ? 'page' : undefined}
-                    className={`flex min-h-9 items-center gap-2 px-2 text-xs hover:bg-surface-raised ${
+                  <DropdownMenuItem
+                    asChild
+                    className={`min-h-9 gap-2 px-2 text-xs hover:bg-surface-raised focus:bg-surface-raised ${
                       current ? 'bg-surface-raised text-foreground' : 'text-muted'
                     }`}
-                    href={studioPageHref(siteId, page.path)}
                     key={page.path}
                   >
-                    <Check
-                      aria-hidden
-                      className={`h-3.5 w-3.5 shrink-0 ${current ? 'opacity-100' : 'opacity-0'}`}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{pageLabel(page)}</span>
-                    <span className="max-w-28 shrink-0 truncate font-mono text-[10px]">
-                      {page.path}
-                    </span>
-                  </Link>
+                    <Link
+                      aria-current={current ? 'page' : undefined}
+                      href={studioPageHref(siteId, page.path, revisionId)}
+                    >
+                      <Check
+                        aria-hidden
+                        className={`h-3.5 w-3.5 shrink-0 ${current ? 'opacity-100' : 'opacity-0'}`}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{pageLabel(page)}</span>
+                      <span className="max-w-28 shrink-0 truncate font-mono text-[10px]">
+                        {page.path}
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
                 )
               })}
             </div>
-          </div>
-        </details>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
       <div className="flex min-w-0 items-center justify-self-end">
@@ -146,20 +163,31 @@ export function StudioPreviewToolbar({
         ) : null}
         <button
           aria-label={
-            selecting
-              ? 'Cancel page selection'
-              : selection
-                ? 'Select another element on the page'
-                : 'Select an element on the page'
+            !selectionEnabled
+              ? 'Selection is available on the latest version'
+              : selecting
+                ? 'Cancel page selection'
+                : selection
+                  ? 'Select another element on the page'
+                  : 'Select an element on the page'
           }
           aria-pressed={selecting}
+          disabled={!selectionEnabled}
           className={`flex h-8 items-center justify-center gap-1.5 px-2 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-signal focus-visible:outline-offset-2 ${
-            selecting
-              ? 'bg-accent text-accent-foreground'
-              : 'text-muted hover:bg-surface-raised hover:text-foreground'
+            !selectionEnabled
+              ? 'cursor-not-allowed text-foreground-subtle'
+              : selecting
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted hover:bg-surface-raised hover:text-foreground'
           }`}
           onClick={() => setSelecting(!selecting)}
-          title={selecting ? 'Cancel selection' : 'Select on page'}
+          title={
+            selectionEnabled
+              ? selecting
+                ? 'Cancel selection'
+                : 'Select on page'
+              : 'Continue from this version to select and edit elements'
+          }
           type="button"
         >
           <MousePointerClick aria-hidden className="h-3.5 w-3.5" />
@@ -177,6 +205,10 @@ function pageLabel(page?: StudioPageOption): string {
 }
 
 /** Preserve the selected Studio page while keeping the root URL clean. */
-function studioPageHref(siteId: string, path: string): string {
-  return path === '/' ? `/studio/${siteId}` : `/studio/${siteId}?page=${encodeURIComponent(path)}`
+function studioPageHref(siteId: string, path: string, revisionId?: string): string {
+  const query = new URLSearchParams()
+  if (revisionId) query.set('version', revisionId)
+  if (path !== '/') query.set('page', path)
+  const suffix = query.toString()
+  return `/studio/${siteId}${suffix ? `?${suffix}` : ''}`
 }

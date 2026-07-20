@@ -1,5 +1,4 @@
 import type { MetadataRoute } from 'next'
-import { DOCUMENTATION_RULES, getRuleDocumentationUrl } from '@/lib/docs'
 import { SITE_URL } from '@/lib/seo'
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -9,16 +8,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: number
   }> = [
     { path: '', changeFrequency: 'weekly', priority: 1 },
-    { path: '/monitoring', changeFrequency: 'weekly', priority: 0.8 },
     { path: '/pricing', changeFrequency: 'monthly', priority: 0.8 },
-    { path: '/docs', changeFrequency: 'weekly', priority: 0.8 },
-    { path: '/docs/audits', changeFrequency: 'monthly', priority: 0.75 },
-    { path: '/docs/ai', changeFrequency: 'monthly', priority: 0.7 },
-    { path: '/docs/cli', changeFrequency: 'monthly', priority: 0.75 },
-    { path: '/docs/rules', changeFrequency: 'weekly', priority: 0.9 },
-    { path: '/docs/security', changeFrequency: 'monthly', priority: 0.7 },
-    { path: '/guides/tailwind-ai-components', changeFrequency: 'monthly', priority: 0.75 },
-    { path: '/components/7igf4HoGRDc', changeFrequency: 'yearly', priority: 0.5 },
+    { path: '/integrations', changeFrequency: 'monthly', priority: 0.6 },
     { path: '/support', changeFrequency: 'monthly', priority: 0.5 },
     { path: '/legal/privacy', changeFrequency: 'yearly', priority: 0.2 },
     { path: '/legal/terms', changeFrequency: 'yearly', priority: 0.2 },
@@ -30,10 +21,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: entry.changeFrequency,
     priority: entry.priority
   }))
-  const ruleEntries: MetadataRoute.Sitemap = DOCUMENTATION_RULES.map(rule => ({
-    url: `${SITE_URL}${getRuleDocumentationUrl(rule)}`,
-    changeFrequency: 'monthly',
-    priority: 0.6
-  }))
-  return [...staticEntries, ...ruleEntries]
+  return staticEntries
 }

@@ -9,21 +9,29 @@ import { retryBuilderSite } from './actions'
 export function RetrySiteImportForm({
   className,
   secondary = false,
-  siteId
+  siteId,
+  sourceType = 'website'
 }: {
   className?: string
   secondary?: boolean
   siteId: string
+  sourceType?: 'figma' | 'website'
 }) {
   return (
     <form action={retryBuilderSite} className={className}>
       <input name="siteId" type="hidden" value={siteId} />
-      <RetrySiteImportButton secondary={secondary} />
+      <RetrySiteImportButton secondary={secondary} sourceType={sourceType} />
     </form>
   )
 }
 
-function RetrySiteImportButton({ secondary }: { secondary: boolean }) {
+function RetrySiteImportButton({
+  secondary,
+  sourceType
+}: {
+  secondary: boolean
+  sourceType: 'figma' | 'website'
+}) {
   const { pending } = useFormStatus()
   return (
     <CodeRocketButton
@@ -37,7 +45,11 @@ function RetrySiteImportButton({ secondary }: { secondary: boolean }) {
       ) : (
         <RotateCcw aria-hidden />
       )}
-      {pending ? 'Starting again…' : 'Try this website again'}
+      {pending
+        ? 'Starting again…'
+        : sourceType === 'figma'
+          ? 'Try this design again'
+          : 'Try this website again'}
     </CodeRocketButton>
   )
 }

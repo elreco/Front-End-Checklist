@@ -54,7 +54,7 @@ describe('safe HTML fetch', () => {
     )
   })
 
-  it('records response evidence used by website health checks', async () => {
+  it('returns bounded response metadata used during website imports', async () => {
     const fakeFetch = async () =>
       new Response('<!doctype html><title>Healthy page</title>', {
         status: 200,
@@ -137,7 +137,7 @@ describe('safe HTML fetch', () => {
     )
   })
 
-  it('allows a monitored sign-in page to contain a password field', async () => {
+  it('allows an explicitly selected sign-in page to contain a password field', async () => {
     const fakeFetch = async () =>
       new Response('<!doctype html><title>Sign in</title><form><input type="password"></form>', {
         status: 200,

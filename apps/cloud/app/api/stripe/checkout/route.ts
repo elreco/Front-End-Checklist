@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { readPricingCurrency, stripeCurrency } from '@/lib/pricing'
-import { createStripeClient, stripeAiOveragePrice, stripePriceForPlan } from '@/lib/stripe'
+import { createStripeClient, stripePriceForPlan } from '@/lib/stripe'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { parseUpgradeSource } from '@/lib/upgrade'
 import { normalizeWebsiteDraft } from '@/lib/website-draft'
@@ -34,10 +34,7 @@ export async function POST(request: Request) {
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     currency: stripeCurrency(currency),
-    line_items: [
-      { price: stripePriceForPlan(plan), quantity: 1 },
-      { price: stripeAiOveragePrice() }
-    ],
+    line_items: [{ price: stripePriceForPlan(plan), quantity: 1 }],
     customer: customerId,
     customer_email: customerId ? undefined : data.user.email,
     ...(customerId ? { customer_update: { address: 'auto', name: 'auto' } } : {}),

@@ -1,11 +1,11 @@
--- Add the no-code website recreation product without replacing website health monitoring.
+-- Add the no-code website recreation product.
 -- Source HTML and executable code are never persisted: only a bounded, versioned site document.
 
 alter table public.cr_jobs
   drop constraint if exists cr_jobs_kind_check;
 alter table public.cr_jobs
   add constraint cr_jobs_kind_check
-  check (kind in ('audit', 'retention', 'email', 'ai_analysis', 'ai_usage', 'site_import'));
+  check (kind in ('site_import'));
 
 create table public.cr_builder_sites (
   id uuid primary key default gen_random_uuid(),

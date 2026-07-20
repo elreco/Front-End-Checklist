@@ -16,8 +16,18 @@ const notices: Record<string, string> = {
     'CodeRocket could not safely reach this address. Check it and try a public HTTPS page.',
   'invalid-name': 'Use a website name between 1 and 120 characters.',
   'invalid-instruction': 'Keep the optional request between 2 and 2,000 characters.',
-  'create-failed': 'The website could not be started. Nothing was charged; please try again.'
+  'create-failed': 'The website could not be started. Nothing was charged; please try again.',
+  'invalid-figma-url': 'Paste a valid Figma design link and inspect it again.',
+  'invalid-figma-screens': 'Choose between one and five Figma screens.',
+  'figma-unavailable':
+    'Figma connection is not configured on this installation yet. No design was read.',
+  'figma-connection-failed':
+    'Figma could not be connected. Try again and allow read access to file content.',
+  'figma-connected': 'Figma is connected. Inspect the design and choose the screens to recreate.',
+  'figma-file-unavailable':
+    'The connected Figma account could not open this design. Check its sharing access and try again.'
 }
+const positiveNotices = new Set(['figma-connected'])
 
 export default async function CreateWebsitePage({
   searchParams
@@ -26,15 +36,26 @@ export default async function CreateWebsitePage({
 }) {
   const params = await searchParams
   const rawUrl = Array.isArray(params.url) ? params.url[0] : params.url
+  const rawFigmaUrl = Array.isArray(params.figmaUrl) ? params.figmaUrl[0] : params.figmaUrl
+  const rawSource = Array.isArray(params.source) ? params.source[0] : params.source
   const notice = Array.isArray(params.notice) ? params.notice[0] : params.notice
   const initialUrl = normalizeWebsiteDraft(rawUrl ?? '') ?? ''
+  const initialFigmaUrl = rawFigmaUrl?.startsWith('https://') ? rawFigmaUrl.slice(0, 2_048) : ''
+  const initialSource = rawSource === 'figma' ? 'figma' : 'url'
   const context = await getAppShellContext()
   const builderLimits = getBuilderPlanEntitlements(context.plan)
 
   return (
     <ProductShell eyebrow="Start from a real example" title="Create your website">
       {notice && notices[notice] ? (
-        <p className="mb-5 border border-danger bg-surface p-4 text-danger" role="alert">
+        <p
+          className={`mb-5 border bg-surface p-4 ${
+            positiveNotices.has(notice)
+              ? 'border-success text-success'
+              : 'border-danger text-danger'
+          }`}
+          role={positiveNotices.has(notice) ? 'status' : 'alert'}
+        >
           {notices[notice]}
         </p>
       ) : null}
@@ -47,9 +68,9 @@ export default async function CreateWebsitePage({
                 Website creation starts with Launch
               </h2>
               <p className="mt-3 max-w-2xl text-muted leading-7">
-                The free account keeps website monitoring free, but it never starts paid AI or
-                hosting work in the background. Launch includes one hosted website, bounded
-                recreation costs, and a hard monthly spending ceiling.
+                The free account lets you explore the creation journey, but it never starts paid
+                generation or hosting work in the background. Launch includes one hosted website,
+                bounded recreation costs, and a hard monthly spending ceiling.
               </p>
               {initialUrl ? (
                 <p className="mt-5 border border-border bg-background p-4 text-sm">
@@ -66,7 +87,11 @@ export default async function CreateWebsitePage({
               </CodeRocketButton>
             </div>
           ) : (
-            <SiteCreationForm initialUrl={initialUrl} />
+            <SiteCreationForm
+              initialFigmaUrl={initialFigmaUrl}
+              initialSource={initialSource}
+              initialUrl={initialUrl}
+            />
           )}
         </section>
         <aside className="space-y-4">

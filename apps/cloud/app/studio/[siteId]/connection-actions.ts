@@ -73,7 +73,9 @@ export async function saveBuilderLinkConnection(formData: FormData) {
   if (result.applied === 0) redirect(connectionHref(siteId, 'connection-ready'))
   const { error: revisionError } = await supabase.rpc('cr_update_builder_site_content', {
     p_site_id: siteId,
-    p_site_document: result.document
+    p_site_document: result.document,
+    p_revision_title: provider === 'stripe' ? 'Added Stripe payments' : 'Added appointment booking',
+    p_source_revision_id: null
   })
   redirect(connectionHref(siteId, revisionError ? 'connection-partial' : 'connection-applied'))
 }
@@ -126,7 +128,10 @@ export async function disconnectBuilderConnection(formData: FormData) {
     if (result.removed > 0)
       await supabase.rpc('cr_update_builder_site_content', {
         p_site_id: siteId,
-        p_site_document: result.document
+        p_site_document: result.document,
+        p_revision_title:
+          provider === 'stripe' ? 'Removed Stripe payments' : 'Removed appointment booking',
+        p_source_revision_id: null
       })
   }
   redirect(connectionHref(siteId, 'connection-removed'))

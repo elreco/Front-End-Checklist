@@ -5,14 +5,14 @@ import { createPublicMetadata, SUPPORT_EMAIL } from '@/lib/seo'
 export const metadata: Metadata = createPublicMetadata({
   title: 'Privacy policy',
   description:
-    'How CodeRocket collects, uses, protects, retains, and shares website creation, hosting, check, billing, and support data.',
+    'How CodeRocket collects, uses, protects, retains, and shares website creation, hosting, billing, and support data.',
   path: '/legal/privacy'
 })
 
 export default function PrivacyPage() {
   return (
     <LegalPage
-      description="This policy explains what CodeRocket needs to recreate and host websites, run checks, protect accounts, provide guidance, and manage subscriptions."
+      description="This policy explains what CodeRocket needs to recreate and host websites, protect accounts, provide guided changes, and manage subscriptions."
       title="Privacy policy"
     >
       <h2>1. Who is responsible</h2>
@@ -25,13 +25,12 @@ export default function PrivacyPage() {
       <h2>2. Data we process</h2>
       <ul>
         <li>Account identity, email address, authentication provider, and profile preferences.</li>
-        <li>Website names, URLs, selected pages, access mode, and project settings.</li>
+        <li>Website names, source URLs, selected pages, access mode, and project settings.</li>
         <li>
           Public source text, images, links, visual settings, editable site documents, versions, and
           publishing status.
         </li>
-        <li>Check results, technical evidence, rule identifiers, history, and shared reports.</li>
-        <li>AI requests, generated fix guidance, model metadata, and usage records.</li>
+        <li>Generation and editing requests, generated versions, model metadata, and usage records.</li>
         <li>Plan, Stripe customer and subscription identifiers, invoices, and payment status.</li>
         <li>Security, delivery, error, support, and operational logs.</li>
         <li>
@@ -46,27 +45,26 @@ export default function PrivacyPage() {
 
       <h2>3. Why we use it</h2>
       <p>
-        We use this data to provide and secure the service, run requested and scheduled checks,
-        compare results, send important alerts, answer support requests, prevent abuse, administer
-        subscriptions, and comply with legal obligations. Where consent is required, it can be
-        withdrawn without affecting earlier lawful processing.
+        We use this data to provide and secure the service, create requested website versions,
+        publish approved versions, answer support requests, prevent abuse, administer subscriptions,
+        and comply with legal obligations. Where consent is required, it can be withdrawn without
+        affecting earlier lawful processing.
       </p>
 
-      <h2>4. Website content and AI guidance</h2>
+      <h2>4. Website content and generated versions</h2>
       <p>
         Website recreation opens only public HTTPS pages and stores a bounded component document,
         not the source HTML or JavaScript. Owned-site mode may retain visible public copy and image
-        URLs; inspiration mode removes source identity, images, and wording. Public checks save only
-        the evidence needed to explain a result. When a user explicitly requests AI guidance,
-        bounded evidence and relevant context are sent to the configured AI provider. Common
-        credential patterns are removed first. Passwords, access tokens, cookies, and secret headers
-        must not be included in support or AI requests.
+        URLs; inspiration mode removes source identity, images, and wording. When a user requests a
+        first version or a change, bounded source content and relevant project context are sent to
+        the configured AI provider. Common credential patterns are removed first. Passwords, access
+        tokens, cookies, and secret headers must not be included in prompts or support requests.
       </p>
 
       <h2>5. Service providers</h2>
       <p>
         CodeRocket relies on service providers for hosting and networking, Supabase authentication
-        and database services, Stripe billing, OpenAI-powered fix guidance, Google Analytics where
+        and database services, Stripe billing, OpenAI-powered website generation, Google Analytics where
         consent is given, and transactional email. They process data only for the service they
         provide and under their own security and privacy commitments. International transfers may
         occur with appropriate contractual safeguards.
@@ -74,11 +72,10 @@ export default function PrivacyPage() {
 
       <h2>6. Retention</h2>
       <p>
-        Website check history follows the active plan: normally 30 days on Free, 90 days on Launch,
-        and 365 days on Studio. Generated website versions are retained while the website and
-        account remain active so owners can recover earlier work. Account, billing, security, and
-        legal records may be kept longer when required for fraud prevention, dispute handling, tax,
-        or legal compliance. Revoked share links stop providing access immediately.
+        Generated website versions are retained while the website and account remain active so
+        owners can recover earlier work. Temporary import captures expire automatically. Account,
+        billing, security, and legal records may be kept longer when required for fraud prevention,
+        dispute handling, tax, or legal compliance. Unpublishing a site removes its public version.
       </p>
 
       <h2>7. Security</h2>

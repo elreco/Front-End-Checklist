@@ -13,10 +13,11 @@ import {
 } from '@coderocket/core'
 import { createServiceClient } from '@coderocket/db'
 import { z } from 'zod'
-import type { WorkerJob } from './audit-job'
 import { assertJobActive } from './job-cancellation'
 import { loadSiteEditAttachments, resolveSiteEditAttachmentImages } from './site-edit-attachments'
+import { reportSiteEditProgress } from './site-edit-progress'
 import { estimateVisualAiCostMicroeur } from './site-import-cost'
+import type { WorkerJob } from './worker-job'
 
 const SITE_EDIT_MAX_INPUT_TOKENS = 35_000
 const FAILED_SITE_EDIT_COST_MICROEUR = 150_000
@@ -50,7 +51,7 @@ export async function processSiteEditJob(job: WorkerJob): Promise<void> {
         .maybeSingle(),
       db
         .from('cr_site_revisions')
-        .select('site_document')
+        .select('revision_number,site_document')
         .eq('site_id', job.builder_site_id)
         .eq('owner_id', job.owner_id)
         .order('revision_number', { ascending: false })
@@ -109,18 +110,18 @@ export async function processSiteEditJob(job: WorkerJob): Promise<void> {
   if (maximumCost > FAILED_SITE_EDIT_COST_MICROEUR)
     throw new Error('The selected editing model exceeds the protected credit budget')
 
-  await assertJobActive(job)
   await db.from('cr_builder_messages').update({ status: 'working' }).eq('id', messageId)
-  await db
-    .from('cr_jobs')
-    .update({
-      progress_stage: 'starting',
-      progress_message: 'Understanding the change you want',
-      progress_updated_at: new Date().toISOString()
-    })
-    .eq('id', job.id)
-    .eq('owner_id', job.owner_id)
+  await reportSiteEditProgress(job, {
+    current: 1,
+    message: 'Reading your request and current website',
+    stage: 'starting'
+  })
   const provider = new OpenAiSiteEditProvider({ apiKey, model })
+  await reportSiteEditProgress(job, {
+    current: 2,
+    message: 'Preparing the clearest way to make this change',
+    stage: 'comparing'
+  })
   const result = await provider.edit({
     connections,
     document,
@@ -130,7 +131,11 @@ export async function processSiteEditJob(job: WorkerJob): Promise<void> {
     idempotencyKey: `coderocket-site-edit-${job.id}`,
     safetyIdentifier: createHash('sha256').update(job.owner_id).digest('hex')
   })
-  await assertJobActive(job)
+  await reportSiteEditProgress(job, {
+    current: 3,
+    message: 'Updating the relevant parts of your website',
+    stage: 'checking_pages'
+  })
   const resolvedPlan = await resolveSiteEditAttachmentImages(
     db,
     result.plan,
@@ -140,6 +145,11 @@ export async function processSiteEditJob(job: WorkerJob): Promise<void> {
   )
   await assertJobActive(job)
   const nextDocument = applySiteEditPlan(document, resolvedPlan)
+  await reportSiteEditProgress(job, {
+    current: 4,
+    message: 'Checking the result and saving your new version',
+    stage: 'saving'
+  })
   await persistConnectionRequests(db, job, connectionRows ?? [], resolvedPlan)
   const actualCost = estimateVisualAiCostMicroeur(parsedPricing, result.usage)
   const { error: settlementError } = await db.rpc('cr_settle_site_edit', {
@@ -153,14 +163,16 @@ export async function processSiteEditJob(job: WorkerJob): Promise<void> {
   })
   if (settlementError) throw new Error(settlementError.message)
   await db
-    .from('cr_jobs')
-    .update({
-      progress_stage: 'completed',
-      progress_message: 'Your private version is ready to review',
-      progress_updated_at: new Date().toISOString()
-    })
-    .eq('id', job.id)
+    .from('cr_site_revisions')
+    .update({ title: result.plan.summary })
+    .eq('site_id', job.builder_site_id)
     .eq('owner_id', job.owner_id)
+    .eq('revision_number', (revision?.revision_number ?? 0) + 1)
+  await reportSiteEditProgress(job, {
+    current: 5,
+    message: 'Your new private version is ready',
+    stage: 'completed'
+  })
 }
 
 /** Convert owner-safe connector rows into the small capability receipt the AI may use. */

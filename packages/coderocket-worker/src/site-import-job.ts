@@ -13,10 +13,9 @@ import {
   type SiteDocument,
   selectRepresentativePageTargets
 } from '@coderocket/core'
-import { BrowserAuditSession } from '@coderocket/core/browser'
+import { BrowserCaptureSession } from '@coderocket/core/browser'
 import { applySiteVisualRefinement } from '@coderocket/core/site-visual'
 import { createServiceClient } from '@coderocket/db'
-import type { WorkerJob } from './audit-job'
 import { buildBrowserHandoffEndpoint, estimateBrowserHandoffCostMicroeur } from './browser-handoff'
 import {
   clearBuilderImportAccess,
@@ -34,13 +33,16 @@ import {
   SITE_VISUAL_MAX_INPUT_TOKENS
 } from './site-import-cost'
 import { sanitizeSiteImportFailure } from './site-import-failure'
+import { processFigmaSiteImportJob } from './site-import-figma-job'
 import { readablePageName, readBuilderPlan, readSourceMode } from './site-import-model'
 import { isSameWebsiteCapture } from './site-import-origin'
 import { reportSiteImportCapture, reportSiteImportProgress } from './site-import-progress'
+import type { WorkerJob } from './worker-job'
 
 /** Discover public or authorised screens and store one bounded, editable site-document revision. */
 export async function processSiteImportJob(job: WorkerJob): Promise<void> {
   if (!job.builder_site_id) throw new Error('Website import job has no website')
+  if (job.payload.sourceType === 'figma') return processFigmaSiteImportJob(job)
   const db = createServiceClient()
   const startedAt = Date.now()
   const { data: site, error } = await db
@@ -97,7 +99,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     .eq('owner_id', site.owner_id)
   if (progressError) throw new Error(progressError.message)
 
-  const browser = new BrowserAuditSession({
+  const browser = new BrowserCaptureSession({
     login: access.login,
     remoteBrowserEndpoint: access.handoff ? buildBrowserHandoffEndpoint(access.handoff) : undefined,
     siteUrl: site.source_url

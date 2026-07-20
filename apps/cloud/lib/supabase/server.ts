@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getSupabaseServerConfig } from './config'
 
-/** Create a request-scoped Supabase client using the legacy CodeRocket auth project. */
+/** Create a request-scoped Supabase client for the CodeRocket account project. */
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies()
   const config = getSupabaseServerConfig()

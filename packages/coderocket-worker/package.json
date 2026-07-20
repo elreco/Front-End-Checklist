@@ -16,14 +16,12 @@
     "@coderocket/ai": "workspace:*",
     "@coderocket/core": "workspace:*",
     "@coderocket/db": "workspace:*",
-    "resend": "catalog:",
-    "stripe": "catalog:",
+    "tsx": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/config-typescript": "workspace:^",
     "@types/node": "catalog:",
-    "tsx": "catalog:",
     "typescript": "catalog:"
   }
 }

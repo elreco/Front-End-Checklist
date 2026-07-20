@@ -1,6 +1,6 @@
 import { createServiceClient } from '@coderocket/db'
-import type { WorkerJob } from './audit-job'
 import { assertJobActive, JobCancelledError } from './job-cancellation'
+import type { WorkerJob } from './worker-job'
 
 const ARTIFACT_BUCKET = 'cr-builder-imports'
 const ARTIFACT_RETENTION_MS = 24 * 60 * 60 * 1000
@@ -83,15 +83,24 @@ export async function reportSiteImportProgress(
 /** Store one bounded private screenshot and attach it to an owner-visible capture milestone. */
 export async function reportSiteImportCapture(
   job: WorkerJob,
-  capture: { dataUrl: string; name: 'desktop' | 'mobile' }
+  capture: {
+    dataUrl: string
+    index?: number
+    name: 'desktop' | 'figma' | 'mobile'
+    title?: string
+  }
 ): Promise<void> {
   if (!job.builder_site_id) return
   await assertJobActive(job)
   const encoded = capture.dataUrl.match(/^data:image\/jpeg;base64,([a-z0-9+/=]+)$/i)?.[1]
   const bytes = encoded ? Buffer.from(encoded, 'base64') : undefined
+  const captureKey =
+    capture.name === 'figma'
+      ? `figma-${Math.max(1, Math.min(5, capture.index ?? 1))}`
+      : capture.name
   const artifactPath =
     bytes && bytes.byteLength <= MAX_ARTIFACT_BYTES
-      ? `${job.owner_id}/${job.builder_site_id}/${job.id}/${capture.name}.jpg`
+      ? `${job.owner_id}/${job.builder_site_id}/${job.id}/${captureKey}.jpg`
       : undefined
   let storedPath: string | undefined
   if (artifactPath && bytes) {
@@ -106,11 +115,18 @@ export async function reportSiteImportCapture(
   }
 
   const db = createServiceClient()
-  const progress = capture.name === 'desktop' ? 28 : 34
+  const progress =
+    capture.name === 'desktop'
+      ? 28
+      : capture.name === 'mobile'
+        ? 34
+        : 24 + Math.max(1, Math.min(5, capture.index ?? 1)) * 5
   const message =
     capture.name === 'desktop'
       ? 'Checking how the homepage adapts to a phone'
-      : 'Understanding the design and layout'
+      : capture.name === 'mobile'
+        ? 'Understanding the design and layout'
+        : 'Reading the selected Figma screens'
   const now = new Date().toISOString()
   const { data: activeJob, error: progressError } = await db
     .from('cr_jobs')
@@ -139,16 +155,23 @@ export async function reportSiteImportCapture(
       owner_id: job.owner_id,
       site_id: job.builder_site_id,
       job_id: job.id,
-      event_key: `capture-${capture.name}`,
+      event_key: `capture-${captureKey}`,
       stage: 'checking_pages',
       event_kind: 'capture',
-      title: capture.name === 'desktop' ? 'Computer view captured' : 'Phone view captured',
+      title:
+        capture.name === 'desktop'
+          ? 'Computer view captured'
+          : capture.name === 'mobile'
+            ? 'Phone view captured'
+            : `${capture.title?.slice(0, 90) || 'Figma screen'} captured`,
       detail:
         storedPath && capture.name === 'desktop'
           ? 'CodeRocket measured the wide layout, spacing, colours, and visible sections.'
-          : storedPath
+          : storedPath && capture.name === 'mobile'
             ? 'CodeRocket checked how the same page adapts to a smaller screen.'
-            : 'The layout was checked, but its private image preview could not be saved.',
+            : storedPath
+              ? 'CodeRocket is using this private frame preview with its structured Figma layers.'
+              : 'The layout was checked, but its private image preview could not be saved.',
       progress,
       artifact_path: storedPath ?? null,
       artifact_kind: storedPath ? capture.name : null,

@@ -5,13 +5,7 @@ import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
 import { type ReactNode, useEffect, useRef } from 'react'
 import { trackProductEvent } from '@/lib/analytics-browser'
-import { getPlanLabel } from '@/lib/product-language'
-import {
-  buildPricingHref,
-  getPageLimitUpgrade,
-  type PlanId,
-  type UpgradeSource
-} from '@/lib/upgrade'
+import { buildPricingHref, type PlanId, type UpgradeSource } from '@/lib/upgrade'
 
 interface UpgradeLinkProps {
   children: ReactNode
@@ -27,13 +21,6 @@ interface PlanLimitUpsellProps extends Omit<UpgradeLinkProps, 'children'> {
   compact?: boolean
   description: string
   title: string
-}
-
-interface PageLimitUpsellProps {
-  attemptedPages?: number
-  compact?: boolean
-  currentPages: number
-  plan: PlanId
 }
 
 /** Link to a contextual, attributable pricing comparison. */
@@ -122,44 +109,5 @@ export function PlanLimitUpsell({
         </div>
       </div>
     </div>
-  )
-}
-
-/** Explain the next page allowance without showing an offer before it becomes relevant. */
-export function PageLimitUpsell({
-  attemptedPages,
-  compact,
-  currentPages,
-  plan
-}: PageLimitUpsellProps) {
-  const upgrade = getPageLimitUpgrade(plan)
-  const extraDraftPages = Math.max(0, (attemptedPages ?? currentPages) - currentPages)
-  if (!upgrade)
-    return (
-      <div className={`border border-border bg-background ${compact ? 'p-4' : 'p-5'}`}>
-        <p className="font-heading font-semibold text-base">
-          The Studio limit is {currentPages} pages per site
-        </p>
-        <p className="mt-1 text-muted text-xs leading-5">
-          Remove one monitored page before adding another. Your existing checks and history stay
-          unchanged.
-        </p>
-      </div>
-    )
-  const title =
-    extraDraftPages > 0
-      ? `${extraDraftPages} more ${extraDraftPages === 1 ? 'page is' : 'pages are'} ready to add`
-      : `All ${currentPages} included page slots are in use`
-  return (
-    <PlanLimitUpsell
-      actionLabel={`Unlock ${upgrade.additionalPages} more pages`}
-      compact={compact}
-      currentPlan={plan}
-      description={`${getPlanLabel(upgrade.targetPlan)} monitors up to ${upgrade.targetLimit} pages per site. ${plan === 'free' ? 'It also checks them every day instead of every week.' : 'It also expands your workspace to 50 client sites.'}`}
-      source="page_limit"
-      targetPlan={upgrade.targetPlan}
-      title={title}
-      preserveContext
-    />
   )
 }

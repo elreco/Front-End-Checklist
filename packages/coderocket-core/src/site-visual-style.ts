@@ -81,7 +81,16 @@ export function applySiteVisualRefinement(
     ...blueprint,
     sections: blueprint.sections.map((section, index) => {
       const refined = stylesBySection.get(index)
-      return refined ? { ...section, layout: refined.layout, visual: refined.style } : section
+      if (!refined) return section
+      return {
+        ...section,
+        layout: refined.layout,
+        visual: {
+          ...refined.style,
+          imageAspectRatio: section.visual?.imageAspectRatio ?? refined.style.imageAspectRatio,
+          imagePosition: section.visual?.imagePosition ?? refined.style.imagePosition
+        }
+      }
     }),
     visualAnalysis: 'responsive-ai',
     visualTheme: refinement.theme

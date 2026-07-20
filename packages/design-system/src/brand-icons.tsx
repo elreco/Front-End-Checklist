@@ -3,6 +3,7 @@ import {
   SiCalendly,
   SiClaude,
   SiFacebook,
+  SiFigma,
   SiGithub,
   SiGitlab,
   SiGoogle,
@@ -24,6 +25,7 @@ function createBrandIcon(Icon: typeof SiX) {
 const BitbucketBrandIcon = createBrandIcon(SiBitbucket)
 const ClaudeBrandIcon = createBrandIcon(SiClaude)
 const FacebookBrandIcon = createBrandIcon(SiFacebook)
+const FigmaBrandIcon = createBrandIcon(SiFigma)
 const GitHubBrandIcon = createBrandIcon(SiGithub)
 const GitLabBrandIcon = createBrandIcon(SiGitlab)
 const GoogleBrandIcon = createBrandIcon(SiGoogle)
@@ -39,6 +41,7 @@ export {
   CalendlyBrandIcon,
   ClaudeBrandIcon,
   FacebookBrandIcon,
+  FigmaBrandIcon,
   GitHubBrandIcon,
   GitLabBrandIcon,
   GoogleBrandIcon,

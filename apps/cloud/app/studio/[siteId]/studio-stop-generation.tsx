@@ -20,18 +20,27 @@ import { cancelBuilderGeneration } from './generation-actions'
 export function StudioStopGeneration({
   action = cancelBuilderGeneration,
   mode,
-  siteId
+  siteId,
+  triggerClassName,
+  triggerVariant = 'outline'
 }: {
   action?: (formData: FormData) => Promise<void>
   mode: 'change' | 'creation'
   siteId: string
+  triggerClassName?: string
+  triggerVariant?: 'danger' | 'outline'
 }) {
   const [open, setOpen] = useState(false)
   const creation = mode === 'creation'
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <CodeRocketButton size="sm" type="button" variant="outline">
+        <CodeRocketButton
+          className={triggerClassName}
+          size="sm"
+          type="button"
+          variant={triggerVariant}
+        >
           <Square aria-hidden />
           {creation ? 'Stop creation' : 'Stop change'}
         </CodeRocketButton>

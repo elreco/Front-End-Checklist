@@ -6,15 +6,7 @@ alter table public.cr_jobs
   drop constraint if exists cr_jobs_kind_check;
 alter table public.cr_jobs
   add constraint cr_jobs_kind_check
-  check (kind in (
-    'audit',
-    'retention',
-    'email',
-    'ai_analysis',
-    'ai_usage',
-    'site_import',
-    'site_edit'
-  ));
+  check (kind in ('site_import', 'site_edit'));
 create unique index cr_jobs_one_active_site_edit_idx
   on public.cr_jobs(builder_site_id)
   where kind = 'site_edit' and status in ('queued', 'leased');

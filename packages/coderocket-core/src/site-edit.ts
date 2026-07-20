@@ -247,7 +247,7 @@ function addPage(document: SiteDocument, operation: z.infer<typeof addPageSchema
   const existingPages = document.pages ?? [
     {
       path: '/',
-      title: document.sections[0]?.heading ?? document.identity.name,
+      title: document.sections[0]?.heading || document.identity.name,
       sections: document.sections
     }
   ]
@@ -441,7 +441,7 @@ function updatePageSections(
     sections: pagePath === '/' ? sections : document.sections,
     pages: document.pages?.map(page =>
       page.path === pagePath
-        ? { ...page, sections, title: sections[0]?.heading ?? page.title }
+        ? { ...page, sections, title: sections[0]?.heading || page.title }
         : page
     )
   }

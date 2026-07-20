@@ -1,12 +1,5 @@
 import type { PlanId } from '@coderocket/core'
-import {
-  Activity,
-  ArrowRight,
-  Check,
-  ExternalLink,
-  Globe2,
-  WandSparkles
-} from '@repo/design-system/icons'
+import { Check, ExternalLink, Globe2, WandSparkles } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
 import { WebsiteRecreationForm } from '@/components/website-recreation-form'
@@ -19,16 +12,14 @@ const builderBenefits = [
   'Managed hosting when you decide to publish'
 ]
 
-/** Make website cloning the primary workspace while keeping monitoring clearly optional. */
+/** Make website cloning the primary workspace. */
 export function BuilderDashboardOverview({
   displayName,
   plan,
-  projectCount,
   sites
 }: {
   displayName: string
   plan: PlanId
-  projectCount: number
   sites: BuilderSiteSummary[]
 }) {
   const firstName = displayName.split(/\s+/)[0] || displayName
@@ -144,33 +135,6 @@ export function BuilderDashboardOverview({
             ))}
           </div>
         )}
-      </section>
-
-      <section className="flex flex-col gap-5 border border-border bg-background p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex max-w-3xl gap-4">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center border border-border bg-surface">
-            <Activity aria-hidden className="h-4 w-4 text-muted" />
-          </span>
-          <div>
-            <p className="font-mono text-[10px] text-muted uppercase tracking-[.14em]">
-              Optional tool
-            </p>
-            <h2 className="mt-1 font-heading font-semibold text-lg">
-              Monitor a website that is already online
-            </h2>
-            <p className="mt-1 text-muted text-sm leading-6">
-              Website Health keeps checks and history separate from the creation workspace.
-              {projectCount > 0
-                ? ` ${projectCount} ${projectCount === 1 ? 'site is' : 'sites are'} currently monitored.`
-                : ''}
-            </p>
-          </div>
-        </div>
-        <CodeRocketButton asChild className="shrink-0" size="sm" variant="outline">
-          <Link href="/sites">
-            Open Website Health <ArrowRight aria-hidden />
-          </Link>
-        </CodeRocketButton>
       </section>
     </div>
   )

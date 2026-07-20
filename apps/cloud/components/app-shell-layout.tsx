@@ -13,7 +13,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from 'react'
 import { signOut } from '@/app/actions'
-import { isStudioWorkspaceRoute, resolveSidebarCollapsed } from '@/lib/sidebar-layout'
 import { AppNavigation } from './app-navigation'
 import { AppPlanPrompt } from './app-plan-prompt'
 
@@ -83,8 +82,22 @@ interface AppShellLayoutProps {
   initials: string
   initialCollapsed: boolean
   plan: PlanId
-  projectCount: number
-  projectLimit: number
+  siteCount: number
+  siteLimit: number
+}
+
+/** Studio starts focused on the canvas while every other route honors the saved preference. */
+function resolveSidebarCollapsed({
+  expandedStudioPath,
+  pathname,
+  preferredCollapsed
+}: {
+  expandedStudioPath?: string
+  pathname: string
+  preferredCollapsed: boolean
+}): boolean {
+  if (!pathname.startsWith('/studio/')) return preferredCollapsed
+  return expandedStudioPath !== pathname
 }
 
 /** Owns the responsive desktop sidebar state around private product screens. */
@@ -97,8 +110,8 @@ export function AppShellLayout({
   initials,
   initialCollapsed,
   plan,
-  projectCount,
-  projectLimit
+  siteCount,
+  siteLimit
 }: AppShellLayoutProps) {
   const pathname = usePathname()
   const [expandedStudioPath, setExpandedStudioPath] = useState<string>()
@@ -119,7 +132,7 @@ export function AppShellLayout({
 
   /** Toggle the desktop sidebar without affecting navigation or account state. */
   const toggleSidebar = () => {
-    if (isStudioWorkspaceRoute(pathname)) {
+    if (pathname.startsWith('/studio/')) {
       setExpandedStudioPath(collapsed ? pathname : undefined)
       return
     }
@@ -197,8 +210,8 @@ export function AppShellLayout({
                 creditLimit={creditLimit}
                 creditsRemaining={creditsRemaining}
                 plan={plan}
-                projectCount={projectCount}
-                projectLimit={projectLimit}
+                siteCount={siteCount}
+                siteLimit={siteLimit}
               />
             )}
           </div>

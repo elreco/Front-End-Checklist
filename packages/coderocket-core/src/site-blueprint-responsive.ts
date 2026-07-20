@@ -25,7 +25,18 @@ export function mergeResponsiveBlueprints(
       if (!section.visual) return section
       return {
         ...section,
+        imageMobileWidth: mobileSection?.imageWidth ?? section.imageWidth,
         layout: section.layout ?? tabletSection?.layout ?? mobileSection?.layout,
+        form: section.form
+          ? {
+              ...section.form,
+              style: {
+                ...section.form.style,
+                mobileInputWidth:
+                  mobileSection?.form?.style.inputWidth ?? section.form.style.inputWidth
+              }
+            }
+          : undefined,
         visual: {
           ...section.visual,
           desktop: section.visual.desktop,

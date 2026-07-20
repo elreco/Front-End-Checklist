@@ -10,6 +10,11 @@ import {
 import type { SiteSectionVisualStyle, SiteVisualTheme } from '@coderocket/core/site-visual'
 import { createServiceClient } from '@coderocket/db'
 import { type BuilderConnectionSummary, readBuilderConnections } from './builder-connections'
+import { readBuilderRevisionSummaries } from './builder-revisions'
+import {
+  parseStudioIterationProgress,
+  type StudioIterationProgress
+} from './studio-iteration-progress'
 import { getSupabaseServerConfig } from './supabase/config'
 import { createSupabaseServerClient } from './supabase/server'
 
@@ -30,17 +35,20 @@ export interface BuilderSiteSummary {
 export interface BuilderSiteDetail extends BuilderSiteSummary {
   collections: BuilderCollectionSummary[]
   connections: BuilderConnectionSummary[]
+  currentRevisionId?: string
   document?: SiteDocument
   error?: string
   messages: BuilderMessage[]
   revisionNumber?: number
   revisions: BuilderRevisionSummary[]
+  viewedRevision?: BuilderRevisionSummary
 }
 
 export interface BuilderRevisionSummary {
   createdAt: string
   id: string
   revisionNumber: number
+  title: string
 }
 
 export interface BuilderMessage {
@@ -53,6 +61,7 @@ export interface BuilderMessage {
   createdAt: string
   creditCost: number
   id: string
+  progress?: StudioIterationProgress
   role: 'assistant' | 'user'
   selection?: SiteEditSelection
   status: 'queued' | 'working' | 'completed' | 'failed'
@@ -217,8 +226,22 @@ const demoSite: BuilderSiteDetail = {
   status: 'ready',
   statusMessage: 'Your first version is ready',
   updatedAt: '2026-07-19T10:02:00.000Z',
+  currentRevisionId: 'demo-revision-1',
   revisionNumber: 1,
-  revisions: [{ createdAt: '2026-07-19T10:02:00.000Z', id: 'demo-revision-1', revisionNumber: 1 }],
+  revisions: [
+    {
+      createdAt: '2026-07-19T10:02:00.000Z',
+      id: 'demo-revision-1',
+      revisionNumber: 1,
+      title: 'Initial website'
+    }
+  ],
+  viewedRevision: {
+    createdAt: '2026-07-19T10:02:00.000Z',
+    id: 'demo-revision-1',
+    revisionNumber: 1,
+    title: 'Initial website'
+  },
   collections: [],
   connections: [],
   messages: [
@@ -235,7 +258,7 @@ const demoSite: BuilderSiteDetail = {
   document: demoDocument
 }
 
-/** List the signed-in owner's generated websites without mixing them with monitored sites. */
+/** List the signed-in owner's generated websites. */
 export async function listBuilderSites(): Promise<BuilderSiteSummary[]> {
   if (process.env.CODEROCKET_DEMO_MODE === 'true') return [demoSite]
   if (!getSupabaseServerConfig()) return []
@@ -261,8 +284,11 @@ export async function listBuilderSites(): Promise<BuilderSiteSummary[]> {
   }))
 }
 
-/** Load one generated website and only its latest owner-visible revision. */
-export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail | undefined> {
+/** Load one generated website and an explicitly selected owner-visible revision. */
+export async function getBuilderSite(
+  siteId: string,
+  requestedRevisionId?: string
+): Promise<BuilderSiteDetail | undefined> {
   if (process.env.CODEROCKET_DEMO_MODE === 'true' && siteId === 'demo') return demoSite
   if (!getSupabaseServerConfig()) return undefined
   const supabase = await createSupabaseServerClient()
@@ -279,7 +305,7 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
     .maybeSingle()
   if (!site) return undefined
   const [
-    { data: revision },
+    { data: latestRevision },
     { data: revisions },
     { data: messages },
     { data: messageAttachments },
@@ -288,7 +314,7 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
   ] = await Promise.all([
     supabase
       .from('cr_site_revisions')
-      .select('revision_number,site_document')
+      .select('id,revision_number,title,created_at,site_document')
       .eq('site_id', site.id)
       .eq('owner_id', auth.user.id)
       .order('revision_number', { ascending: false })
@@ -296,14 +322,16 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
       .maybeSingle(),
     supabase
       .from('cr_site_revisions')
-      .select('id,revision_number,created_at')
+      .select('id,revision_number,title,created_at')
       .eq('site_id', site.id)
       .eq('owner_id', auth.user.id)
       .order('revision_number', { ascending: false })
       .limit(20),
     supabase
       .from('cr_builder_messages')
-      .select('id,role,content,status,credit_cost,selection,created_at')
+      .select(
+        'id,role,content,status,credit_cost,selection,progress_stage,progress_current,progress_total,progress_message,progress_updated_at,created_at'
+      )
       .eq('site_id', site.id)
       .eq('owner_id', auth.user.id)
       .order('created_at', { ascending: true })
@@ -340,7 +368,20 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
     })
     attachmentsByMessage.set(attachment.message_id, current)
   }
-  const parsedDocument = siteDocumentSchema.safeParse(revision?.site_document)
+  let activeRevision = latestRevision
+  if (requestedRevisionId && requestedRevisionId !== latestRevision?.id) {
+    const { data: requestedRevision } = await supabase
+      .from('cr_site_revisions')
+      .select('id,revision_number,title,created_at,site_document')
+      .eq('id', requestedRevisionId)
+      .eq('site_id', site.id)
+      .eq('owner_id', auth.user.id)
+      .maybeSingle()
+    if (requestedRevision) activeRevision = requestedRevision
+  }
+  const revisionSummaries = readBuilderRevisionSummaries(revisions)
+  const viewedRevision = revisionSummaries.find(item => item.id === activeRevision?.id)
+  const parsedDocument = siteDocumentSchema.safeParse(activeRevision?.site_document)
   return {
     id: site.id,
     name: site.name,
@@ -352,16 +393,15 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
     publishedAt: site.published_at ?? undefined,
     updatedAt: site.updated_at,
     error: site.last_error ?? undefined,
-    revisionNumber: revision?.revision_number,
-    revisions: (revisions ?? []).map(item => ({
-      createdAt: item.created_at,
-      id: item.id,
-      revisionNumber: item.revision_number
-    })),
+    currentRevisionId: latestRevision?.id,
+    revisionNumber: latestRevision?.revision_number,
+    revisions: revisionSummaries,
+    viewedRevision,
     messages: (messages ?? []).flatMap(message => {
       const role = message.role === 'assistant' ? 'assistant' : 'user'
       const status = readMessageStatus(message.status)
       const selection = siteEditSelectionSchema.safeParse(message.selection)
+      const progress = parseStudioIterationProgress(message)
       return typeof message.content === 'string'
         ? [
             {
@@ -374,6 +414,7 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
                 : {}),
               role,
               ...(selection.success ? { selection: selection.data } : {}),
+              ...(progress ? { progress } : {}),
               status
             }
           ]

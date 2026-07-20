@@ -16,6 +16,7 @@ import { STUDIO_ATTACHMENT_ACCEPT } from '@/lib/studio-attachments'
 import { requestBuilderSiteEditWithContext } from './iteration-actions'
 import { StudioComposerAttachments } from './studio-composer-attachments'
 import { useStudioSelection } from './studio-selection-context'
+import { StudioStopGeneration } from './studio-stop-generation'
 import { StudioVoiceInput } from './studio-voice-input'
 import { useStudioAttachments } from './use-studio-attachments'
 
@@ -27,7 +28,15 @@ const suggestions = [
 ]
 
 /** Let anyone request a visual change with words, files, voice, or a selected page element. */
-export function StudioEditForm({ disabled, siteId }: { disabled: boolean; siteId: string }) {
+export function StudioEditForm({
+  active,
+  disabled,
+  siteId
+}: {
+  active: boolean
+  disabled: boolean
+  siteId: string
+}) {
   const [instruction, setInstruction] = useState('')
   const [dragging, setDragging] = useState(false)
   const [voiceBusy, setVoiceBusy] = useState(false)
@@ -200,7 +209,16 @@ export function StudioEditForm({ disabled, siteId }: { disabled: boolean; siteId
             {instruction.length >= 1_600 ? (
               <span className="font-mono text-[10px] text-muted">{instruction.length}/2000</span>
             ) : null}
-            <SubmitChangeButton disabled={!canSubmit} />
+            {active ? (
+              <StudioStopGeneration
+                mode="change"
+                siteId={siteId}
+                triggerClassName="h-8 px-2.5 text-[11px]"
+                triggerVariant="danger"
+              />
+            ) : (
+              <SubmitChangeButton disabled={!canSubmit} />
+            )}
           </div>
         </div>
       </div>

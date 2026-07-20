@@ -24,13 +24,14 @@ import {
   type SiteCaptureStudy,
   type SiteViewportCapture
 } from './site-blueprint-capture'
+import { enrichPageBlueprintStructure } from './site-blueprint-structure'
 import type { SiteSourceBlueprint } from './site-document'
 
 const NAVIGATION_TIMEOUT_MS = 20_000
 
 export type { BrowserPageSource } from './browser-page-reader'
 
-export interface BrowserAuditSessionOptions {
+export interface BrowserCaptureSessionOptions {
   authenticatedHeaders?: Record<string, string>
   login?: BrowserLoginCredential
   publicHeaders?: Record<string, string>
@@ -40,9 +41,9 @@ export interface BrowserAuditSessionOptions {
 
 /**
  * Open public and signed-in pages in isolated browser contexts while preventing credentials from
- * being sent outside the monitored origin.
+ * being sent outside the source origin.
  */
-export class BrowserAuditSession {
+export class BrowserCaptureSession {
   private readonly authenticatedHeaders: Record<string, string>
   private readonly login?: BrowserLoginCredential
   private readonly publicHeaders: Record<string, string>
@@ -54,7 +55,7 @@ export class BrowserAuditSession {
   private authenticatedContext?: Promise<BrowserContext>
   private authentication?: Promise<void>
 
-  constructor(options: BrowserAuditSessionOptions) {
+  constructor(options: BrowserCaptureSessionOptions) {
     this.siteOrigin = new URL(options.siteUrl).origin
     this.publicHeaders = options.publicHeaders ?? {}
     this.authenticatedHeaders = {
@@ -80,7 +81,7 @@ export class BrowserAuditSession {
   async loadPage(url: string, authenticated: boolean): Promise<BrowserPageSource> {
     const requestedUrl = await assertPublicHttpsUrl(url)
     if (requestedUrl.origin !== this.siteOrigin)
-      throw new Error('The page is outside the monitored website')
+      throw new Error('The page is outside the source website')
     const context = authenticated
       ? await this.getAuthenticatedContext()
       : await this.getPublicContext()
@@ -129,7 +130,8 @@ export class BrowserAuditSession {
         }
         await dismissOptionalCookieNotice(page)
         if (viewport.name === 'desktop') await warmLazyPageMedia(page)
-        const blueprint = await capturePageBlueprint(page)
+        const measuredBlueprint = await capturePageBlueprint(page)
+        const blueprint = await enrichPageBlueprintStructure(page, measuredBlueprint)
         if (viewport.name === 'desktop') desktopBlueprint = blueprint
         if (viewport.name === 'tablet') tabletBlueprint = blueprint
         if (viewport.name === 'mobile') mobileBlueprint = blueprint
@@ -185,7 +187,7 @@ export class BrowserAuditSession {
     return context
   }
 
-  /** Start one hardened browser process per audit rather than one process per page. */
+  /** Start one hardened browser process per capture rather than one process per page. */
   private async getBrowser(): Promise<Browser> {
     if (this.browser) return this.browser
     if (this.remoteBrowserEndpoint) {
@@ -244,7 +246,7 @@ export class BrowserAuditSession {
     return context
   }
 
-  /** Validate every new network origin and attach access values only to the monitored website. */
+  /** Validate every new network origin and attach access values only to the source website. */
   private async routeRequest(route: Route, headers: Record<string, string>): Promise<void> {
     const request = route.request()
     let url: URL
@@ -292,7 +294,7 @@ export class BrowserAuditSession {
   private async signIn(context: BrowserContext, credential: BrowserLoginCredential): Promise<void> {
     const loginUrl = await assertPublicHttpsUrl(credential.loginUrl)
     if (loginUrl.origin !== this.siteOrigin)
-      throw new Error('The sign-in page must belong to the monitored website')
+      throw new Error('The sign-in page must belong to the source website')
     const page = await context.newPage()
     try {
       await page.goto(loginUrl.toString(), {

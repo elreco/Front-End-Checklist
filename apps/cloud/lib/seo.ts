@@ -4,7 +4,7 @@ export const SITE_NAME = 'CodeRocket'
 export const SITE_URL = 'https://www.coderocket.app'
 export const SUPPORT_EMAIL = 'contact@coderocket.app'
 export const DEFAULT_DESCRIPTION =
-  'Clone, edit, and host a website without code. Start from one public URL, review a private version, and use optional website health tools only when needed.'
+  'Clone, edit, and host a website without code. Start from a public URL or Figma design, review a private version, and publish when you are ready.'
 export const DEFAULT_SOCIAL_IMAGE = '/opengraph-image'
 
 export const PUBLIC_ROBOTS: Metadata['robots'] = {

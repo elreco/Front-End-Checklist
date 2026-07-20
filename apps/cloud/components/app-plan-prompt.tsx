@@ -1,7 +1,6 @@
 import type { PlanId } from '@coderocket/core'
 import { ArrowUpRight } from '@repo/design-system/icons'
-import { getPlanLabel } from '@/lib/product-language'
-import { getNextPlan } from '@/lib/upgrade'
+import { getNextPlan, getPlanLabel } from '@/lib/upgrade'
 import { UpgradeLink } from './plan-limit-upsell'
 
 /** Summarize creation credits and expose one contextual next-plan action. */
@@ -9,17 +8,17 @@ export function AppPlanPrompt({
   creditLimit,
   creditsRemaining,
   plan,
-  projectCount,
-  projectLimit
+  siteCount,
+  siteLimit
 }: {
   creditLimit: number
   creditsRemaining: number
   plan: PlanId
-  projectCount: number
-  projectLimit: number
+  siteCount: number
+  siteLimit: number
 }) {
   const nextPlan = getNextPlan(plan)
-  const builderIncluded = projectLimit > 0
+  const builderIncluded = siteLimit > 0
   return (
     <div className="mt-4 border border-border bg-background p-3">
       <div className="flex items-center justify-between gap-2">
@@ -49,10 +48,10 @@ export function AppPlanPrompt({
       </div>
       <p className="mt-2.5 text-muted text-xs leading-5">
         {plan === 'agency'
-          ? `${projectCount}/${projectLimit} websites · credits are shared across the workspace.`
+          ? `${siteCount}/${siteLimit} websites · credits are shared across the workspace.`
           : builderIncluded
             ? 'A first useful version costs 20 credits. Manual edits stay free.'
-            : 'Unlock your first hosted website with Launch. Website checks stay available separately.'}
+            : 'Unlock your first hosted website with Launch.'}
       </p>
       {nextPlan ? (
         <UpgradeLink

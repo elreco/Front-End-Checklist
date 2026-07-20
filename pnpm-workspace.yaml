@@ -4,25 +4,13 @@ packages:
   - configs/*
 
 allowBuilds:
-  '@prisma/engines': set this to true or false
-  '@sentry/cli': set this to true or false
-  core-js: set this to true or false
   esbuild: set this to true or false
   lefthook: set this to true or false
-  prisma: set this to true or false
   sharp: set this to true or false
-  tree-sitter: set this to true or false
-  tree-sitter-javascript: set this to true or false
-  tree-sitter-typescript: set this to true or false
   unrs-resolver: set this to true or false
 
 catalog:
-  # TypeScript & tooling
-  # UI utilities
   "@icons-pack/react-simple-icons": "^13.13.0"
-  # Prisma
-  "@prisma/client": "^7.8.0"
-  # Radix (shared by web + design-system)
   "@radix-ui/react-checkbox": "^1.3.3"
   "@radix-ui/react-dialog": "^1.1.15"
   "@radix-ui/react-dropdown-menu": "^2.1.16"
@@ -32,11 +20,7 @@ catalog:
   "@radix-ui/react-switch": "^1.2.6"
   "@radix-ui/react-tabs": "^1.1.13"
   "@radix-ui/react-tooltip": "^1.2.8"
-  # TanStack
-  "@tanstack/react-query": "^5.100.14"
-  # Testing
   "@testing-library/react": "^16.3.2"
-  "@types/jest": "^30.0.0"
   "@types/node": "^25.9.1"
   "@types/react": "^19.2.15"
   "@types/react-dom": "^19.2.3"
@@ -45,25 +29,16 @@ catalog:
   "class-variance-authority": "^0.7.1"
   "framer-motion": "^12.40.0"
   jest: "^30.4.2"
-  # Next
   "@next/third-parties": "^16.2.6"
   next: "^16.2.6"
   playwright-core: "^1.60.0"
   puppeteer-core: "^24.16.0"
-  prisma: "^7.8.0"
-  # React
   react: "^19.2.6"
   react-dom: "^19.2.6"
   postgres: "^3.4.7"
-  resend: "^6.0.1"
-  rehype-pretty-code: "^0.14.3"
-  rehype-slug: "^6.0.0"
-  remark-gfm: "^4.0.1"
-  shiki: "^4.1.0"
   stripe: "^18.4.0"
   "tailwind-merge": "^3.6.0"
   ts-jest: "^29.4.11"
   tsx: "^4.22.3"
   typescript: "^6.0.3"
-  # Validation & data
   zod: "^4.4.3"

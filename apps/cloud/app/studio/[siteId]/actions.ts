@@ -11,7 +11,18 @@ export async function retryBuilderSite(formData: FormData) {
   const supabase = await createSupabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) redirect(`/login?next=/studio/${encodeURIComponent(siteId)}`)
-  const { error } = await supabase.rpc('cr_retry_site_import', { p_site_id: siteId })
+  const { data: site } = await supabase
+    .from('cr_builder_sites')
+    .select('source_url')
+    .eq('id', siteId)
+    .eq('owner_id', auth.user.id)
+    .is('archived_at', null)
+    .maybeSingle()
+  const figmaSource = site?.source_url?.includes('figma.com/') ?? false
+  const { error } = await supabase.rpc(
+    figmaSource ? 'cr_retry_figma_import' : 'cr_retry_site_import',
+    { p_site_id: siteId }
+  )
   redirect(`/studio/${siteId}?notice=${error ? 'retry-failed' : 'retry-started'}`)
 }
 
@@ -140,13 +151,15 @@ export async function updateBuilderSite(formData: FormData) {
   })
   const { error } = await supabase.rpc('cr_update_builder_site_content', {
     p_site_id: siteId,
-    p_site_document: nextDocument
+    p_site_document: nextDocument,
+    p_revision_title: pagePath === '/' ? 'Updated homepage content' : `Updated ${heading}`,
+    p_source_revision_id: null
   })
   redirect(studioNoticeHref(siteId, pagePath, error ? 'save-failed' : 'saved'))
 }
 
-/** Restore an owner-visible revision by copying it into a new immutable latest version. */
-export async function restoreBuilderRevision(formData: FormData) {
+/** Continue from an earlier immutable version without removing any later work. */
+export async function continueFromBuilderRevision(formData: FormData) {
   const siteId = String(formData.get('siteId') ?? '')
   const revisionId = String(formData.get('revisionId') ?? '')
   const requestedPagePath = String(formData.get('pagePath') ?? '/')
@@ -157,18 +170,22 @@ export async function restoreBuilderRevision(formData: FormData) {
   if (!auth.user) redirect(`/login?next=/studio/${encodeURIComponent(siteId)}`)
   const { data: revision } = await supabase
     .from('cr_site_revisions')
-    .select('site_document')
+    .select('site_document,title')
     .eq('id', revisionId)
     .eq('site_id', siteId)
     .eq('owner_id', auth.user.id)
     .maybeSingle()
   const parsed = siteDocumentSchema.safeParse(revision?.site_document)
-  if (!parsed.success) redirect(studioNoticeHref(siteId, pagePath, 'restore-failed'))
+  if (!parsed.success) redirect(studioNoticeHref(siteId, pagePath, 'version-continue-failed'))
   const { error } = await supabase.rpc('cr_update_builder_site_content', {
     p_site_id: siteId,
-    p_site_document: parsed.data
+    p_site_document: parsed.data,
+    p_revision_title: `Continued from ${revision?.title ?? 'earlier version'}`,
+    p_source_revision_id: revisionId
   })
-  redirect(studioNoticeHref(siteId, pagePath, error ? 'restore-failed' : 'restored'))
+  redirect(
+    studioNoticeHref(siteId, pagePath, error ? 'version-continue-failed' : 'version-continued')
+  )
 }
 
 /** Point the public slug at the latest immutable revision. */

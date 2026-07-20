@@ -9,17 +9,15 @@ const footerGroups = [
     links: [
       { href: '/create', label: 'Clone a website' },
       { href: '/', label: 'Website builder' },
-      { href: '/pricing', label: 'Pricing' },
-      { href: '/monitoring', label: 'Website health tools' }
+      { href: '/pricing', label: 'Pricing' }
     ]
   },
   {
-    title: 'Resources',
+    title: 'Get started',
     links: [
-      { href: '/docs', label: 'Documentation' },
-      { href: '/docs/rules', label: 'Rules reference' },
-      { href: '/docs/cli', label: 'Protected site access' },
-      { href: '/docs/security', label: 'Security model' }
+      { href: '/#how-it-works', label: 'How it works' },
+      { href: '/integrations', label: 'Connections' },
+      { href: '/support', label: 'Support' }
     ]
   },
   {
@@ -56,8 +54,8 @@ export function MarketingFooter() {
               />
             </Link>
             <p className="mt-5 max-w-sm text-muted leading-7">
-              Clone, edit, and publish a website without code. Optional health tools remain
-              available when an existing site needs ongoing checks.
+              Clone, edit, and publish a website without code. Start from a public website or a
+              Figma design, then keep every change in one private workspace.
             </p>
           </div>
 
@@ -92,7 +90,7 @@ export function MarketingFooter() {
               compact
             />
           </div>
-          <p>Frontend quality, cleared for launch.</p>
+          <p>From existing idea to editable website.</p>
         </div>
       </div>
     </footer>

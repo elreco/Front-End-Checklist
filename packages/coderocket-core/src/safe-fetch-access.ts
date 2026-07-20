@@ -1,4 +1,4 @@
-import type { AuditHttpResponse } from './safe-fetch-response'
+import type { SafeHttpResponse } from './safe-fetch-response'
 
 const SIGN_IN_PATH_PATTERN = /(?:^|\/)(?:auth\/)?(?:log-?in|sign-?in|session|sso)(?:\/|$)/i
 const FORBIDDEN_REQUEST_HEADERS = new Set([
@@ -59,7 +59,7 @@ export function assertHtmlIsRequestedPage(requestedUrl: URL, html: string): void
 
 /** Convert recognizable hosting protection responses into actionable access diagnostics. */
 export async function rejectKnownAccessBarrier(
-  response: AuditHttpResponse,
+  response: SafeHttpResponse,
   noun: 'page' | 'resource'
 ): Promise<void> {
   if (response.headers.get('cf-mitigated')?.toLowerCase() === 'challenge') {

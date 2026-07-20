@@ -1,7 +1,5 @@
 import {
   getBuilderPlanEntitlements,
-  getPlanEntitlements,
-  type PlanEntitlements,
   type PlanId
 } from '@coderocket/core'
 import { getInitials } from './format'
@@ -13,11 +11,9 @@ export interface AppShellContext {
   email: string
   initials: string
   plan: PlanId
-  limits: PlanEntitlements
   builderLimits: ReturnType<typeof getBuilderPlanEntitlements>
   builderCreditsRemaining: number
   builderSiteCount: number
-  projectCount: number
   hasBillingAccount: boolean
 }
 
@@ -26,11 +22,9 @@ const demoContext: AppShellContext = {
   email: 'alex@northstar.studio',
   initials: 'AM',
   plan: 'free',
-  limits: getPlanEntitlements('free'),
   builderLimits: getBuilderPlanEntitlements('free'),
   builderCreditsRemaining: 0,
   builderSiteCount: 0,
-  projectCount: 1,
   hasBillingAccount: false
 }
 
@@ -42,8 +36,7 @@ export async function getAppShellContext(): Promise<AppShellContext> {
       ...demoContext,
       displayName: 'CodeRocket user',
       email: '',
-      initials: 'CR',
-      projectCount: 0
+      initials: 'CR'
     }
 
   const supabase = await createSupabaseServerClient()
@@ -53,14 +46,12 @@ export async function getAppShellContext(): Promise<AppShellContext> {
       ...demoContext,
       displayName: 'CodeRocket user',
       email: '',
-      initials: 'CR',
-      projectCount: 0
+      initials: 'CR'
     }
 
   const [
     { data: profile },
     { data: subscription },
-    { count: projectCount },
     { count: builderSiteCount },
     { data: builderUsage }
   ] = await Promise.all([
@@ -70,11 +61,6 @@ export async function getAppShellContext(): Promise<AppShellContext> {
       .select('plan_id,stripe_customer_id')
       .eq('owner_id', auth.user.id)
       .maybeSingle(),
-    supabase
-      .from('cr_projects')
-      .select('id', { count: 'exact', head: true })
-      .eq('owner_id', auth.user.id)
-      .is('archived_at', null),
     supabase
       .from('cr_builder_sites')
       .select('id', { count: 'exact', head: true })
@@ -114,11 +100,9 @@ export async function getAppShellContext(): Promise<AppShellContext> {
     email,
     initials: getInitials(displayName),
     plan,
-    limits: getPlanEntitlements(plan),
     builderLimits,
     builderCreditsRemaining,
     builderSiteCount: builderSiteCount ?? 0,
-    projectCount: projectCount ?? 0,
     hasBillingAccount: Boolean(subscription?.stripe_customer_id)
   }
 }

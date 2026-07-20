@@ -8,7 +8,6 @@
     "dev": "next dev --port 3100",
     "lint": "biome check .",
     "start": "node .next/standalone/apps/cloud/server.js",
-    "sync:legacy-premium": "node --env-file-if-exists=.env.local --import tsx scripts/sync-legacy-premium.ts",
     "test": "node --import tsx --test test/*.test.ts",
     "test:ci": "node --import tsx --test test/*.test.ts",
     "test:coverage": "node --import tsx --test test/*.test.ts",
@@ -16,7 +15,6 @@
   },
   "dependencies": {
     "@coderocket/ai": "workspace:*",
-    "@frontendchecklist/rules": "workspace:*",
     "@coderocket/core": "workspace:*",
     "@coderocket/db": "workspace:*",
     "@next/third-parties": "catalog:",
@@ -27,11 +25,6 @@
     "puppeteer-core": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-markdown": "^10.1.0",
-    "rehype-pretty-code": "catalog:",
-    "rehype-slug": "catalog:",
-    "remark-gfm": "catalog:",
-    "shiki": "catalog:",
     "stripe": "catalog:",
     "zod": "catalog:"
   },

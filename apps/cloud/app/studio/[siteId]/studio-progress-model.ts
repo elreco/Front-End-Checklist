@@ -7,7 +7,7 @@ const studioImportEventSchema = z.object({
   title: z.string(),
   detail: z.string().nullable().optional(),
   progress: z.number().min(0).max(100),
-  artifactKind: z.enum(['desktop', 'mobile']).nullable().optional(),
+  artifactKind: z.enum(['desktop', 'figma', 'mobile']).nullable().optional(),
   artifactUrl: z.string().url().optional(),
   createdAt: z.string()
 })
@@ -70,20 +70,25 @@ export function studioQueueIsDelayed(progress: StudioImportProgress, now: number
 /** Explain the current milestone in plain language without inventing a completion estimate. */
 export function studioProgressGuidance(
   progress: StudioImportProgress,
-  elapsedMilliseconds: number
+  elapsedMilliseconds: number,
+  sourceType: 'figma' | 'website' = 'website'
 ): string {
   if (progress.stage === 'retrying')
     return 'No action is needed. CodeRocket will continue from the saved request automatically.'
   if (progress.stage === 'queued' || progress.stage === 'starting')
     return 'The request is saved. You can leave this page without stopping the work.'
   if (progress.stage === 'checking_pages' && progress.current === 0) {
+    if (sourceType === 'figma')
+      return progress.total > 1
+        ? `CodeRocket is reading the ${progress.total} selected screens and their structured Figma layers.`
+        : 'CodeRocket is reading the selected screen and its structured Figma layers.'
     const remaining = Math.max(0, progress.total - 1)
     return remaining > 0
       ? `The first screen is checked on computer and phone. The other ${remaining} page${remaining === 1 ? '' : 's'} will follow.`
       : 'The first screen is being checked on computer and phone before it is rebuilt.'
   }
   if (progress.stage === 'checking_pages' && progress.total > 0)
-    return `${Math.min(progress.current, progress.total)} of ${progress.total} pages rebuilt. Each finished page is saved as the work continues.`
+    return `${Math.min(progress.current, progress.total)} of ${progress.total} ${sourceType === 'figma' ? 'screens' : 'pages'} rebuilt. Each finished page is saved as the work continues.`
   if (progress.stage === 'comparing')
     return elapsedMilliseconds > 60_000
       ? 'Visual and animated websites can take a few minutes here. CodeRocket is still working.'

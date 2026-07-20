@@ -16,7 +16,8 @@ export default async function StudioPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const [{ siteId }, query] = await Promise.all([params, searchParams])
-  const site = await getBuilderSite(siteId)
+  const requestedVersion = Array.isArray(query.version) ? query.version[0] : query.version
+  const site = await getBuilderSite(siteId, requestedVersion)
   if (!site) notFound()
   const handoff =
     site.status === 'waiting_for_access' ? await getBuilderBrowserHandoff(siteId) : undefined
@@ -26,7 +27,11 @@ export default async function StudioPage({
 
   return (
     <ProductShell
-      action={site.document ? <StudioPublishAction site={site} /> : undefined}
+      action={
+        site.document && site.viewedRevision?.id === site.currentRevisionId ? (
+          <StudioPublishAction site={site} />
+        ) : undefined
+      }
       eyebrow="Website project"
       title={site.name}
       workspace

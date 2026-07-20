@@ -1,3 +1,4 @@
+import { FigmaBrandIcon } from '@repo/design-system/brand-icons'
 import {
   Check,
   Clock3,
@@ -20,11 +21,23 @@ const creationSteps = [
 export type StudioConnectionMode = 'connecting' | 'live' | 'fallback'
 
 /** Show the five stable creation milestones without exposing worker-specific stages. */
-export function StudioCreationSteps({ percent }: { percent: number }) {
+export function StudioCreationSteps({
+  percent,
+  sourceType = 'website'
+}: {
+  percent: number
+  sourceType?: 'figma' | 'website'
+}) {
   const activeIndex = activeStepIndex(percent)
+  const steps =
+    sourceType === 'figma'
+      ? creationSteps.map((step, index) =>
+          index === 1 ? { ...step, icon: FigmaBrandIcon, label: 'Reading your design' } : step
+        )
+      : creationSteps
   return (
     <ol className="mt-6 grid gap-px border border-border bg-border sm:grid-cols-5">
-      {creationSteps.map(({ icon: Icon, label }, index) => {
+      {steps.map(({ icon: Icon, label }, index) => {
         const complete = index < activeIndex || percent === 100
         const active = index === activeIndex && percent < 100
         return (
@@ -71,7 +84,11 @@ export function StudioConnectionBadge({ mode }: { mode: StudioConnectionMode }) 
 }
 
 /** Return the current owner-facing milestone label. */
-export function currentStudioStepLabel(percent: number): string {
+export function currentStudioStepLabel(
+  percent: number,
+  sourceType: 'figma' | 'website' = 'website'
+): string {
+  if (sourceType === 'figma' && activeStepIndex(percent) === 1) return 'Reading your design'
   return creationSteps[activeStepIndex(percent)]?.label ?? creationSteps[0].label
 }
 

@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'CodeRocket',
     short_name: 'CodeRocket',
     description:
-      'Monitor website availability, search visibility, accessibility, speed, security, and frontend quality.',
+      'Clone, edit, and publish a website from a public URL or Figma design without opening a code editor.',
     id: '/',
     start_url: '/',
     scope: '/',

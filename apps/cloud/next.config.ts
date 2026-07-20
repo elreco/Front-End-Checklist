@@ -7,18 +7,8 @@ const nextConfig: NextConfig = {
     '@coderocket/ai',
     '@coderocket/core',
     '@coderocket/db',
-    '@frontendchecklist/rules',
     '@repo/design-system'
   ],
-  async redirects() {
-    return [
-      {
-        source: '/legacy/:path*',
-        destination: '/gone',
-        permanent: false
-      }
-    ]
-  },
   async headers() {
     return [
       {
@@ -31,14 +21,13 @@ const nextConfig: NextConfig = {
         ]
       },
       ...[
-        '/audits/:path*',
+        '/create/:path*',
         '/dashboard/:path*',
         '/login/:path*',
-        '/onboarding/:path*',
-        '/projects/:path*',
         '/recover/:path*',
-        '/reports/:path*',
-        '/settings/:path*'
+        '/settings/:path*',
+        '/studio/:path*',
+        '/websites/:path*'
       ].map(source => ({
         source,
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }]

@@ -16,13 +16,17 @@ export function SiteDocumentImage({
 }) {
   if (!section.imageUrl || usesBackgroundImage) return null
   const visual = section.visual
+  const measuredWidth = section.imageWidth
+  const mobileWidth = section.imageMobileWidth ?? measuredWidth
   return (
     <img
       alt={section.imageAlt ?? ''}
       className={
-        visual?.imagePosition === 'before' && section.layout === 'split'
-          ? 'order-1 w-full self-center'
-          : 'w-full self-center'
+        visual?.imagePosition === 'before'
+          ? 'order-1 mx-auto max-w-full self-center'
+          : section.layout === 'split'
+            ? 'max-w-full self-center'
+            : 'mx-auto max-w-full self-center'
       }
       data-cr-select-key={!published ? `image-${section.id}` : undefined}
       data-cr-select-kind={!published ? 'image' : undefined}
@@ -35,7 +39,11 @@ export function SiteDocumentImage({
       style={{
         aspectRatio: visual?.imageAspectRatio,
         borderRadius: visual?.borderRadius,
-        objectFit: visual?.imageFit ?? 'cover'
+        objectFit: visual?.imageFit ?? 'cover',
+        width:
+          measuredWidth && mobileWidth
+            ? `clamp(${mobileWidth}px, ${(measuredWidth / 14.4).toFixed(2)}cqw, ${measuredWidth}px)`
+            : '100%'
       }}
       width={1200}
     />

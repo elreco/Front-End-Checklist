@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  buildProjectPageUrl,
-  deriveSiteAccessMode,
-  normalizeAuthenticatedPagePaths,
   normalizeHttpsOrigin,
   normalizeProjectPagePath,
   normalizeProjectPagePaths
@@ -34,28 +31,4 @@ describe('CodeRocket project page paths', () => {
     assert.throws(() => normalizeProjectPagePath(`/${'a'.repeat(2048)}`), /2048/)
   })
 
-  it('always builds a URL on the monitored origin', () => {
-    assert.equal(
-      buildProjectPageUrl('https://www.example.com/base', '/pricing'),
-      'https://www.example.com/pricing'
-    )
-    assert.throws(
-      () => buildProjectPageUrl('https://www.example.com', '//other.example'),
-      /hostname/
-    )
-  })
-
-  it('keeps authenticated pages inside the monitored selection and derives mixed access', () => {
-    const pages = ['/', '/pricing', '/dashboard']
-    assert.deepEqual(normalizeAuthenticatedPagePaths(['/dashboard'], pages), ['/dashboard'])
-    assert.equal(deriveSiteAccessMode(pages, []), 'public')
-    assert.equal(deriveSiteAccessMode(pages, [], true), 'protected')
-    assert.equal(deriveSiteAccessMode(pages, ['/dashboard']), 'protected')
-    assert.equal(deriveSiteAccessMode(pages, ['/dashboard'], false), 'protected')
-    assert.equal(deriveSiteAccessMode(pages, pages), 'private')
-    assert.throws(
-      () => normalizeAuthenticatedPagePaths(['/admin'], pages),
-      /must also be monitored/
-    )
-  })
 })

@@ -57,11 +57,6 @@ const faqItems = [
     question: 'Where is my website hosted?',
     answer:
       'CodeRocket runs on Fly.io and publishes generated websites through the same controlled platform. It does not depend on Vercel. Custom domains and asset delivery can be connected without exposing infrastructure settings in the normal journey.'
-  },
-  {
-    question: 'Does the existing website monitoring product still exist?',
-    answer:
-      'Yes. Website health remains available as a separate tool for automatic checks, change detection, accessibility, search visibility, security, and performance.'
   }
 ]
 

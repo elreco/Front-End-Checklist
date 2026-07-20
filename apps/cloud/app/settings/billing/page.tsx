@@ -1,7 +1,6 @@
 import type { PlanId } from '@coderocket/core'
 import {
   AlertTriangle,
-  CalendarClock,
   Check,
   CreditCard,
   Gauge,
@@ -9,39 +8,34 @@ import {
 } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
-import { BillingAiUsage } from '@/components/billing-ai-usage'
 import { UpgradeLink } from '@/components/plan-limit-upsell'
 import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
 import { type BillingAccountData, billingConnectionState } from '@/lib/billing'
 import { getBillingAccountData } from '@/lib/billing-data'
 import { formatBillingDate } from '@/lib/billing-format'
-import { getPlanLabel } from '@/lib/product-language'
 import { createPrivateMetadata } from '@/lib/seo'
-import { getNextPlan } from '@/lib/upgrade'
+import { getNextPlan, getPlanLabel } from '@/lib/upgrade'
 
 export const metadata = createPrivateMetadata('Plan & billing')
 
 export default async function BillingPage() {
   const context = await getAppShellContext()
-  const account = await getBillingAccountData(context.plan, context.limits.aiCreditsPerMonth)
+  const account = await getBillingAccountData(context.plan)
   const nextPlan = getNextPlan(context.plan)
   const benefits =
     context.plan === 'free'
       ? [
           'Explore the website-creation demo',
-          'Monitor 1 existing website and 5 important pages',
-          'Automatic check every week',
-          '10 extra checks each month',
-          '30 days of history and private reports'
+          'Plan a clone from a public website or Figma file',
+          'No payment card required'
         ]
       : [
           `${context.builderLimits.sites} created and hosted ${context.builderLimits.sites === 1 ? 'website' : 'websites'}`,
           `${context.builderLimits.creationCreditsPerMonth} creation credits each month`,
           `${context.builderLimits.hostedVisitsPerMonth.toLocaleString('en-GB')} hosted visits each month`,
           `First versions start from up to ${context.builderLimits.pagesPerImport} useful page types`,
-          `Monitor ${context.limits.projects} existing websites every day`,
-          `${context.limits.retentionDays} days of monitoring history`
+          'Safe versions, managed data, payments, and scheduling connections'
         ]
 
   return (
@@ -65,18 +59,18 @@ export default async function BillingPage() {
           <div className="grid gap-px bg-border sm:grid-cols-3">
             <PlanFact
               icon={Globe2}
-              label="Sites used"
-              value={`${context.projectCount} / ${context.limits.projects}`}
-            />
-            <PlanFact
-              icon={CalendarClock}
-              label="Automatic checks"
-              value={context.limits.schedule}
+              label="Websites used"
+              value={`${context.builderSiteCount} / ${context.builderLimits.sites}`}
             />
             <PlanFact
               icon={Gauge}
-              label="History kept"
-              value={`${context.limits.retentionDays} days`}
+              label="Creation credits"
+              value={`${context.builderCreditsRemaining} / ${context.builderLimits.creationCreditsPerMonth}`}
+            />
+            <PlanFact
+              icon={Gauge}
+              label="Hosted visits"
+              value={context.builderLimits.hostedVisitsPerMonth.toLocaleString('en-GB')}
             />
           </div>
           <div className="p-5 sm:p-6">
@@ -98,8 +92,6 @@ export default async function BillingPage() {
             ) : null}
           </div>
         </section>
-
-        <BillingAiUsage account={account} plan={context.plan} />
         <ManageBilling account={account} plan={context.plan} />
       </div>
     </ProductShell>
@@ -143,8 +135,8 @@ function ManageBilling({ account, plan }: { account: BillingAccountData; plan: P
                   This test subscription is not connected to Stripe.
                 </p>
                 <p className="mt-1 text-sm leading-6">
-                  The portal and paid AI overage remain unavailable until checkout creates a Stripe
-                  customer for this account.
+                  The billing portal remains unavailable until checkout creates a Stripe customer
+                  for this account.
                 </p>
               </div>
             </div>

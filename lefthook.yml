@@ -41,31 +41,6 @@ pre-commit:
       run: pnpm dlx sort-package-json {staged_files}
       stage_fixed: true
 
-    # Regenerate skills when rule MDX files change
-    generate-skills:
-      glob: "packages/content/rules/en/**/*.mdx"
-      run: pnpm tsx scripts/generate/generate-skills.ts {staged_files} && git add skills/
-
-    # Regenerate README catalog when rule MDX files change
-    generate-readme:
-      glob: "packages/content/rules/en/**/*.mdx"
-      run: pnpm generate:readme && git add README.md docs/generated/rules-catalog.md
-
-    # Enforce canonical rule section structure on changed rules
-    validate-rule-structure:
-      glob: "packages/content/rules/en/**/*.mdx"
-      run: pnpm validate:rule-structure {staged_files}
-
-    # Enforce claim-to-source evidence metadata on changed rules
-    validate-evidence:
-      glob: "packages/content/rules/en/**/*.mdx"
-      run: pnpm validate:evidence {staged_files}
-
-    # Fail commit if changed rules score below minimum quality threshold
-    score-rules:
-      glob: "packages/content/rules/en/**/*.mdx"
-      run: pnpm tsx scripts/rule-structure/score-rules.ts {staged_files}
-
     # TypeScript as casts validation
     check-as-casts:
       glob: "**/*.{ts,tsx}"
@@ -80,22 +55,6 @@ pre-commit:
       glob: "**/index.{js,ts,jsx,tsx}"
       exclude: "**/node_modules/**"
       run: node scripts/validation/check-barrel-files.js {staged_files}
-
-    # Console logs validation
-    check-console-logs:
-      glob: "**/*.{js,jsx,ts,tsx}"
-      exclude: |
-        **/node_modules/**
-        **/*.test.*
-        **/*.spec.*
-        **/scripts/**
-        **/packages/validators/**
-        **/packages/generator/**
-      run: node scripts/validation/check-console-logs.js {staged_files}
-
-    # Directory structure validation
-    check-directory-structure:
-      run: node scripts/validation/check-directory-structure.js
 
     # File complexity validation
     check-file-complexity:
@@ -114,28 +73,3 @@ pre-commit:
         **/*.test.*
         **/*.spec.*
       run: node scripts/validation/check-jsdoc.js {staged_files}
-
-    # Relative imports validation
-    check-relative-imports:
-      glob: "apps/web/**/*.{ts,tsx,js,jsx}"
-      exclude: "apps/web/**/node_modules/**"
-      run: pnpm tsx scripts/validation/check-relative-imports.ts {staged_files}
-
-    # Test modified test files
-    test-modified:
-      glob: "apps/web/**/*.{test,spec}.{js,ts,tsx}"
-      run: cd apps/web && pnpm test:related {staged_files}
-
-    # Check test coverage for web app
-    check-coverage:
-      glob: "apps/web/src/**/*.{ts,tsx,js,jsx}"
-      exclude: |
-        apps/web/src/**/*.test.*
-        apps/web/src/**/*.spec.*
-      run: cd apps/web && pnpm test:coverage --silent
-
-# Commit message validation
-commit-msg:
-  commands:
-    lint-commit-message:
-      run: pnpm commitlint --edit {1}

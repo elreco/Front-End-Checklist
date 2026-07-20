@@ -13,7 +13,6 @@ export default async function DashboardPage() {
       <BuilderDashboardOverview
         displayName={context.displayName}
         plan={context.plan}
-        projectCount={context.projectCount}
         sites={sites}
       />
     </ProductShell>

@@ -12,7 +12,7 @@ export const metadata: Metadata = createPublicMetadata({
 export default function LegalNoticePage() {
   return (
     <LegalPage
-      description="Publisher, hosting, contact, and intellectual property information for the CodeRocket website monitoring service."
+      description="Publisher, hosting, contact, and intellectual property information for the CodeRocket website creation service."
       title="Legal notice"
     >
       <h2>Publisher</h2>
@@ -45,8 +45,8 @@ export default function LegalNoticePage() {
       <p>
         CodeRocket names, logos, interface designs, and service-specific content may not be reused
         in a way that implies endorsement or affiliation. Third-party names, software,
-        documentation, and the synchronized Front-End Checklist corpus remain subject to their
-        respective rights and licenses.
+        documentation, and open-source dependencies remain subject to their respective rights and
+        licenses.
       </p>
 
       <h2>Information and external links</h2>

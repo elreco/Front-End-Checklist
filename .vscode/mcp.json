@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "frontendchecklist": {
-      "type": "http",
-      "url": "https://mcp.frontendchecklist.io",
-      "description": "Frontend best practice rules — 374 rules across HTML, CSS, JS, Accessibility, SEO, Security, Performance, Images, and Testing"
-    }
-  }
-}

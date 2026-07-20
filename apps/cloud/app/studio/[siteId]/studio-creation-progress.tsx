@@ -33,10 +33,12 @@ import { StudioStopGeneration } from './studio-stop-generation'
 export function StudioCreationProgress({
   initialMessage,
   initialUpdatedAt,
+  sourceType = 'website',
   siteId
 }: {
   initialMessage?: string
   initialUpdatedAt: string
+  sourceType?: 'figma' | 'website'
   siteId: string
 }) {
   const router = useRouter()
@@ -127,7 +129,9 @@ export function StudioCreationProgress({
       : failed
         ? 'Creation stopped safely'
         : queueDelayed
-          ? 'Your website is in the queue'
+          ? sourceType === 'figma'
+            ? 'Your Figma design is in the queue'
+            : 'Your website is in the queue'
           : 'Building your first version'
   const message = completed
     ? 'Opening your private, editable preview…'
@@ -137,9 +141,10 @@ export function StudioCreationProgress({
         ? 'CodeRocket could not finish this website after several attempts. Nothing was published.'
         : queueDelayed
           ? 'CodeRocket is temporarily busy. Your request is saved and will start automatically.'
-          : (progress.message ??
-            'CodeRocket is studying the public website and rebuilding it as editable sections.')
-  const guidance = studioProgressGuidance(progress, elapsedMs)
+          : (progress.message ?? sourceType === 'figma')
+            ? 'CodeRocket is reading the selected Figma screens and rebuilding them as editable sections.'
+            : 'CodeRocket is studying the public website and rebuilding it as editable sections.'
+  const guidance = studioProgressGuidance(progress, elapsedMs, sourceType)
 
   return (
     <section aria-busy={pending} className="border border-border bg-surface">
@@ -204,7 +209,7 @@ export function StudioCreationProgress({
                 ? 'Stopped by you'
                 : failed
                   ? 'Stopped safely'
-                  : currentStudioStepLabel(percent)}
+                  : currentStudioStepLabel(percent, sourceType)}
             </span>
             <span className="text-muted">{percent}%</span>
           </div>
@@ -225,11 +230,17 @@ export function StudioCreationProgress({
           </div>
         </div>
 
-        {failed || cancelled ? null : <StudioCreationSteps percent={percent} />}
+        {failed || cancelled ? null : (
+          <StudioCreationSteps percent={percent} sourceType={sourceType} />
+        )}
       </div>
 
       <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,.75fr)]">
-        <StudioProgressCaptures events={progress.events} pending={pending} />
+        <StudioProgressCaptures
+          events={progress.events}
+          pending={pending}
+          sourceType={sourceType}
+        />
         <StudioProgressActivity events={progress.events} pending={pending} />
       </div>
 

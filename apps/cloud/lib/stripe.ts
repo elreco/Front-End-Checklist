@@ -16,12 +16,6 @@ export function stripePriceForPlan(plan: 'solo' | 'agency'): string {
   return price
 }
 
-export function stripeAiOveragePrice(): string {
-  const price = process.env.STRIPE_AI_OVERAGE_PRICE_ID
-  if (!price) throw new Error('Stripe AI overage price is not configured')
-  return price
-}
-
 export function planForStripePrice(priceId?: string): 'free' | PaidPlanId {
   if (priceId && priceId === process.env.STRIPE_SOLO_PRICE_ID) return 'solo'
   if (priceId && priceId === process.env.STRIPE_AGENCY_PRICE_ID) return 'agency'

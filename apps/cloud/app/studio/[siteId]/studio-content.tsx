@@ -1,3 +1,4 @@
+import { parseFigmaFileUrl } from '@coderocket/core/figma-source'
 import { selectSiteDocumentPage } from '@coderocket/core/site-document'
 import { isBrowserHandoffConfigured } from '@/lib/browser-handoff'
 import { getBuilderAccessRecovery } from '@/lib/builder-access-recovery'
@@ -8,6 +9,7 @@ import { StudioAppLayout } from './studio-app-layout'
 import { StudioBrowserHandoff } from './studio-browser-handoff'
 import { StudioCancelledCreation } from './studio-cancelled-creation'
 import { StudioCreationProgress } from './studio-creation-progress'
+import { StudioFigmaImportFailure } from './studio-figma-import-failure'
 import { StudioPreview } from './studio-preview'
 import { StudioProtectedAccess } from './studio-protected-access'
 import { StudioSelectionProvider } from './studio-selection-context'
@@ -21,6 +23,7 @@ const notices: Record<string, string> = {
   'publish-failed': 'The website could not be published. Your private version is unchanged.',
   'retry-started': 'CodeRocket is studying this website again. No additional import was counted.',
   'retry-failed': 'The website could not be restarted. Nothing was changed.',
+  'figma-connected': 'Figma is connected. You can try the saved design again.',
   'missing-version': 'This website does not have an editable version yet.',
   'invalid-content': 'Add a business name and a main headline.',
   'invalid-action-link': 'Use a complete secure link beginning with https://.',
@@ -67,13 +70,16 @@ const notices: Record<string, string> = {
   'secure-browser-stop-failed':
     'The temporary browser could not be closed from here. It will still expire automatically.',
   'monthly-limit': 'This recreation cannot start because the protected monthly budget was reached.',
-  restored: 'This version is restored as a new private version.',
-  'restore-failed': 'That version could not be restored. Your current version is unchanged.'
+  'version-continued':
+    'You are now continuing from that version. Every version in your timeline is still available.',
+  'version-continue-failed':
+    'CodeRocket could not continue from that version. Your latest version is unchanged.'
 }
 const positiveNotices = new Set([
   'saved',
   'published',
   'retry-started',
+  'figma-connected',
   'change-started',
   'generation-stopped',
   'generation-already-finished',
@@ -81,7 +87,7 @@ const positiveNotices = new Set([
   'connection-ready',
   'connection-applied',
   'connection-removed',
-  'restored',
+  'version-continued',
   'secure-browser-ready',
   'secure-browser-continued',
   'secure-browser-stopped',
@@ -108,6 +114,7 @@ export function StudioContent({
   site: NonNullable<Awaited<ReturnType<typeof getBuilderSite>>>
 }) {
   const pending = site.status === 'queued' || site.status === 'analyzing'
+  const figmaSource = Boolean(parseFigmaFileUrl(site.sourceUrl))
   const selectedPage =
     site.document?.pages?.find(page => page.path === requestedPage) ??
     site.document?.pages?.find(page => page.path === '/')
@@ -141,12 +148,19 @@ export function StudioContent({
               initialMessage={site.statusMessage}
               initialUpdatedAt={site.updatedAt}
               siteId={site.id}
+              sourceType={figmaSource ? 'figma' : 'website'}
             />
           </div>
         ) : site.status === 'failed' && site.error === 'cancelled_by_owner' ? (
           <section className="h-full overflow-y-auto p-4 sm:p-6">
             <div className="mx-auto max-w-3xl">
               <StudioCancelledCreation siteId={site.id} />
+            </div>
+          </section>
+        ) : (site.status === 'failed' || !site.document) && figmaSource ? (
+          <section className="h-full overflow-y-auto p-4 sm:p-6">
+            <div className="mx-auto max-w-3xl">
+              <StudioFigmaImportFailure siteId={site.id} sourceUrl={site.sourceUrl} />
             </div>
           </section>
         ) : site.status === 'failed' || !site.document ? (
@@ -166,7 +180,10 @@ export function StudioContent({
             </div>
           </section>
         ) : previewDocument ? (
-          <StudioSelectionProvider key={selectedPath} pagePath={selectedPath}>
+          <StudioSelectionProvider
+            key={`${site.viewedRevision?.id ?? 'latest'}:${selectedPath}`}
+            pagePath={selectedPath}
+          >
             <div className="flex h-full min-h-0 flex-col">
               <StudioToolbar
                 openConnections={openPanel === 'connections'}
@@ -174,11 +191,17 @@ export function StudioContent({
                 site={site}
               />
               <StudioAppLayout
-                conversation={<StudioWorkspacePanel site={site} />}
+                conversation={<StudioWorkspacePanel selectedPath={selectedPath} site={site} />}
                 preview={
                   <StudioPreview
                     connections={site.connections}
                     document={previewDocument}
+                    revisionId={
+                      site.viewedRevision?.id === site.currentRevisionId
+                        ? undefined
+                        : site.viewedRevision?.id
+                    }
+                    readOnly={site.viewedRevision?.id !== site.currentRevisionId}
                     selectedPath={selectedPath}
                     siteId={site.id}
                   />

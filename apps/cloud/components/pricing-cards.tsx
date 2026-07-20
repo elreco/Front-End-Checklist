@@ -19,14 +19,12 @@ const plans: Array<{
   {
     id: 'free',
     name: 'Free',
-    outcome: 'Try CodeRocket and monitor a website',
+    outcome: 'Explore how your new website could work',
     description: 'Explore the product before asking CodeRocket to create or host anything.',
     features: [
       'Explore the complete website-creation demo',
-      'Monitor 1 existing website and 5 important pages',
-      'Automatic check every week',
-      '10 extra checks each month',
-      '30 days of history and private reports',
+      'Start from a public website or Figma design',
+      'Review the guided cloning journey',
       'No payment card required'
     ]
   },
@@ -41,8 +39,7 @@ const plans: Array<{
       'First month includes the first version plus at least 13 guided changes',
       'Change text, links, and colours yourself without using credits',
       '20,000 hosted visits each month',
-      'Safe versions, managed data, payments, and scheduling connections',
-      'Monitor 3 existing websites every day with 90 days of history'
+      'Safe versions, managed data, payments, and scheduling connections'
     ]
   },
   {
@@ -56,8 +53,7 @@ const plans: Array<{
       'Use the allowance for first versions, changes, pages, products, and data',
       '250,000 hosted visits each month across the workspace',
       'Safe versions, managed data, payments, and scheduling connections',
-      'Monitor 50 existing websites every day with 365 days of history',
-      'Share client-ready reports without secondary branding'
+      'Keep client projects together in one workspace'
     ]
   }
 ]
@@ -140,7 +136,7 @@ export function PricingCards({
               </CodeRocketButton>
             ) : plan.id === 'free' ? (
               <CodeRocketButton asChild fullWidth variant="outline">
-                <Link href="/monitoring">Use free website checks</Link>
+                <Link href="/create">Explore website creation</Link>
               </CodeRocketButton>
             ) : (
               <form

@@ -1,5 +1,0 @@
-{
-  "extends": "@repo/config-typescript/node.json",
-  "compilerOptions": { "module": "ESNext", "moduleResolution": "Bundler" },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
-}

@@ -8,8 +8,6 @@ import { getAppShellContext } from '@/lib/app-shell-data'
 import { AppNavigation } from './app-navigation'
 import { AppShellLayout } from './app-shell-layout'
 
-export { EmptyState, GateBadge } from './product-ui'
-
 /** Distinct authenticated application frame used by every private product screen. */
 export async function ProductShell({
   children,
@@ -41,8 +39,8 @@ export async function ProductShell({
         plan={context.plan}
         creditLimit={context.builderLimits.creationCreditsPerMonth}
         creditsRemaining={context.builderCreditsRemaining}
-        projectCount={context.builderSiteCount}
-        projectLimit={context.builderLimits.sites}
+        siteCount={context.builderSiteCount}
+        siteLimit={context.builderLimits.sites}
       >
         <div className={workspace ? 'flex h-dvh min-w-0 flex-col overflow-hidden' : 'min-w-0'}>
           <header

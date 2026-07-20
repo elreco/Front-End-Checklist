@@ -46,10 +46,10 @@ export async function readBrowserPage(page: Page, requestedUrl: URL): Promise<Br
     throw new Error('An interactive browser verification blocked the page')
   const responseBody = await response.body()
   if (responseBody.byteLength > MAX_BROWSER_HTML_BYTES)
-    throw new Error('HTML response exceeds the 2 MB audit limit')
+    throw new Error('HTML response exceeds the 2 MB capture limit')
   const html = responseBody.toString('utf8') || renderedHtml
   if (new TextEncoder().encode(renderedHtml).byteLength > MAX_BROWSER_HTML_BYTES)
-    throw new Error('Rendered page exceeds the 2 MB audit limit')
+    throw new Error('Rendered page exceeds the 2 MB capture limit')
   return {
     durationMs: Math.round(performance.now() - startedAt),
     fetchedAt: new Date().toISOString(),

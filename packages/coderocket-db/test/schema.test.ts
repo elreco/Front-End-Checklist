@@ -2,36 +2,52 @@ import assert from 'node:assert/strict'
 import { readdir, readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'
 
-describe('CodeRocket database migration', () => {
-  it('enables RLS on every owner-data table', async () => {
+const migrationsDirectory = new URL('../supabase/migrations/', import.meta.url)
+
+async function readMigrations(): Promise<string> {
+  const filenames = (await readdir(migrationsDirectory))
+    .filter(filename => filename.endsWith('.sql'))
+    .sort()
+  const migrations = await Promise.all(
+    filenames.map(filename => readFile(new URL(filename, migrationsDirectory), 'utf8'))
+  )
+  return migrations.join('\n')
+}
+
+describe('CodeRocket database migrations', () => {
+  it('starts with builder accounts, subscriptions, and a durable worker queue', async () => {
     const sql = await readFile(
       new URL('../supabase/migrations/202607160001_coderocket_foundation.sql', import.meta.url),
       'utf8'
     )
     for (const table of [
-      'cr_projects',
-      'cr_audits',
-      'cr_audit_pages',
-      'cr_findings',
-      'cr_occurrences',
-      'cr_api_tokens',
-      'cr_share_links',
-      'cr_subscriptions'
-    ]) {
-      assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`))
-    }
+      'cr_profiles',
+      'cr_jobs',
+      'cr_subscriptions',
+      'cr_stripe_events',
+      'cr_worker_heartbeats'
+    ])
+      assert.match(sql, new RegExp(`create table public\\.${table}`))
+    assert.match(sql, /kind in \('site_import'\)/)
+    assert.match(sql, /create or replace function public\.cr_claim_jobs/)
+  })
+
+  it('creates only the website cloning, editing, connection, and publishing domain', async () => {
+    const sql = (await readMigrations()).toLowerCase()
+    for (const table of [
+      'cr_builder_sites',
+      'cr_site_revisions',
+      'cr_builder_messages',
+      'cr_builder_connections',
+      'cr_figma_connections'
+    ])
+      assert.match(sql, new RegExp(`create table public\\.${table}`))
+    assert.doesNotMatch(sql, /cr_audits|cr_findings|cr_occurrences|cr_projects/)
+    assert.doesNotMatch(sql, /'audit'|'retention'|'email'|'ai_analysis'|'ai_usage'/)
   })
 
   it('contains no destructive table or data operations', async () => {
-    const migrationsDirectory = new URL('../supabase/migrations/', import.meta.url)
-    const migrationFiles = (await readdir(migrationsDirectory))
-      .filter(filename => filename.endsWith('.sql'))
-      .sort()
-    const migrations = await Promise.all(
-      migrationFiles.map(filename => readFile(new URL(filename, migrationsDirectory), 'utf8'))
-    )
-    const sql = migrations.join('\n').toLowerCase()
-
+    const sql = (await readMigrations()).toLowerCase()
     assert.doesNotMatch(sql, /drop\s+table/)
     assert.doesNotMatch(sql, /truncate/)
     assert.doesNotMatch(sql, /delete\s+from/)
@@ -39,17 +55,8 @@ describe('CodeRocket database migration', () => {
   })
 
   it('keeps every public database object inside the cr_ namespace', async () => {
-    const migrationsDirectory = new URL('../supabase/migrations/', import.meta.url)
-    const migrationFiles = (await readdir(migrationsDirectory)).filter(filename =>
-      filename.endsWith('.sql')
-    )
-    const migrations = await Promise.all(
-      migrationFiles.map(filename => readFile(new URL(filename, migrationsDirectory), 'utf8'))
-    )
-    const publicObjects = migrations.flatMap(migration =>
-      [...migration.matchAll(/\bpublic\.([a-z_][a-z0-9_]*)/gi)].map(match => match[1])
-    )
-
+    const sql = await readMigrations()
+    const publicObjects = [...sql.matchAll(/\bpublic\.([a-z_][a-z0-9_]*)/gi)].map(match => match[1])
     assert.ok(publicObjects.length > 0)
     assert.deepEqual(
       [...new Set(publicObjects.filter(objectName => !objectName.startsWith('cr_')))],
@@ -57,524 +64,56 @@ describe('CodeRocket database migration', () => {
     )
   })
 
-  it('adds website health coverage without touching unrelated data', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607160003_website_health.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /add value if not exists 'inconclusive'/)
-    assert.match(sql, /add column if not exists requested_page_count/)
-    assert.match(sql, /add column if not exists checked_page_count/)
-    assert.match(sql, /add column if not exists audience/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  it('keeps owner data behind row-level security', async () => {
+    const sql = (await readMigrations()).toLowerCase()
+    for (const table of [
+      'cr_profiles',
+      'cr_jobs',
+      'cr_subscriptions',
+      'cr_builder_sites',
+      'cr_site_revisions',
+      'cr_builder_connections',
+      'cr_figma_connections'
+    ])
+      assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`))
   })
 
-  it('stores durable website check progress without adding another queue', async () => {
+  it('stores encrypted Figma OAuth data and bounds each selected-screen import', async () => {
     const sql = await readFile(
-      new URL('../supabase/migrations/202607160004_audit_progress.sql', import.meta.url),
+      new URL('../supabase/migrations/202607210001_figma_site_import.sql', import.meta.url),
       'utf8'
     )
-    assert.match(sql, /alter table public\.cr_jobs/)
-    assert.match(sql, /add column if not exists progress_stage/)
-    assert.match(sql, /add column if not exists progress_current/)
-    assert.match(sql, /add column if not exists progress_total/)
-    assert.doesNotMatch(sql.toLowerCase(), /create\s+table|drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('persists complete audits atomically and prevents duplicate active jobs', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607160005_check_robustness.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /create or replace function public\.cr_persist_audit/)
-    assert.match(sql, /cr_jobs_one_active_audit_per_project_idx/)
-    assert.match(sql, /create or replace function public\.cr_valid_page_paths/)
-    assert.match(sql, /on conflict \(project_id, fingerprint\) do update/)
-    assert.match(sql, /grant execute on function public\.cr_persist_audit/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('stores deterministic evidence and an owner-controlled finding workflow', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607160006_finding_workflow.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /add column if not exists evidence jsonb/)
-    assert.match(sql, /workflow_status in \('open', 'acknowledged', 'muted'\)/)
-    assert.match(sql, /insert into public\.cr_occurrences[^;]+evidence/s)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('allows owners to update only finding workflow metadata', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607170005_finding_workflow_permissions.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
+    assert.match(sql, /create table public\.cr_figma_connections/)
+    assert.match(sql, /encrypted_credentials text not null/)
     assert.match(
       sql,
-      /grant update \(workflow_status, workflow_note, workflow_updated_at\)[^;]+to authenticated/s
+      /revoke all privileges on table public\.cr_figma_connections from anon, authenticated/
     )
-    assert.match(sql, /create policy cr_findings_owner_update/)
-    assert.match(sql, /for update/)
-    assert.match(sql, /using \(auth\.uid\(\) = owner_id\)/)
-    assert.match(sql, /with check \(auth\.uid\(\) = owner_id\)/)
-    assert.doesNotMatch(sql.toLowerCase(), /grant update on table public\.cr_findings/)
+    assert.match(sql, /cardinality\(p_node_ids\) not between 1 and 5/)
+    assert.match(sql, /create or replace function public\.cr_request_figma_import/)
+    assert.doesNotMatch(sql, /access_token|refresh_token/)
   })
 
-  it('meters evidence-grounded AI analyses without changing audit truth', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607160008_ai_analysis.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /create table public\.cr_ai_tasks/)
-    assert.match(sql, /create table public\.cr_ai_credit_ledger/)
-    assert.match(sql, /create or replace function public\.cr_request_ai_analysis/)
-    assert.match(sql, /create or replace function public\.cr_settle_ai_analysis/)
-    assert.match(sql, /findings\.resolved_at is null/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('snapshots provider prices and the CodeRocket billing multiplier', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607160009_ai_pricing_ledger.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /create table public\.cr_ai_model_pricing/)
-    assert.match(sql, /'gpt-5\.6-terra'/)
-    assert.match(sql, /'openai-2026-07-09'/)
-    assert.match(sql, /provider_cost_microusd/)
-    assert.match(sql, /customer_charge_microusd/)
-    assert.match(sql, /charge_multiplier_bps/)
-    assert.match(sql, /create trigger cr_ai_tasks_snapshot_pricing/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('stops cancelled checks before they can persist a late audit', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607160010_job_cancellation.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /add column if not exists cancelled_at/)
-    assert.match(sql, /add column if not exists cancelled_by/)
-    assert.match(sql, /create or replace function public\.cr_guard_audit_job_persistence/)
-    assert.match(sql, /for update/)
-    assert.match(sql, /before insert on public\.cr_audits/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('keeps old audits while resetting the comparison baseline after URL changes', async () => {
+  it('streams safe plain-language milestones for Studio iterations', async () => {
     const sql = await readFile(
       new URL(
-        '../supabase/migrations/202607170002_project_configuration_baselines.sql',
+        '../supabase/migrations/202607210002_studio_iteration_live_progress.sql',
         import.meta.url
       ),
       'utf8'
     )
-    assert.match(sql, /add column if not exists baseline_reset_at timestamptz/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('stores page-level authentication without replacing the monitored page list', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607170006_page_access_modes.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /add column if not exists authenticated_page_paths text\[\]/)
-    assert.match(sql, /authenticated_page_paths <@ page_paths/)
-    assert.match(sql, /when access_mode = 'private'/)
-    assert.match(sql, /secure_runner_required = access_mode <> 'public'/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('stores managed website access encrypted and owner-scoped', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607170007_managed_access_connections.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
-    assert.match(sql, /create table public\.cr_project_access_connections/)
-    assert.match(sql, /encrypted_headers text not null/)
-    assert.match(sql, /enable row level security/)
-    assert.match(sql, /auth\.uid\(\) = owner_id/)
-    assert.match(sql, /scope in \('all', 'authenticated'\)/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('combines origin-wide and signed-in access without exposing either bundle', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607170008_managed_access_layers.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /unique \(project_id, scope\)/)
-    assert.match(sql, /project_access_connections_project_id_key/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('supports an encrypted dedicated test account without adding plaintext columns', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607180002_browser_login_connections.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /'browser_login'/)
-    assert.match(sql, /credentials remain inside encrypted_headers/)
-    assert.doesNotMatch(
-      sql.toLowerCase(),
-      /password\s+(?:text|varchar)|username\s+(?:text|varchar)/
-    )
-  })
-
-  it('stores only bounded HTTPS social preview image URLs on monitored sites', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607170003_project_social_images.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /add column if not exists social_image_url text/)
-    assert.match(sql, /char_length\(social_image_url\) between 1 and 2048/)
-    assert.match(sql, /social_image_url like 'https:\/\/%'/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('stores redacted document receipts without adding raw HTML columns', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607180001_audit_document_proofs.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /add column if not exists final_url text/)
-    assert.match(sql, /add column if not exists document_proof jsonb/)
-    assert.match(sql, /Never full HTML/)
-    assert.doesNotMatch(sql, /html_source|raw_html|document_html/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('bills only paid AI overage through an idempotent Stripe outbox job', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607170001_ai_usage_billing.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /included_credits/)
-    assert.match(sql, /overage_cap_microeur/)
-    assert.match(sql, /billable_overage_microeur/)
-    assert.match(sql, /create or replace function public\.cr_prepare_ai_usage_billing/)
-    assert.match(sql, /'ai_usage'/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('keeps paid AI overage opt-in and bounded by the account budget', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607170004_ai_spending_controls.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /overage_enabled boolean not null default false/)
-    assert.match(sql, /create or replace function public\.cr_update_ai_spending_settings/)
-    assert.match(sql, /and overage_enabled/)
-    assert.match(sql, /billed_overage_microeur < overage_cap_microeur/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('versions recreated websites and reserves provider cost before queueing work', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607190001_site_builder_foundation.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /create table public\.cr_builder_sites/)
-    assert.match(sql, /create table public\.cr_site_revisions/)
-    assert.match(sql, /create table public\.cr_builder_usage_accounts/)
-    assert.match(sql, /create table public\.cr_builder_cost_ledger/)
-    assert.match(sql, /create or replace function public\.cr_request_site_import/)
-    assert.match(sql, /pg_advisory_xact_lock/)
-    assert.match(sql, /reserved_cost_microeur = reserved_cost_microeur \+ reservation/)
-    assert.match(sql, /create or replace function public\.cr_settle_site_import/)
-    assert.match(sql, /Provider cost exceeded the reserved margin budget/)
-    assert.match(sql, /jsonb_array_length\(site_document -> 'pages'\) between 1 and 50/)
-    assert.match(sql, /pg_column_size\(site_document\) <= 2097152/)
-    assert.match(sql, /create or replace function public\.cr_record_published_site_visit/)
-    assert.match(sql, /hosted_visits < hosted_visit_limit/)
-    assert.match(sql, /Never raw HTML, JavaScript, credentials, or executable source/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('reserves bounded responsive-analysis cost inside every monthly plan ceiling', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607200001_responsive_site_recreation.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
-    assert.match(sql, /when 'agency' then 750000 else 250000/)
-    assert.match(sql, /when 'agency' then 40000000/)
-    assert.match(sql, /else 6000000/)
-    assert.match(sql, /imports_used < maximum_imports/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('streams owner-safe recreation milestones with private expiring captures', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607200002_site_import_live_progress.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /create table public\.cr_builder_import_events/)
-    assert.match(sql, /create policy cr_builder_import_events_owner_select/)
-    assert.match(sql, /auth\.uid\(\) = owner_id/)
-    assert.match(sql, /'cr-builder-imports'/)
-    assert.match(sql, /public,\s+file_size_limit,\s+allowed_mime_types/s)
-    assert.match(sql, /alter publication supabase_realtime add table/)
-    assert.match(sql, /Never raw worker logs, prompts, source code, or secrets/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('stores cloned raster assets in one bounded public delivery bucket', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607200013_builder_site_assets.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /'cr-builder-assets'/)
-    assert.match(sql, /8388608/)
-    assert.match(sql, /'image\/avif'.*'image\/webp'/s)
-    assert.doesNotMatch(sql, /image\/svg\+xml/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('renews long-running job leases without exposing the queue to browser roles', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607200005_job_lease_renewal.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /create or replace function public\.cr_renew_job_lease/)
-    assert.match(sql, /lease_expires_at = now\(\) \+ interval '5 minutes'/)
-    assert.match(sql, /and lease_owner = p_worker_id/)
-    assert.match(sql, /revoke all[^;]+from public, anon, authenticated/s)
-    assert.match(sql, /grant execute[^;]+to service_role/s)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('retries a failed website without consuming another advertised import', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607200006_retry_failed_site_import.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /create or replace function public\.cr_retry_site_import/)
-    assert.match(sql, /and status = 'failed'/)
-    assert.match(sql, /reserved_cost_microeur = reserved_cost_microeur \+ reservation/)
-    assert.doesNotMatch(sql, /imports_used\s*=\s*imports_used\s*\+\s*1/)
-    assert.match(sql, /insert into public\.cr_jobs/)
-    assert.match(sql, /grant execute[^;]+to authenticated/s)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('charges plain-language builder credits and refunds terminal failures', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607200007_builder_creation_credits.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /create table public\.cr_builder_credit_ledger/)
-    assert.match(sql, /when 'agency' then 600 else 100/)
-    assert.match(sql, /credit_cost := 20/)
-    assert.match(sql, /create trigger cr_jobs_charge_builder_credits/)
-    assert.match(sql, /create or replace function public\.cr_refund_builder_job_credits/)
-    assert.match(sql, /create trigger cr_jobs_refund_failed_builder_credits/)
-    assert.match(sql, /creation_credits_used = greatest/)
-    assert.match(sql, /Provider prices and model tokens stay in internal ledgers/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('adds durable studio conversations and managed full-stack foundations', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607200008_full_stack_studio_foundation.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
-    assert.match(sql, /'site_edit'/)
-    assert.match(sql, /create table public\.cr_builder_messages/)
-    assert.match(sql, /create table public\.cr_builder_collections/)
-    assert.match(sql, /create table public\.cr_builder_records/)
-    assert.match(sql, /create table public\.cr_builder_connections/)
-    assert.match(sql, /create or replace function public\.cr_request_site_edit/)
-    assert.match(sql, /creation_credits_used = creation_credits_used \+ credit_cost/)
-    assert.match(sql, /create or replace function public\.cr_settle_site_edit/)
-    assert.match(sql, /Provider cost exceeded the reserved margin budget/)
-    assert.match(sql, /alter publication supabase_realtime add table public\.cr_builder_messages/)
-    assert.match(sql, /Credentials belong in encrypted service storage/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('stores bounded visual selections without exposing DOM or source code', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607200009_visual_edit_selection.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /add column selection jsonb/)
-    assert.match(sql, /pg_column_size\(selection\) <= 4096/)
-    assert.match(sql, /create or replace function public\.cr_request_site_edit_with_selection/)
-    assert.match(sql, /queued_job_id := public\.cr_request_site_edit/)
-    assert.match(sql, /set selection = p_selection/)
-    assert.match(sql, /no DOM, HTML, CSS selector, or source code/)
-    assert.match(sql, /Bounded plain-language context/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('uses a short-lived encrypted test account for authorised SaaS imports', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607200010_authenticated_saas_import.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /create table public\.cr_builder_access_connections/)
-    assert.match(sql, /encrypted_credentials text/)
-    assert.match(sql, /expires_at timestamptz/)
-    assert.match(sql, /create or replace function public\.cr_connect_builder_test_account/)
-    assert.match(sql, /public\.cr_retry_site_import\(p_site_id\)/)
-    assert.match(sql, /status in \('failed', 'removed'\) and encrypted_credentials is null/)
-    assert.match(sql, /Never plaintext credentials, cookies, DOM, or source code/)
-    assert.doesNotMatch(
-      sql.toLowerCase(),
-      /password\s+(?:text|varchar)|username\s+(?:text|varchar)/
-    )
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('pauses an authorised import around one encrypted interactive browser handoff', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607200011_interactive_browser_handoff.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
-    assert.match(sql, /create table public\.cr_builder_browser_handoffs/)
-    assert.match(sql, /'waiting_for_access'/)
-    assert.match(sql, /encrypted_session text/)
-    assert.match(sql, /run_after,\s+progress_stage/)
-    assert.match(sql, /create or replace function public\.cr_begin_builder_browser_handoff/)
-    assert.match(sql, /create or replace function public\.cr_confirm_builder_browser_handoff/)
-    assert.match(sql, /create or replace function public\.cr_cancel_builder_browser_handoff/)
-    assert.match(sql, /set run_after = now\(\)/)
-    assert.match(sql, /to service_role/)
-    assert.match(sql, /consumed_cost_microeur = consumed_cost_microeur \+ actual_cost/)
-    assert.match(sql, /source_mode = 'owned'/)
-    assert.match(sql, /AES-GCM envelope/)
-    assert.doesNotMatch(sql.toLowerCase(), /password\s+(?:text|varchar)|token\s+(?:text|varchar)/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('applies an optional creation request only after the faithful first version is durable', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607200012_initial_creation_instruction.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
-    assert.match(sql, /add column initial_instruction text/)
-    assert.match(sql, /initial_instruction_handled_at/)
-    assert.match(
-      sql,
-      /cr_request_site_import\(\s*p_source_url text,[\s\S]+p_initial_instruction text/
-    )
-    assert.match(sql, /site_id := public\.cr_request_site_import/)
-    assert.match(sql, /create or replace function public\.cr_queue_initial_site_instruction/)
-    assert.match(sql, /source_site\.status not in \('ready', 'published'\)/)
-    assert.match(sql, /creation_credits_used = creation_credits_used \+ credit_cost/)
-    assert.match(sql, /'site_edit'/)
-    assert.match(sql, /'Initial guided website change'/)
-    assert.match(sql, /to service_role/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('stops builder generations without allowing a late revision or keeping reserved credits', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607200014_builder_generation_cancellation.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
-    assert.match(sql, /create or replace function public\.cr_cancel_builder_generation/)
-    assert.match(sql, /kind in \('site_import', 'site_edit'\)/)
-    assert.match(sql, /cancelled_at = now\(\)/)
-    assert.match(sql, /perform public\.cr_refund_builder_job_credits\(active_job\.id\)/)
-    assert.match(
-      sql,
-      /reserved_cost_microeur = greatest\(reserved_cost_microeur - reserved_cost, 0\)/
-    )
-    assert.match(sql, /Website generation is no longer active/)
-    assert.match(sql, /status = 'leased'[\s\S]+cancelled_at is null/)
-    assert.match(sql, /Your previous version is unchanged/)
-    assert.match(sql, /grant execute on function public\.cr_cancel_builder_generation/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('stops a guided browser as the same owner-requested creation cancellation', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607200016_fix_guided_browser_generation_cancellation.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
-    assert.match(sql, /create or replace function public\.cr_cancel_builder_browser_handoff/)
-    assert.match(sql, /cancelled_at = now\(\)/)
-    assert.match(sql, /last_error = 'cancelled_by_owner'/)
-    assert.match(sql, /perform public\.cr_refund_builder_job_credits/)
-    assert.doesNotMatch(
-      sql,
-      /update public\.cr_jobs[\s\S]*?progress_updated_at = now\(\),\s+updated_at/
-    )
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('keeps iteration files private, message-bound, and voice requests rate-limited', async () => {
-    const sql = await readFile(
-      new URL('../supabase/migrations/202607200017_studio_prompt_attachments.sql', import.meta.url),
-      'utf8'
-    )
-    assert.match(sql, /'cr-builder-prompt-files'[\s\S]+false/)
-    assert.match(sql, /create table if not exists public\.cr_builder_message_attachments/)
-    assert.match(sql, /create index if not exists cr_builder_message_attachments_message_idx/)
-    assert.match(sql, /drop policy if exists cr_builder_message_attachments_owner_select/)
-    assert.match(sql, /create table if not exists public\.cr_builder_voice_windows/)
-    assert.match(sql, /status in \('pending', 'attached'\)/)
-    assert.match(sql, /cardinality\(attachment_ids\) > 3/)
-    assert.match(sql, /create or replace function public\.cr_request_site_edit_with_context/)
-    assert.match(sql, /cr_request_site_edit_with_selection/)
-    assert.match(sql, /create or replace function public\.cr_take_voice_transcription_slot/)
-    assert.match(sql, /request_count < 10/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('refunds imports claimed by an incompatible worker before provider work starts', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607200003_release_unsupported_site_imports.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
-    assert.match(sql, /Unsupported worker job kind: site_import/)
-    assert.match(sql, /perform public\.cr_settle_site_import/)
-    assert.match(sql, /greatest\(imports_used - 1, 0\)/)
-    assert.match(sql, /Nothing was published or counted against your website allowance/)
-    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
-  })
-
-  it('keeps future incompatible-worker failures automatically refundable', async () => {
-    const sql = await readFile(
-      new URL(
-        '../supabase/migrations/202607200004_refund_incompatible_site_imports.sql',
-        import.meta.url
-      ),
-      'utf8'
-    )
-    assert.match(sql, /create or replace function public\.cr_refund_incompatible_site_import/)
-    assert.match(sql, /after update of status, last_error on public\.cr_jobs/)
-    assert.match(sql, /new\.last_error = 'Unsupported worker job kind: site_import'/)
-    assert.match(sql, /greatest\(imports_used - 1, 0\)/)
+    for (const column of [
+      'progress_stage',
+      'progress_current',
+      'progress_total',
+      'progress_message',
+      'progress_updated_at'
+    ])
+      assert.match(sql, new RegExp(`add column if not exists ${column}`))
+    assert.match(sql, /create or replace function public\.cr_prepare_builder_message_progress/)
+    assert.match(sql, /progress_total > 0 then new\.progress_total else 5/)
+    assert.match(sql, /jobs\.kind = 'site_edit'/)
+    assert.doesNotMatch(sql, /alter publication[^;]+cr_jobs/i)
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 })

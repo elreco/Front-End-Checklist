@@ -10,7 +10,7 @@ import { normalizeWebsiteDraft } from '@/lib/website-draft'
 export const metadata: Metadata = createPublicMetadata({
   title: 'Pricing',
   description:
-    'Compare CodeRocket website cloning, editing, hosting, and optional monitoring plans. Every paid plan has hard usage and cost limits.',
+    'Compare CodeRocket website cloning, editing, and managed hosting plans. Every paid plan has clear usage and cost limits.',
   path: '/pricing',
   image: '/pricing/opengraph-image',
   keywords: ['AI website builder pricing', 'website cloning pricing', 'no-code website hosting']
@@ -30,7 +30,7 @@ const checkoutNotices: Record<string, { message: string; tone: 'danger' | 'muted
     tone: 'danger'
   },
   unavailable: {
-    message: 'Paid plans are temporarily unavailable. Free website checks still work normally.',
+    message: 'Paid plans are temporarily unavailable. You can still explore the creation journey.',
     tone: 'danger'
   }
 }
@@ -47,7 +47,7 @@ function createPricingStructuredData(currency: PricingCurrency) {
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     description:
-      'No-code website cloning, editing, and controlled hosting with optional health tools for existing sites.',
+      'No-code website cloning, editing, and managed hosting from a public website or Figma design.',
     offers: [
       {
         '@type': 'Offer',

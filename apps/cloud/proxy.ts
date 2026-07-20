@@ -4,52 +4,17 @@ import { getSafeAuthDestination } from './lib/auth-redirect'
 import { isAuthenticatedProductRoute } from './lib/product-routes'
 import { getSupabaseServerConfig } from './lib/supabase/config'
 
-const legacyGonePrefixes = [
-  '/ai-website-builder',
-  '/components',
-  '/credits',
-  '/generate',
-  '/generations',
-  '/magic-link',
-  '/open-source',
-  '/users'
-]
-
-const restoredLegacyPaths = new Set(['/components/7igf4HoGRDc'])
-
-/** Apply canonical-host, legacy-route, and authenticated-route behavior at the request boundary. */
+/** Apply canonical-host and authenticated-route behavior at the request boundary. */
 export async function proxy(request: NextRequest) {
   const hostname =
     request.headers.get('host')?.toLowerCase().split(':')[0] ??
     request.nextUrl.hostname.toLowerCase()
-  if (hostname === 'docs.coderocket.app') {
-    const canonical = request.nextUrl.clone()
-    canonical.host = 'www.coderocket.app'
-    canonical.protocol = 'https'
-    canonical.port = ''
-    if (!canonical.pathname.startsWith('/docs')) {
-      canonical.pathname = canonical.pathname === '/' ? '/docs' : `/docs${canonical.pathname}`
-    }
-    return NextResponse.redirect(canonical, 308)
-  }
   if (hostname === 'coderocket.app') {
     const canonical = request.nextUrl.clone()
     canonical.host = 'www.coderocket.app'
     canonical.protocol = 'https'
     canonical.port = ''
     return NextResponse.redirect(canonical, 308)
-  }
-  if (
-    !restoredLegacyPaths.has(request.nextUrl.pathname) &&
-    legacyGonePrefixes.some(
-      prefix =>
-        request.nextUrl.pathname === prefix || request.nextUrl.pathname.startsWith(`${prefix}/`)
-    )
-  ) {
-    return new NextResponse('This legacy CodeRocket page has been permanently removed.', {
-      status: 410,
-      headers: { 'X-Robots-Tag': 'noindex, nofollow, noarchive' }
-    })
   }
   let response = NextResponse.next({ request })
   if (process.env.CODEROCKET_DEMO_MODE === 'true') return response

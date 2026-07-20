@@ -1,4 +1,4 @@
-import { BarChart3, Bell, LockKeyhole, Mail, UserRound } from '@repo/design-system/icons'
+import { BarChart3, History, LockKeyhole, Mail, UserRound } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
 import { CookieSettingsButton } from '@/components/google-analytics-consent'
@@ -54,12 +54,12 @@ export default async function SettingsPage() {
         <aside className="space-y-5">
           <div className="border border-border bg-surface p-5">
             <div className="flex items-center gap-2">
-              <Bell aria-hidden className="h-4 w-4 text-signal" />
-              <h2 className="font-heading font-semibold text-lg">Useful alerts only</h2>
+              <History aria-hidden className="h-4 w-4 text-signal" />
+              <h2 className="font-heading font-semibold text-lg">Recoverable versions</h2>
             </div>
             <p className="mt-3 text-muted text-sm leading-6">
-              New sites alert you only about important problems and repeated check failures. You can
-              change or disable these emails from each site’s settings.
+              Every generated change creates a new version. You can review earlier versions before
+              deciding what to publish.
             </p>
           </div>
           <div className="border border-border bg-background p-5">
@@ -68,8 +68,8 @@ export default async function SettingsPage() {
               <h2 className="font-heading font-semibold text-lg">Private by default</h2>
             </div>
             <p className="mt-3 text-muted text-sm leading-6">
-              Websites and results are visible only to your account. A shared report is created only
-              when you ask for one, and its link can expire.
+              Draft websites stay visible only to your account. A public address is created only
+              when you choose to publish.
             </p>
           </div>
           <div className="border border-border bg-background p-5">

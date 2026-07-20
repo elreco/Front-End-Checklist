@@ -108,7 +108,7 @@ export async function markBuilderAccessVerified(
   if (handoffError) throw new Error(handoffError.message)
 }
 
-/** Remove the browser password after the terminal attempt while retaining a minimal audit status. */
+/** Remove the browser password after the terminal attempt while retaining a minimal access status. */
 export async function clearBuilderImportAccess(
   db: WorkerDatabase,
   siteId: string,

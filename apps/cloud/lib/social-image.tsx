@@ -45,7 +45,7 @@ export function createSocialImage({ accent, headline, kicker }: SocialImageOptio
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontSize: 32, fontWeight: 650 }}>CodeRocket</span>
           <span style={{ color: '#a1a1aa', fontFamily: 'monospace', fontSize: 15 }}>
-            Website health.
+            Clone. Edit. Publish.
           </span>
         </div>
       </div>

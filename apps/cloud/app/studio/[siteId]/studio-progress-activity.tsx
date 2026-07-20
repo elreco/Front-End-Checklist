@@ -1,3 +1,4 @@
+import { FigmaBrandIcon } from '@repo/design-system/brand-icons'
 import {
   Check,
   Circle,
@@ -16,12 +17,16 @@ const captureSlots: Array<'desktop' | 'mobile'> = ['desktop', 'mobile']
 /** Show private source captures as recognisable previews rather than technical image artifacts. */
 export function StudioProgressCaptures({
   events,
-  pending
+  pending,
+  sourceType = 'website'
 }: {
   events: StudioImportEvent[]
   pending: boolean
+  sourceType?: 'figma' | 'website'
 }) {
   const captureEvents = events.filter(event => event.kind === 'capture')
+  const figmaEvents = captureEvents.filter(event => event.artifactKind === 'figma')
+  const figmaSource = sourceType === 'figma' || figmaEvents.length > 0
 
   return (
     <section
@@ -31,11 +36,12 @@ export function StudioProgressCaptures({
       <div className="flex flex-wrap items-start justify-between gap-3 border-border border-b p-4">
         <div>
           <h3 className="font-heading font-semibold text-lg" id="captured-views-heading">
-            Views CodeRocket checked
+            {figmaSource ? 'Figma screens CodeRocket checked' : 'Views CodeRocket checked'}
           </h3>
           <p className="mt-1 text-muted text-sm">
-            Private snapshots used to understand the computer and phone layouts. Deleted after 24
-            hours.
+            {figmaSource
+              ? 'Private frame previews used with Figma layers, text, colours, and spacing. Deleted after 24 hours.'
+              : 'Private snapshots used to understand the computer and phone layouts. Deleted after 24 hours.'}
           </p>
         </div>
         <span className="font-mono text-[10px] text-signal uppercase tracking-[.12em]">
@@ -43,14 +49,22 @@ export function StudioProgressCaptures({
         </span>
       </div>
       <div className="grid gap-3 p-4 sm:grid-cols-2">
-        {captureSlots.map(kind => (
-          <CaptureCard
-            event={captureEvents.find(event => captureMatches(event, kind))}
-            key={kind}
-            kind={kind}
-            pending={pending}
-          />
-        ))}
+        {figmaSource && figmaEvents.length > 0
+          ? figmaEvents
+              .slice(0, 5)
+              .map(event => (
+                <CaptureCard event={event} key={event.id} kind="figma" pending={pending} />
+              ))
+          : figmaSource
+            ? [1].map(slot => <CaptureCard key={slot} kind="figma" pending={pending} />)
+            : captureSlots.map(kind => (
+                <CaptureCard
+                  event={captureEvents.find(event => captureMatches(event, kind))}
+                  key={kind}
+                  kind={kind}
+                  pending={pending}
+                />
+              ))}
       </div>
     </section>
   )
@@ -139,12 +153,17 @@ function CaptureCard({
   pending
 }: {
   event?: StudioImportEvent
-  kind: 'desktop' | 'mobile'
+  kind: 'desktop' | 'figma' | 'mobile'
   pending: boolean
 }) {
   const mobile = kind === 'mobile'
-  const Icon = mobile ? Smartphone : Monitor
-  const label = mobile ? 'Phone view' : 'Computer view'
+  const figma = kind === 'figma'
+  const Icon = figma ? FigmaBrandIcon : mobile ? Smartphone : Monitor
+  const label = figma
+    ? event?.title.replace(/ captured$/i, '') || 'Figma screen'
+    : mobile
+      ? 'Phone view'
+      : 'Computer view'
   const ready = Boolean(event?.artifactUrl)
   return (
     <figure
@@ -163,9 +182,13 @@ function CaptureCard({
       <div className="relative aspect-[16/10] overflow-hidden bg-surface-raised">
         {event?.artifactUrl ? (
           <img
-            alt={`${mobile ? 'Phone' : 'Computer'} capture of the public source page`}
+            alt={
+              figma
+                ? `Private preview of the ${label} Figma screen`
+                : `${mobile ? 'Phone' : 'Computer'} capture of the public source page`
+            }
             className={
-              mobile
+              mobile || figma
                 ? 'h-full w-full object-contain object-top'
                 : 'h-full w-full object-cover object-top'
             }

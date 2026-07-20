@@ -1,9 +1,0 @@
-'use client'
-
-import { createAuthClient } from 'better-auth/react'
-
-type AuthClient = ReturnType<typeof createAuthClient>
-
-export const authClient: AuthClient = createAuthClient({
-  baseURL: typeof window !== 'undefined' ? window.location.origin : undefined
-})

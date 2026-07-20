@@ -1,5 +1,5 @@
 import { CodeRocketMark } from '@repo/design-system/coderocket-logo'
-import { Check, GitPullRequest, Radar, ShieldCheck } from '@repo/design-system/icons'
+import { Check, GitPullRequest, History, ShieldCheck } from '@repo/design-system/icons'
 import { Suspense } from 'react'
 import { createPrivateMetadata } from '@/lib/seo'
 import { LoginForm } from './login-form'
@@ -7,9 +7,9 @@ import { LoginForm } from './login-form'
 export const metadata = createPrivateMetadata('Sign in')
 
 const accountBenefits = [
-  { icon: Radar, text: 'Your existing CodeRocket login still works' },
+  { icon: History, text: 'Every generated change stays in recoverable version history' },
   { icon: GitPullRequest, text: 'Create and edit websites without opening a code screen' },
-  { icon: ShieldCheck, text: 'Drafts, versions, checks, and shared reports stay private' }
+  { icon: ShieldCheck, text: 'Drafts stay private until you choose to publish' }
 ]
 
 export default function LoginPage() {
@@ -28,8 +28,8 @@ export default function LoginPage() {
               <em>without the complexity.</em>
             </h2>
             <p className="mt-7 max-w-lg text-lg text-muted leading-8">
-              Start from an existing website, review an editable version, publish it, and keep
-              monitoring available when you need it.
+              Start from an existing website or Figma design, review an editable version, and
+              publish it only when you are ready.
             </p>
             <ul className="mt-10 space-y-5">
               {accountBenefits.map(({ icon: Icon, text }) => (
@@ -44,18 +44,18 @@ export default function LoginPage() {
           </div>
           <div className="relative mt-14 border border-border bg-background p-5">
             <div className="flex items-center justify-between text-xs uppercase tracking-[.12em]">
-              <span className="text-muted">Example website check</span>
+              <span className="text-muted">Example website version</span>
               <span className="flex items-center gap-2 text-success">
-                <Check aria-hidden className="h-3.5 w-3.5" /> passed
+                <Check aria-hidden className="h-3.5 w-3.5" /> ready
               </span>
             </div>
             <p className="mt-5 font-heading font-semibold text-xl">Acme storefront</p>
-            <p className="mt-1 text-muted text-sm">Production · 12 pages · 14 minutes ago</p>
+            <p className="mt-1 text-muted text-sm">Private draft · 5 pages · saved 14 minutes ago</p>
             <div className="mt-5 grid grid-cols-3 gap-px border border-border bg-border text-center">
               {[
-                ['0', 'new'],
-                ['11', 'still open'],
-                ['7', 'fixed']
+                ['5', 'pages'],
+                ['8', 'sections'],
+                ['3', 'versions']
               ].map(([value, label]) => (
                 <div className="bg-surface p-3" key={label}>
                   <p className="font-mono text-lg">{value}</p>
