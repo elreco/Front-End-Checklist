@@ -328,6 +328,33 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('renews long-running job leases without exposing the queue to browser roles', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607200005_job_lease_renewal.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /create or replace function public\.cr_renew_job_lease/)
+    assert.match(sql, /lease_expires_at = now\(\) \+ interval '5 minutes'/)
+    assert.match(sql, /and lease_owner = p_worker_id/)
+    assert.match(sql, /revoke all[^;]+from public, anon, authenticated/s)
+    assert.match(sql, /grant execute[^;]+to service_role/s)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('retries a failed website without consuming another advertised import', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607200006_retry_failed_site_import.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /create or replace function public\.cr_retry_site_import/)
+    assert.match(sql, /and status = 'failed'/)
+    assert.match(sql, /reserved_cost_microeur = reserved_cost_microeur \+ reservation/)
+    assert.doesNotMatch(sql, /imports_used\s*=\s*imports_used\s*\+\s*1/)
+    assert.match(sql, /insert into public\.cr_jobs/)
+    assert.match(sql, /grant execute[^;]+to authenticated/s)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
   it('refunds imports claimed by an incompatible worker before provider work starts', async () => {
     const sql = await readFile(
       new URL(

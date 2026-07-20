@@ -177,6 +177,20 @@ export class BrowserAuditSession {
       serviceWorkers: 'block',
       userAgent: 'CodeRocket Website Check/1.0'
     })
+    // The TS runtime preserves nested function names with this helper inside browser evaluations.
+    await context.addInitScript({
+      content: `
+        if (typeof globalThis.__name !== 'function') {
+          Object.defineProperty(globalThis, '__name', {
+            configurable: true,
+            value: (target, value) => {
+              Object.defineProperty(target, 'name', { configurable: true, value })
+              return target
+            }
+          })
+        }
+      `
+    })
     const cookie = Object.entries(headers).find(([name]) => name.toLowerCase() === 'cookie')?.[1]
     const requestHeaders = Object.fromEntries(
       Object.entries(headers).filter(([name]) => name.toLowerCase() !== 'cookie')
@@ -286,9 +300,10 @@ export class BrowserAuditSession {
     const startedAt = performance.now()
     const response = await page.goto(requestedUrl.toString(), {
       timeout: NAVIGATION_TIMEOUT_MS,
-      waitUntil: 'domcontentloaded'
+      waitUntil: 'commit'
     })
     if (!response) throw new Error('The website did not return a document')
+    await waitForReadableDocument(page)
     await settlePage(page)
     const finalUrl = new URL(page.url())
     if (isSignInRedirect(requestedUrl, finalUrl))
@@ -330,6 +345,28 @@ export class BrowserAuditSession {
       url: finalUrl.toString()
     }
   }
+}
+
+/**
+ * Continue as soon as a meaningful document is visible, even when a heavy third-party script keeps
+ * the browser's DOMContentLoaded event waiting past the navigation budget.
+ */
+async function waitForReadableDocument(page: Page): Promise<void> {
+  await Promise.race([
+    page
+      .waitForLoadState('domcontentloaded', { timeout: NAVIGATION_TIMEOUT_MS })
+      .catch(() => undefined),
+    page
+      .waitForFunction(
+        `document.body !== null && (
+          (document.body.textContent ?? '').trim().length >= 40
+          || document.body.querySelector('main,header,img,svg,video') !== null
+        )`,
+        undefined,
+        { timeout: NAVIGATION_TIMEOUT_MS }
+      )
+      .catch(() => undefined)
+  ])
 }
 
 /** Find the first visible field without requiring non-technical users to provide CSS selectors. */

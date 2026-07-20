@@ -65,11 +65,23 @@ The additive `202607190001_site_builder_foundation.sql` migration creates:
 - one new `site_import` kind in the existing `cr_jobs` queue.
 
 The existing Fly.io worker claims imports with the same leases and retry policy as website checks.
-A terminal failure releases the unused reservation and preserves a plain-language recovery state.
-During active work it updates the durable job progress and inserts bounded milestones. The Studio
-subscribes to those inserts through Supabase Realtime, then refreshes its owner-scoped progress
-endpoint. A six-second poll remains as a silent fallback when the realtime connection is
-unavailable, so a disconnected browser cannot strand the interface.
+The worker renews its five-minute lease every minute while it owns a long import. If the process
+disappears, the lease expires and another worker can safely claim the durable PostgreSQL job. A
+terminal failure releases the unused reservation and preserves a plain-language recovery state.
+The owner can retry that same failed website without consuming another advertised import; the new
+attempt still reserves its full worst-case provider cost before queueing.
+
+During active work the worker updates durable job progress and inserts bounded milestones. The
+Studio subscribes to those inserts through Supabase Realtime, then refreshes its owner-scoped
+progress endpoint. A six-second poll remains as a silent fallback when the realtime connection is
+unavailable, so closing, reloading, or opening the Studio in another tab cannot strand the job or
+its interface.
+
+The current pilot authorizes one owner account per website. Several tabs or devices signed into
+that account can observe the same job. Separate team members are not authorized yet: an enterprise
+workspace must add organisation membership and role-aware RLS policies before multiple accounts can
+open the same Studio. The queue and event model remain reusable because processing already depends
+on the durable website and job IDs rather than on any viewer connection.
 
 ## Hosting without Vercel
 

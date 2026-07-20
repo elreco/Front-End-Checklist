@@ -4,6 +4,17 @@ import { siteDocumentSchema } from '@coderocket/core'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
+/** Restart one failed recreation without creating or counting another website import. */
+export async function retryBuilderSite(formData: FormData) {
+  const siteId = String(formData.get('siteId') ?? '')
+  if (!siteId) redirect('/websites')
+  const supabase = await createSupabaseServerClient()
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) redirect(`/login?next=/studio/${encodeURIComponent(siteId)}`)
+  const { error } = await supabase.rpc('cr_retry_site_import', { p_site_id: siteId })
+  redirect(`/studio/${siteId}?notice=${error ? 'retry-failed' : 'retry-started'}`)
+}
+
 /** Save novice-facing content fields as a new recoverable site revision. */
 export async function updateBuilderSite(formData: FormData) {
   const siteId = String(formData.get('siteId') ?? '')

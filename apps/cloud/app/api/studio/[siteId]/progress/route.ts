@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sit
     .maybeSingle()
   if (!site) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const [{ data: job }, { data: eventRows }, { data: heartbeat }] = await Promise.all([
+  const [{ data: job }, { data: heartbeat }] = await Promise.all([
     supabase
       .from('cr_jobs')
       .select(
@@ -33,15 +33,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sit
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from('cr_builder_import_events')
-      .select(
-        'id,event_key,event_kind,title,detail,progress,artifact_path,artifact_kind,artifact_expires_at,created_at'
-      )
-      .eq('owner_id', auth.user.id)
-      .eq('site_id', siteId)
-      .order('created_at', { ascending: false })
-      .limit(50),
     createServiceClient()
       .from('cr_worker_heartbeats')
       .select('last_seen_at')
@@ -49,6 +40,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sit
       .limit(1)
       .maybeSingle()
   ])
+  const { data: eventRows } = job
+    ? await supabase
+        .from('cr_builder_import_events')
+        .select(
+          'id,event_key,event_kind,title,detail,progress,artifact_path,artifact_kind,artifact_expires_at,created_at'
+        )
+        .eq('owner_id', auth.user.id)
+        .eq('site_id', siteId)
+        .eq('job_id', job.id)
+        .order('created_at', { ascending: false })
+        .limit(50)
+    : { data: [] }
 
   const events = [...(eventRows ?? [])].reverse()
   const activeArtifactPaths = events.flatMap(event =>

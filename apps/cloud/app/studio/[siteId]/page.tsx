@@ -1,10 +1,10 @@
-import { AlertTriangle, Check, RotateCcw } from '@repo/design-system/icons'
-import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
+import { AlertTriangle, Check } from '@repo/design-system/icons'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ProductShell } from '@/components/product-shell'
 import { getBuilderSite } from '@/lib/builder-data'
 import { createPrivateMetadata } from '@/lib/seo'
+import { RetrySiteImportForm } from './retry-site-import-form'
 import { StudioCreationProgress } from './studio-creation-progress'
 import { StudioEditor } from './studio-editor'
 import { StudioPreview } from './studio-preview'
@@ -16,6 +16,8 @@ const notices: Record<string, string> = {
   published: 'Your latest version is now online.',
   'save-failed': 'The changes could not be saved. Your previous version is unchanged.',
   'publish-failed': 'The website could not be published. Your private version is unchanged.',
+  'retry-started': 'CodeRocket is studying this website again. No additional import was counted.',
+  'retry-failed': 'The website could not be restarted. Nothing was changed.',
   'missing-version': 'This website does not have an editable version yet.',
   'invalid-content': 'Add a business name and a main headline.',
   'invalid-action-link': 'Use a complete secure link beginning with https://.'
@@ -47,7 +49,11 @@ export default async function StudioPage({
     <ProductShell eyebrow="No-code website studio" title={site.name}>
       {notice && notices[notice] ? (
         <p
-          className={`mb-5 border p-4 ${notice === 'saved' || notice === 'published' ? 'border-success bg-surface text-success' : 'border-danger bg-surface text-danger'}`}
+          className={`mb-5 border p-4 ${
+            notice === 'saved' || notice === 'published' || notice === 'retry-started'
+              ? 'border-success bg-surface text-success'
+              : 'border-danger bg-surface text-danger'
+          }`}
           role="status"
         >
           {notices[notice]}
@@ -58,7 +64,6 @@ export default async function StudioPage({
           initialMessage={site.statusMessage}
           initialUpdatedAt={site.updatedAt}
           siteId={site.id}
-          sourceUrl={site.sourceUrl}
         />
       ) : site.status === 'failed' || !site.document ? (
         <section className="flex min-h-[28rem] items-center justify-center border border-danger bg-surface p-6 text-center">
@@ -71,11 +76,7 @@ export default async function StudioPage({
               It may require a sign-in, block automated visitors, or return something other than a
               public web page. Nothing was published.
             </p>
-            <CodeRocketButton asChild className="mt-6">
-              <Link href={`/create?url=${encodeURIComponent(site.sourceUrl)}`}>
-                <RotateCcw aria-hidden /> Try another public page
-              </Link>
-            </CodeRocketButton>
+            <RetrySiteImportForm className="mt-6" siteId={site.id} />
           </div>
         </section>
       ) : previewDocument ? (

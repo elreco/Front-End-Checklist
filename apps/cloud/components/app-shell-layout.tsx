@@ -10,9 +10,11 @@ import { ArrowUpRight, LogOut, PanelLeftClose, PanelLeftOpen } from '@repo/desig
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { TooltipHint, TooltipProvider } from '@repo/design-system/ui/tooltip'
 import Link from 'next/link'
-import { type ReactNode, useEffect, useSyncExternalStore } from 'react'
+import { usePathname } from 'next/navigation'
+import { type ReactNode, useEffect, useState, useSyncExternalStore } from 'react'
 import { signOut } from '@/app/actions'
 import { getPlanLabel } from '@/lib/product-language'
+import { isStudioWorkspaceRoute, resolveSidebarCollapsed } from '@/lib/sidebar-layout'
 import { getNextPlan } from '@/lib/upgrade'
 import { AppNavigation } from './app-navigation'
 import { UpgradeLink } from './plan-limit-upsell'
@@ -85,7 +87,7 @@ interface AppShellLayoutProps {
   projectLimit: number
 }
 
-/** Owns the persistent desktop sidebar state around private product screens. */
+/** Owns the responsive desktop sidebar state around private product screens. */
 export function AppShellLayout({
   children,
   displayName,
@@ -96,11 +98,18 @@ export function AppShellLayout({
   projectCount,
   projectLimit
 }: AppShellLayoutProps) {
-  const collapsed = useSyncExternalStore(
+  const pathname = usePathname()
+  const [expandedStudioPath, setExpandedStudioPath] = useState<string>()
+  const preferredCollapsed = useSyncExternalStore(
     subscribeToSidebarState,
     () => readSidebarState(initialCollapsed),
     () => initialCollapsed
   )
+  const collapsed = resolveSidebarCollapsed({
+    expandedStudioPath,
+    pathname,
+    preferredCollapsed
+  })
 
   useEffect(() => {
     void writeSidebarCookie(readSidebarState(initialCollapsed))
@@ -108,7 +117,11 @@ export function AppShellLayout({
 
   /** Toggle the desktop sidebar without affecting navigation or account state. */
   const toggleSidebar = () => {
-    writeSidebarState(!collapsed)
+    if (isStudioWorkspaceRoute(pathname)) {
+      setExpandedStudioPath(collapsed ? pathname : undefined)
+      return
+    }
+    writeSidebarState(!preferredCollapsed)
   }
 
   return (

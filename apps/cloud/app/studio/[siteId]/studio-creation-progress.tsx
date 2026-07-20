@@ -8,16 +8,14 @@ import {
   LayoutTemplate,
   LoaderCircle,
   Radio,
-  RotateCcw,
   Sparkles,
   TriangleAlert,
   WifiOff
 } from '@repo/design-system/icons'
-import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import { RetrySiteImportForm } from './retry-site-import-form'
 import { StudioProgressActivity, StudioProgressCaptures } from './studio-progress-activity'
 import {
   parseStudioImportProgress,
@@ -39,13 +37,11 @@ type ConnectionMode = 'connecting' | 'live' | 'fallback'
 export function StudioCreationProgress({
   initialMessage,
   initialUpdatedAt,
-  siteId,
-  sourceUrl
+  siteId
 }: {
   initialMessage?: string
   initialUpdatedAt: string
   siteId: string
-  sourceUrl: string
 }) {
   const router = useRouter()
   const terminalHandled = useRef(false)
@@ -177,13 +173,7 @@ export function StudioCreationProgress({
           <p aria-live="polite" className="mt-4 text-muted leading-7">
             {message}
           </p>
-          {failed ? (
-            <CodeRocketButton asChild className="mt-6">
-              <Link href={`/create?url=${encodeURIComponent(sourceUrl)}`}>
-                <RotateCcw aria-hidden /> Try another public page
-              </Link>
-            </CodeRocketButton>
-          ) : null}
+          {failed ? <RetrySiteImportForm className="mt-6" siteId={siteId} /> : null}
         </div>
 
         <div className="mt-7">

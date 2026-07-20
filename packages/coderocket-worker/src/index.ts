@@ -11,6 +11,7 @@ import { failSiteImportJob, processSiteImportJob } from './site-import-job'
 import { cleanupExpiredSiteImportArtifacts, reportSiteImportProgress } from './site-import-progress'
 
 const workerId = `fly-${process.env.FLY_MACHINE_ID ?? randomUUID()}`
+const JOB_LEASE_RENEW_INTERVAL_MS = 60_000
 let stopping = false
 let lastRetentionAt = 0
 
@@ -82,6 +83,54 @@ async function handle(job: WorkerJob) {
   throw new Error(`Unsupported worker job kind: ${String(job.payload.kind)}`)
 }
 
+/** Keep one claimed job private to this worker until it finishes or the worker disappears. */
+function startJobLeaseGuard(jobId: string): { stop: () => Promise<boolean> } {
+  let active = true
+  let stopped = false
+  let timer: NodeJS.Timeout | undefined
+  let renewal: Promise<void> | undefined
+  let stopResult: Promise<boolean> | undefined
+
+  /** Extend the database lease only while this worker still owns it. */
+  const renew = async () => {
+    const { data, error } = await createServiceClient().rpc('cr_renew_job_lease', {
+      p_job_id: jobId,
+      p_worker_id: workerId
+    })
+    if (!error && data === true) return
+    active = false
+    log('error', 'job.lease_lost', {
+      jobId,
+      message: error?.message ?? 'The job is now owned by another worker'
+    })
+  }
+
+  /** Schedule a non-overlapping renewal while the job handler is still active. */
+  const schedule = () => {
+    timer = setTimeout(() => {
+      renewal = renew().finally(() => {
+        renewal = undefined
+        if (active && !stopped) schedule()
+      })
+    }, JOB_LEASE_RENEW_INTERVAL_MS)
+  }
+
+  schedule()
+  return {
+    stop: () => {
+      stopResult ??= (async () => {
+        stopped = true
+        if (timer) clearTimeout(timer)
+        await renewal
+        if (!active) return false
+        await renew()
+        return active
+      })()
+      return stopResult
+    }
+  }
+}
+
 /** Enqueue due work, claim one job, and persist its terminal or retry state. */
 async function tick() {
   const db = createServiceClient()
@@ -113,6 +162,7 @@ async function tick() {
   const { data, error } = await db.rpc('cr_claim_jobs', { p_worker_id: workerId, p_limit: 1 })
   if (error) throw new Error(error.message)
   for (const job of data ?? []) {
+    const lease = startJobLeaseGuard(job.id)
     try {
       const typedJob: WorkerJob = {
         id: job.id,
@@ -123,9 +173,11 @@ async function tick() {
         payload: { ...job.payload, kind: job.kind }
       }
       await handle(typedJob)
+      if (!(await lease.stop())) continue
       await db.rpc('cr_finish_job', { p_job_id: job.id, p_worker_id: workerId })
       log('info', 'job.succeeded', { jobId: job.id, kind: job.kind })
     } catch (error) {
+      if (!(await lease.stop())) continue
       if (error instanceof JobCancelledError) {
         log('info', 'job.cancelled', { jobId: job.id, kind: job.kind })
         continue
