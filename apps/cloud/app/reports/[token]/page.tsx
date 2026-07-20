@@ -167,7 +167,7 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
           </p>
         </div>
         <CodeRocketButton asChild>
-          <Link href="/onboarding">Start free</Link>
+          <Link href="/monitoring">Start free monitoring</Link>
         </CodeRocketButton>
       </footer>
     </main>

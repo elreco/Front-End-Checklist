@@ -5,14 +5,14 @@ import { createPublicMetadata, SUPPORT_EMAIL } from '@/lib/seo'
 export const metadata: Metadata = createPublicMetadata({
   title: 'Privacy policy',
   description:
-    'How CodeRocket collects, uses, protects, retains, and shares account, website check, billing, and support data.',
+    'How CodeRocket collects, uses, protects, retains, and shares website creation, hosting, check, billing, and support data.',
   path: '/legal/privacy'
 })
 
 export default function PrivacyPage() {
   return (
     <LegalPage
-      description="This policy explains what CodeRocket needs to run website checks, protect accounts, provide fix guidance, and manage subscriptions."
+      description="This policy explains what CodeRocket needs to recreate and host websites, run checks, protect accounts, provide guidance, and manage subscriptions."
       title="Privacy policy"
     >
       <h2>1. Who is responsible</h2>
@@ -26,6 +26,10 @@ export default function PrivacyPage() {
       <ul>
         <li>Account identity, email address, authentication provider, and profile preferences.</li>
         <li>Website names, URLs, selected pages, access mode, and project settings.</li>
+        <li>
+          Public source text, images, links, visual settings, editable site documents, versions, and
+          publishing status.
+        </li>
         <li>Check results, technical evidence, rule identifiers, history, and shared reports.</li>
         <li>AI requests, generated fix guidance, model metadata, and usage records.</li>
         <li>Plan, Stripe customer and subscription identifiers, invoices, and payment status.</li>
@@ -50,12 +54,13 @@ export default function PrivacyPage() {
 
       <h2>4. Website content and AI guidance</h2>
       <p>
-        Public checks retrieve only configured HTTPS pages and save the bounded evidence needed to
-        explain a result. A document receipt may include response metadata, a fingerprint, and a
-        redacted structural HTML outline, but not the complete page source. When a user explicitly
-        requests an AI explanation, bounded finding evidence and the relevant rule context are sent
-        to the configured AI provider. Common credential patterns are removed first. Passwords, CI
-        access tokens, cookies, and secret headers must not be included in support or AI requests.
+        Website recreation opens only public HTTPS pages and stores a bounded component document,
+        not the source HTML or JavaScript. Owned-site mode may retain visible public copy and image
+        URLs; inspiration mode removes source identity, images, and wording. Public checks save only
+        the evidence needed to explain a result. When a user explicitly requests AI guidance,
+        bounded evidence and relevant context are sent to the configured AI provider. Common
+        credential patterns are removed first. Passwords, access tokens, cookies, and secret headers
+        must not be included in support or AI requests.
       </p>
 
       <h2>5. Service providers</h2>
@@ -69,10 +74,11 @@ export default function PrivacyPage() {
 
       <h2>6. Retention</h2>
       <p>
-        Website check history follows the active plan: normally 30 days on Free, 90 days on
-        Personal, and 365 days on Agency. Account, billing, security, and legal records may be kept
-        longer when required for fraud prevention, dispute handling, tax, or legal compliance.
-        Revoked share links stop providing access immediately.
+        Website check history follows the active plan: normally 30 days on Free, 90 days on Launch,
+        and 365 days on Studio. Generated website versions are retained while the website and
+        account remain active so owners can recover earlier work. Account, billing, security, and
+        legal records may be kept longer when required for fraud prevention, dispute handling, tax,
+        or legal compliance. Revoked share links stop providing access immediately.
       </p>
 
       <h2>7. Security</h2>

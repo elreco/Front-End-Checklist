@@ -162,7 +162,7 @@ export function OnboardingPagesStep({
             {plan === 'agency' ? (
               <>
                 Remove the {extraPages} extra {extraPages === 1 ? 'page' : 'pages'} to continue.{' '}
-                Agency includes up to {pagesPerProject} pages per site.
+                Studio includes up to {pagesPerProject} pages per site.
               </>
             ) : (
               <>

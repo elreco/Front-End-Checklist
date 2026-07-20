@@ -7,10 +7,10 @@ const footerGroups = [
   {
     title: 'Product',
     links: [
-      { href: '/', label: 'Website monitoring' },
+      { href: '/create', label: 'Clone a website' },
+      { href: '/', label: 'Website builder' },
       { href: '/pricing', label: 'Pricing' },
-      { href: '/docs/audits', label: 'How checks work' },
-      { href: '/docs/ai', label: 'AI fix assistant' }
+      { href: '/monitoring', label: 'Website health tools' }
     ]
   },
   {
@@ -56,8 +56,8 @@ export function MarketingFooter() {
               />
             </Link>
             <p className="mt-5 max-w-sm text-muted leading-7">
-              Clear website health monitoring for owners, freelancers, and agencies. See what
-              changed, why it matters, and what to do next.
+              Clone, edit, and publish a website without code. Optional health tools remain
+              available when an existing site needs ongoing checks.
             </p>
           </div>
 

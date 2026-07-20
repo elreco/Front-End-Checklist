@@ -4,7 +4,7 @@ export const SITE_NAME = 'CodeRocket'
 export const SITE_URL = 'https://www.coderocket.app'
 export const SUPPORT_EMAIL = 'contact@coderocket.app'
 export const DEFAULT_DESCRIPTION =
-  'Monitor website availability, search visibility, accessibility, speed, security, and frontend quality. See what changed and what needs attention.'
+  'Clone, edit, and host a website without code. Start from one public URL, review a private version, and use optional website health tools only when needed.'
 export const DEFAULT_SOCIAL_IMAGE = '/opengraph-image'
 
 export const PUBLIC_ROBOTS: Metadata['robots'] = {

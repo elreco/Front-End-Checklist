@@ -7,6 +7,7 @@ export type UpgradeSource =
   | 'page_limit'
   | 'sidebar_plan'
   | 'site_limit'
+  | 'website_creation'
 
 export interface PricingUpgradeContext {
   currentPlan?: PlanId
@@ -16,7 +17,7 @@ export interface PricingUpgradeContext {
 
 type PricingSearchParams = Record<string, string | string[] | undefined>
 
-/** Return the next self-serve plan without inventing an upgrade beyond Agency. */
+/** Return the next self-serve plan without inventing an upgrade beyond Studio. */
 export function getNextPlan(plan: PlanId): Exclude<PlanId, 'free'> | undefined {
   if (plan === 'free') return 'solo'
   if (plan === 'solo') return 'agency'
@@ -78,7 +79,8 @@ export function parseUpgradeSource(
     value === 'daily_monitoring' ||
     value === 'page_limit' ||
     value === 'sidebar_plan' ||
-    value === 'site_limit'
+    value === 'site_limit' ||
+    value === 'website_creation'
   )
     return value
   return undefined

@@ -5,14 +5,14 @@ import { createPublicMetadata } from '@/lib/seo'
 export const metadata: Metadata = createPublicMetadata({
   title: 'Terms of service',
   description:
-    'Terms governing CodeRocket accounts, website checks, subscriptions, AI guidance, reports, and acceptable use.',
+    'Terms governing CodeRocket website recreation, hosting, checks, subscriptions, AI guidance, reports, and acceptable use.',
   path: '/legal/terms'
 })
 
 export default function TermsPage() {
   return (
     <LegalPage
-      description="These terms govern access to CodeRocket website monitoring, fix guidance, integrations, and shared reports."
+      description="These terms govern access to CodeRocket website recreation, hosting, monitoring, fix guidance, integrations, and shared reports."
       title="Terms of service"
     >
       <h2>1. Agreement</h2>
@@ -24,10 +24,11 @@ export default function TermsPage() {
 
       <h2>2. The service</h2>
       <p>
-        CodeRocket checks configured website pages, records technical findings, compares completed
-        checks, and provides documentation and optional AI-assisted fix guidance. A result is a
-        technical aid, not a guarantee of legal compliance, security, accessibility, ranking,
-        performance, or uninterrupted availability.
+        CodeRocket can study a public website, rebuild visible content with controlled components,
+        host an explicitly published version, check configured pages, record technical findings, and
+        provide optional AI-assisted guidance. A recreation or check is a technical aid, not a
+        guarantee of legal compliance, security, accessibility, ranking, performance, fidelity, or
+        uninterrupted availability.
       </p>
 
       <h2>3. Accounts and authorized websites</h2>
@@ -36,6 +37,11 @@ export default function TermsPage() {
         tokens, and notify CodeRocket of suspected unauthorized use. You may check only websites and
         environments you own or are explicitly authorized to test. Dedicated, least-privileged test
         accounts should be used for protected pages.
+      </p>
+      <p>
+        Choose the ownership option only when you own the source content or have permission to
+        migrate it. Inspiration mode must not be used to impersonate another organization or
+        reproduce protected logos, images, wording, or trade dress.
       </p>
 
       <h2>4. Acceptable use</h2>
@@ -51,11 +57,12 @@ export default function TermsPage() {
       <h2>5. Plans, billing, and cancellation</h2>
       <p>
         Current features and prices are shown on the pricing page. Paid subscriptions renew until
-        canceled and are processed by Stripe. Paid plans include a monthly AI allowance. Token-based
-        AI usage above that allowance is added to the same invoice only when you enable a monthly
-        spending budget in billing settings. Applicable taxes may be added at checkout. Canceling
-        keeps paid access until the end of the current billing period unless the product states
-        otherwise. Statutory refund rights remain unaffected.
+        canceled and are processed by Stripe. Website creation and hosting pause at their included
+        ceilings; overage is never enabled automatically. Paid plans also include a monthly AI
+        allowance. Token-based fix-guidance usage above that allowance is added to the same invoice
+        only when you enable a monthly spending budget in billing settings. Applicable taxes may be
+        added at checkout. Canceling keeps paid access until the end of the current billing period
+        unless the product states otherwise. Statutory refund rights remain unaffected.
       </p>
 
       <h2>6. AI and technical guidance</h2>
@@ -75,7 +82,9 @@ export default function TermsPage() {
 
       <h2>8. Ownership</h2>
       <p>
-        You retain rights in your website and submitted content. CodeRocket retains rights in the
+        You retain rights in your website and submitted content and grant CodeRocket the permission
+        needed to retrieve, transform, store, and serve them at your request. You remain responsible
+        for third-party rights and externally hosted assets. CodeRocket retains rights in the
         product, branding, application code, and service-specific presentation. The synchronized
         Front-End Checklist corpus remains subject to its applicable upstream license and notices.
       </p>

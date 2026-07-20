@@ -255,8 +255,8 @@ function PlanCard({ data }: { data: DashboardData }) {
         {data.plan === 'agency'
           ? 'You have 50 sites, a full year of history, and client reports without secondary branding.'
           : data.plan === 'solo'
-            ? 'Agency adds 50 client sites, a year of history, and fully unbranded reports.'
-            : 'Personal checks up to three websites every day and keeps 90 days of history.'}
+            ? 'Studio adds 50 monitored client sites, a year of history, and fully unbranded reports.'
+            : 'Launch checks up to three websites every day and keeps 90 days of history.'}
       </p>
       <div className="mt-5 border border-border bg-background p-4">
         <p className="font-mono text-[10px] text-signal uppercase tracking-[.12em]">

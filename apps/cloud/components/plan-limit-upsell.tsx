@@ -138,7 +138,7 @@ export function PageLimitUpsell({
     return (
       <div className={`border border-border bg-background ${compact ? 'p-4' : 'p-5'}`}>
         <p className="font-heading font-semibold text-base">
-          The Agency limit is {currentPages} pages per site
+          The Studio limit is {currentPages} pages per site
         </p>
         <p className="mt-1 text-muted text-xs leading-5">
           Remove one monitored page before adding another. Your existing checks and history stay

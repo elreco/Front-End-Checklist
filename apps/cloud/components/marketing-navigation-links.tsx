@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const links = [
-  { hideOnMobile: true, href: '/', label: 'Home', matches: '/' },
+  { hideOnMobile: true, href: '/#how-it-works', label: 'How it works', matches: '/#how-it-works' },
   { hideOnMobile: true, href: '/pricing', label: 'Pricing', matches: '/pricing' },
-  { hideOnMobile: true, href: '/docs', label: 'Docs', matches: '/docs' }
+  { hideOnMobile: true, href: '/docs', label: 'Help', matches: '/docs' }
 ]
 
 /** Main marketing links with an accessible and visible current-section state. */

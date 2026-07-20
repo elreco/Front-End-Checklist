@@ -1,5 +1,5 @@
 import { CodeRocketLogo } from '@repo/design-system/coderocket-logo'
-import { Plus } from '@repo/design-system/icons'
+import { WandSparkles } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
@@ -34,8 +34,8 @@ export async function ProductShell({
         initials={context.initials}
         initialCollapsed={initialSidebarCollapsed}
         plan={context.plan}
-        projectCount={context.projectCount}
-        projectLimit={context.limits.projects}
+        projectCount={context.builderSiteCount}
+        projectLimit={context.builderLimits.sites}
       >
         <div className="min-w-0">
           <header className="sticky top-0 z-40 border-border border-b bg-background">
@@ -57,20 +57,15 @@ export async function ProductShell({
                 </h1>
               </div>
               <div className="ml-auto flex items-center gap-2">
-                <CodeRocketButton
-                  asChild
-                  className="hidden sm:inline-flex"
-                  size="sm"
-                  variant="outline"
-                >
-                  <Link href="/onboarding">
-                    <Plus aria-hidden /> Add a site
+                <CodeRocketButton asChild className="hidden sm:inline-flex" size="sm">
+                  <Link href="/create">
+                    <WandSparkles aria-hidden /> Clone a website
                   </Link>
                 </CodeRocketButton>
                 {action}
                 <Link
                   aria-label={`Open account settings for ${context.displayName}`}
-                  className="flex h-9 w-9 items-center justify-center bg-surface-raised font-mono font-semibold text-xs hover:bg-accent"
+                  className="flex h-9 w-9 items-center justify-center bg-surface-raised font-mono font-semibold text-xs hover:bg-accent hover:text-accent-foreground"
                   href="/settings"
                 >
                   {context.initials}

@@ -8,8 +8,8 @@ export const metadata = createPrivateMetadata('Sign in')
 
 const accountBenefits = [
   { icon: Radar, text: 'Your existing CodeRocket login still works' },
-  { icon: GitPullRequest, text: 'Your new dashboard starts clean and focused on website health' },
-  { icon: ShieldCheck, text: 'Websites, checks, and shared reports stay private' }
+  { icon: GitPullRequest, text: 'Create and edit websites without opening a code screen' },
+  { icon: ShieldCheck, text: 'Drafts, versions, checks, and shared reports stay private' }
 ]
 
 export default function LoginPage() {
@@ -20,16 +20,16 @@ export default function LoginPage() {
           <CodeRocketMark className="absolute -right-24 -bottom-20 h-96 w-96 text-border" />
           <div className="relative">
             <p className="font-mono text-signal text-xs uppercase tracking-[.18em]">
-              Your website control room
+              Your website workspace
             </p>
             <h2 className="mt-7 max-w-xl font-editorial text-6xl leading-[.95] tracking-[-.035em]">
-              Keep every website
+              Build your website
               <br />
-              <em>under control.</em>
+              <em>without the complexity.</em>
             </h2>
             <p className="mt-7 max-w-lg text-lg text-muted leading-8">
-              Sign in to see what changed, what still needs attention, and what has already been
-              fixed across the websites you monitor.
+              Start from an existing website, review an editable version, publish it, and keep
+              monitoring available when you need it.
             </p>
             <ul className="mt-10 space-y-5">
               {accountBenefits.map(({ icon: Icon, text }) => (

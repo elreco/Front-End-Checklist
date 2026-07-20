@@ -9,6 +9,6 @@ export default function PricingOpenGraphImage() {
   return createSocialImage({
     headline: 'Website monitoring',
     accent: 'that scales with you.',
-    kicker: 'Free · Personal · Agency'
+    kicker: 'Free · Launch · Studio'
   })
 }

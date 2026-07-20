@@ -83,7 +83,7 @@ export default async function BillingPage() {
             {nextPlan ? (
               <CodeRocketButton asChild className="mt-6">
                 <UpgradeLink currentPlan={context.plan} source="billing" targetPlan={nextPlan}>
-                  {context.plan === 'free' ? 'Compare paid plans' : 'Upgrade to Agency'}
+                  {context.plan === 'free' ? 'Compare paid plans' : 'Upgrade to Studio'}
                 </UpgradeLink>
               </CodeRocketButton>
             ) : null}

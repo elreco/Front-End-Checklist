@@ -4,11 +4,15 @@ export const AUTHENTICATED_PRODUCT_PREFIXES = [
   '/audits',
   '/settings',
   '/onboarding',
-  '/sites'
+  '/sites',
+  '/create',
+  '/studio',
+  '/websites'
 ]
 
-const CHROME_FREE_PREFIXES = [...AUTHENTICATED_PRODUCT_PREFIXES, '/reports']
+const CHROME_FREE_PREFIXES = [...AUTHENTICATED_PRODUCT_PREFIXES, '/reports', '/s']
 
+/** Match one route prefix without treating similar path names as children. */
 function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }

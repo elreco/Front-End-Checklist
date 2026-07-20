@@ -11,12 +11,12 @@ type LocalizedPlanPrice = {
 
 /** Stable localized monthly prices and AI spending caps mirrored in Stripe. */
 export const LOCALIZED_PRICING: Record<PricingCurrency, LocalizedPlanPrice> = {
-  AUD: { agency: 169, agencyAiCap: 170, locale: 'en-AU', personal: 22, personalAiCap: 34 },
-  CAD: { agency: 149, agencyAiCap: 150, locale: 'en-CA', personal: 19, personalAiCap: 30 },
-  CHF: { agency: 95, agencyAiCap: 95, locale: 'de-CH', personal: 12, personalAiCap: 19 },
-  EUR: { agency: 99, agencyAiCap: 100, locale: 'en-IE', personal: 12, personalAiCap: 20 },
-  GBP: { agency: 89, agencyAiCap: 90, locale: 'en-GB', personal: 11, personalAiCap: 18 },
-  USD: { agency: 109, agencyAiCap: 110, locale: 'en-US', personal: 14, personalAiCap: 22 }
+  AUD: { agency: 249, agencyAiCap: 170, locale: 'en-AU', personal: 49, personalAiCap: 34 },
+  CAD: { agency: 219, agencyAiCap: 150, locale: 'en-CA', personal: 45, personalAiCap: 30 },
+  CHF: { agency: 139, agencyAiCap: 95, locale: 'de-CH', personal: 27, personalAiCap: 19 },
+  EUR: { agency: 149, agencyAiCap: 100, locale: 'en-IE', personal: 29, personalAiCap: 20 },
+  GBP: { agency: 129, agencyAiCap: 90, locale: 'en-GB', personal: 25, personalAiCap: 18 },
+  USD: { agency: 169, agencyAiCap: 110, locale: 'en-US', personal: 32, personalAiCap: 22 }
 }
 
 const COUNTRY_CURRENCIES: Record<string, PricingCurrency> = {

@@ -23,8 +23,8 @@ describe('localized pricing', () => {
   })
 
   it('formats stable localized price points', () => {
-    assert.equal(formatLocalizedPrice(14, 'USD'), '$14')
-    assert.equal(formatLocalizedPrice(11, 'GBP'), '£11')
-    assert.match(formatLocalizedPrice(12, 'EUR'), /€12|12\s€/)
+    assert.equal(formatLocalizedPrice(32, 'USD'), '$32')
+    assert.equal(formatLocalizedPrice(25, 'GBP'), '£25')
+    assert.match(formatLocalizedPrice(29, 'EUR'), /€29|29\s€/)
   })
 })

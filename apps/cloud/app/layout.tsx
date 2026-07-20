@@ -41,7 +41,7 @@ const playfairDisplay = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'CodeRocket — Website health monitoring',
+    default: 'CodeRocket — Clone a website without code',
     template: '%s — CodeRocket'
   },
   description: DEFAULT_DESCRIPTION,
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }]
   },
   openGraph: {
-    title: 'CodeRocket — Website health monitoring',
+    title: 'CodeRocket — Clone a website without code',
     description: DEFAULT_DESCRIPTION,
     url: SITE_URL,
     siteName: SITE_NAME,
@@ -68,13 +68,13 @@ export const metadata: Metadata = {
         url: DEFAULT_SOCIAL_IMAGE,
         width: 1200,
         height: 630,
-        alt: 'CodeRocket website health monitoring'
+        alt: 'CodeRocket no-code website cloning'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CodeRocket — Website health monitoring',
+    title: 'CodeRocket — Clone a website without code',
     description: DEFAULT_DESCRIPTION,
     images: [DEFAULT_SOCIAL_IMAGE]
   },

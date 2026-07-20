@@ -57,8 +57,8 @@ const categoryLabels: Record<FindingCategory, string> = {
 
 const planLabels: Record<PlanId, string> = {
   free: 'Free',
-  solo: 'Personal',
-  agency: 'Agency'
+  solo: 'Launch',
+  agency: 'Studio'
 }
 
 const accessModeLabels: Record<SiteAccessMode, string> = {

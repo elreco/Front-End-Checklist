@@ -89,7 +89,7 @@ export default function SecurityDocumentationPage() {
         </h2>
         <p className="mt-4 max-w-3xl text-muted leading-7">
           A worker periodically removes audits older than the owner plan allows: 30 days for Free,
-          90 days for Personal, and 365 days for Agency. CodeRocket migrations are restricted to the
+          90 days for Launch, and 365 days for Studio. CodeRocket migrations are restricted to the
           isolated <DocsInlineCode>cr_*</DocsInlineCode> database namespace and never read or modify
           tables from the previous product.
         </p>

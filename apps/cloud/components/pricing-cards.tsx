@@ -18,37 +18,39 @@ const plans: Array<{
   {
     id: 'free',
     name: 'Free',
-    description: 'Know when your main website needs attention.',
+    description: 'Monitor one existing website and explore how CodeRocket works.',
     features: [
-      '1 website · 5 important pages',
+      'Website builder demo · no paid work starts',
+      'Monitor 1 website · 5 important pages',
       'Weekly automatic health check',
-      '10 extra checks started by you or CI / month',
-      'At least 3 guided resolutions / month · sharing and handoff included',
-      '30-day history and private reports'
+      '10 extra health checks / month',
+      '30-day history and private reports',
+      'No credit card'
     ]
   },
   {
     id: 'solo',
-    name: 'Personal',
-    description: 'For independent owners and freelancers.',
+    name: 'Launch',
+    description: 'Create and run one professional website without code.',
     features: [
-      '3 websites · 25 pages each',
-      'Daily automatic health checks',
-      '100 extra checks started by you or CI / month',
-      'At least 100 guided resolutions · client and developer handoff included',
-      '90-day history and email alerts'
+      '1 created and hosted website',
+      '5 source recreations / month · up to 10 public pages each',
+      '20,000 hosted visits / month',
+      'Simple editor, safe versions, and publishing',
+      'Stripe, Calendly, and booking links without API setup',
+      'Monitor 3 websites daily · 90-day history'
     ]
   },
   {
     id: 'agency',
-    name: 'Agency',
-    description: 'For agencies maintaining client portfolios.',
+    name: 'Studio',
+    description: 'Create and maintain a small portfolio of client websites.',
     features: [
-      '50 websites · 50 pages each',
-      'Daily automatic health checks',
-      '500 extra checks started by you or CI / month',
-      'At least 600 guided resolutions · sharing and handoff included',
-      '365-day history',
+      '10 created and hosted websites',
+      '50 source recreations / month · up to 50 public pages each',
+      '250,000 hosted visits / month across the workspace',
+      'Versioned editing and one-click publishing',
+      'Monitor 50 websites daily · 365-day history',
       'Reports without secondary branding'
     ]
   }
@@ -56,6 +58,7 @@ const plans: Array<{
 
 interface PricingCardsProps extends PricingUpgradeContext {
   currency: PricingCurrency
+  websiteDraft?: string
 }
 
 /** Render the available CodeRocket plans and their purchase actions. */
@@ -63,7 +66,8 @@ export function PricingCards({
   currency,
   currentPlan,
   recommendedPlan,
-  source
+  source,
+  websiteDraft
 }: PricingCardsProps) {
   const localizedPricing = LOCALIZED_PRICING[currency]
   const trackedView = useRef(false)
@@ -90,19 +94,7 @@ export function PricingCards({
                 plan.id === 'solo' ? localizedPricing.personal : localizedPricing.agency,
                 currency
               )
-        const features =
-          plan.id === 'free'
-            ? plan.features
-            : [
-                ...plan.features.slice(0, 4),
-                `Token-based AI overage after included credits · ${formatLocalizedPrice(
-                  plan.id === 'solo'
-                    ? localizedPricing.personalAiCap
-                    : localizedPricing.agencyAiCap,
-                  currency
-                )} monthly cap`,
-                ...plan.features.slice(4)
-              ]
+        const features = plan.features
         return (
           <article
             className={`relative flex flex-col border-border border-r border-b bg-background p-7 sm:p-9 ${isFeatured ? 'after:absolute after:inset-x-0 after:top-0 after:h-1 after:bg-accent' : ''}`}
@@ -139,7 +131,7 @@ export function PricingCards({
               </CodeRocketButton>
             ) : plan.id === 'free' ? (
               <CodeRocketButton asChild fullWidth variant="outline">
-                <Link href="/onboarding">Start free</Link>
+                <Link href="/monitoring">Use free website checks</Link>
               </CodeRocketButton>
             ) : (
               <form
@@ -155,6 +147,7 @@ export function PricingCards({
               >
                 <input name="plan" type="hidden" value={plan.id} />
                 {source ? <input name="source" type="hidden" value={source} /> : null}
+                {websiteDraft ? <input name="website" type="hidden" value={websiteDraft} /> : null}
                 <CodeRocketButton fullWidth type="submit">
                   Choose {plan.name}
                 </CodeRocketButton>

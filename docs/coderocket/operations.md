@@ -13,7 +13,10 @@ Only the worker and server routes receive `SUPABASE_SERVICE_ROLE_KEY`. It must n
 
 ## Stripe
 
-- Create monthly Personal (€12, internal plan id `solo`) and Agency (€99) recurring prices.
+- Create monthly Launch (€29, internal plan id `solo`) and Studio (€149, internal plan id
+  `agency`) recurring prices.
+- Keep website creation and hosted-visit overage disabled by default. The database hard-stops at
+  the included ceilings documented in `site-builder-architecture.md`.
 - Put their IDs in `STRIPE_SOLO_PRICE_ID` and `STRIPE_AGENCY_PRICE_ID`.
 - Enable automatic tax and tax ID collection in Checkout.
 - Register `/api/stripe/webhook`; subscribe to subscription create/update/delete and invoice payment failure events.

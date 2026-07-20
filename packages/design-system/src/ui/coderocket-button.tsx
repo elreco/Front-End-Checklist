@@ -8,7 +8,8 @@ const codeRocketButtonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'border-accent bg-accent text-white hover:border-[#8b70ff] hover:bg-[#8b70ff]',
+        primary:
+          'border-accent bg-accent text-accent-foreground hover:border-accent-hover hover:bg-accent-hover',
         secondary:
           'border-surface-raised bg-surface-raised text-foreground hover:border-border hover:bg-surface',
         outline:

@@ -5,14 +5,16 @@ import { SITE_URL, SUPPORT_EMAIL } from '@/lib/seo'
 export function GET() {
   const content = `# CodeRocket
 
-> Website health monitoring that shows what changed, what still needs attention, and what could not be verified.
+> Clone a public website into a safe, editable, hosted website without handling source code.
 
-CodeRocket monitors selected website pages through a cloud check when no sign-in is required or a secure customer-controlled runner when access is restricted. It uses deterministic checks grounded in the maintained Front-End Checklist corpus, then offers optional AI explanations without allowing AI to edit a website or resolve a finding.
+CodeRocket's primary journey starts with one public website address. It studies the visible pages, rebuilds them with controlled components, and gives the owner a private version to edit before publishing. Website health monitoring remains available as an optional tool for sites that are already online.
 
 ## Product
 
-- [Website monitoring](${SITE_URL}/): Product overview, use cases, and check model
-- [Pricing](${SITE_URL}/pricing): Free, Personal, and Agency plans
+- [Website builder](${SITE_URL}/): Clone, edit, host, and publish a website without code
+- [Create a website](${SITE_URL}/create): Start from one public website address
+- [Pricing](${SITE_URL}/pricing): Free, Launch, and Studio plans
+- [Website health tools](${SITE_URL}/monitoring): Optional checks for existing websites
 - [Support](${SITE_URL}/support): Product, account, billing, privacy, and security help
 
 ## Official documentation

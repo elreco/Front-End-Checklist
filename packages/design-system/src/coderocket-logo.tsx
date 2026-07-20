@@ -30,7 +30,7 @@ export interface CodeRocketLogoProps extends CodeRocketMarkProps {
   wordmarkClassName?: string
 }
 
-export const CODEROCKET_TAGLINE = 'Website health.'
+export const CODEROCKET_TAGLINE = 'Build without code.'
 
 /** CodeRocket wordmark lockup. */
 export function CodeRocketLogo({

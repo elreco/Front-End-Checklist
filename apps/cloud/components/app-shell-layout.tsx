@@ -185,7 +185,7 @@ export function AppShellLayout({
             }`}
           >
             <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-accent font-mono font-semibold text-white text-xs">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-accent font-mono font-semibold text-accent-foreground text-xs">
                 {initials}
               </span>
               {collapsed ? null : (
@@ -233,6 +233,7 @@ function PlanPrompt({
 }) {
   const isAgency = plan === 'agency'
   const nextPlan = getNextPlan(plan)
+  const builderIncluded = projectLimit > 0
   return (
     <div className="mt-auto border border-border bg-background p-4">
       <div className="flex items-center justify-between gap-2">
@@ -240,12 +241,12 @@ function PlanPrompt({
           {getPlanLabel(plan)} plan
         </p>
         <span className="text-muted text-xs">
-          {projectCount}/{projectLimit} sites
+          {builderIncluded ? `${projectCount}/${projectLimit} created` : 'Builder locked'}
         </span>
       </div>
       <div
         aria-label="Sites used"
-        aria-valuemax={projectLimit}
+        aria-valuemax={Math.max(projectLimit, 1)}
         aria-valuemin={0}
         aria-valuenow={projectCount}
         className="mt-3 h-1 bg-surface-raised"
@@ -253,15 +254,17 @@ function PlanPrompt({
       >
         <span
           className="block h-full bg-accent"
-          style={{ width: `${Math.min(100, (projectCount / projectLimit) * 100)}%` }}
+          style={{
+            width: builderIncluded ? `${Math.min(100, (projectCount / projectLimit) * 100)}%` : '0%'
+          }}
         />
       </div>
       <p className="mt-3 text-muted text-xs leading-5">
         {isAgency
-          ? 'Daily checks and reports without CodeRocket branding are active.'
-          : plan === 'solo'
-            ? 'Need more client websites and reports without CodeRocket branding?'
-            : 'Get daily checks, more sites, and a longer history.'}
+          ? 'Ten created websites are included. Optional monitoring reports remain available.'
+          : builderIncluded
+            ? `${projectLimit - projectCount} created website${projectLimit - projectCount === 1 ? '' : 's'} remaining.`
+            : 'Unlock your first hosted website with Launch. Website checks stay available separately.'}
       </p>
       {nextPlan ? (
         <UpgradeLink
@@ -270,7 +273,7 @@ function PlanPrompt({
           source="sidebar_plan"
           targetPlan={nextPlan}
         >
-          {plan === 'free' ? 'Unlock more sites' : 'Grow to Agency'}{' '}
+          {plan === 'free' ? 'Unlock website creation' : 'Grow to Studio'}{' '}
           <ArrowUpRight aria-hidden className="h-3.5 w-3.5" />
         </UpgradeLink>
       ) : null}

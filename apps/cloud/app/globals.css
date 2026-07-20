@@ -20,6 +20,8 @@
   --color-card: var(--cr-surface);
   --color-background-subtle: var(--cr-surface-raised);
   --color-accent: var(--cr-accent);
+  --color-accent-foreground: var(--cr-accent-foreground);
+  --color-accent-hover: var(--cr-accent-hover);
   --color-signal: var(--cr-signal);
   --color-ring: var(--cr-signal);
   --color-success: var(--cr-success);
@@ -54,6 +56,8 @@
   --cr-muted: #96969f;
   --cr-border: #29292f;
   --cr-accent: #7c5cfc;
+  --cr-accent-foreground: #09090b;
+  --cr-accent-hover: #8b70ff;
   --cr-signal: #22d3ee;
   --cr-success: #53d7a2;
   --cr-danger: #ff7a69;
@@ -88,9 +92,11 @@ body {
   color: var(--cr-foreground);
   font-family: var(--font-geist), system-ui, sans-serif;
 }
-a {
-  color: inherit;
-  text-decoration: none;
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]) {

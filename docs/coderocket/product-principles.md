@@ -5,7 +5,9 @@ strategy, copy, interaction design, implementation, review, and testing.
 
 ## Product promise
 
-CodeRocket turns frontend quality checks into clear decisions and practical next steps.
+CodeRocket turns an existing public website into a safe, editable website that its owner can change
+and publish without handling code. Website creation is the primary product journey. Website health
+checks remain available as a complementary tool for sites that are already online.
 
 The product must be useful to:
 
@@ -22,11 +24,15 @@ than forcing users to choose a technical or non-technical version of CodeRocket.
 The normal starting point is one website address.
 
 ```text
-Add the website address
-→ CodeRocket detects what it can
-→ CodeRocket checks the selected pages
-→ The user sees what matters and what to do next
+Paste the website address
+→ CodeRocket studies the visible public pages
+→ The user reviews a private, editable first version
+→ The user changes what matters and publishes deliberately
 ```
+
+Creation surfaces must lead with this URL-to-website journey. Website health, check history, and
+technical review tools belong under a clearly secondary or optional layer. They must remain
+discoverable without receiving the same visual weight as website creation.
 
 Configuration is introduced only when the default attempt proves that it is needed. For example,
 protected-page access should appear after CodeRocket detects a blocked page, not as a prerequisite
@@ -100,6 +106,9 @@ recovery action. Loading messages describe the operation in progress.
 
 Non-developers should be able to:
 
+- create a private first version of a website by pasting one public address;
+- change its important wording and actions without seeing source code;
+- publish deliberately on managed hosting;
 - add and monitor a public website with only its address;
 - understand the level and highest-priority problem;
 - share a stable result;

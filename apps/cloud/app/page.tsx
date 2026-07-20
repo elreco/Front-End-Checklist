@@ -1,30 +1,23 @@
 import type { Metadata } from 'next'
+import { BuilderMarketing } from '@/components/builder-marketing'
 import { JsonLd } from '@/components/json-ld'
-import { Benefits, Hero } from '@/components/marketing'
-import {
-  absoluteUrl,
-  createPublicMetadata,
-  DEFAULT_DESCRIPTION,
-  SITE_NAME,
-  SITE_URL,
-  SUPPORT_EMAIL
-} from '@/lib/seo'
+import { absoluteUrl, createPublicMetadata, SITE_NAME, SITE_URL, SUPPORT_EMAIL } from '@/lib/seo'
 
-const homeTitle = 'CodeRocket — Website health monitoring'
+const homeTitle = 'CodeRocket — Clone a website without code'
+const homeDescription =
+  'Paste a website address and turn the visible experience into a safe, editable, hosted website. Built for people who do not code.'
 
 export const metadata: Metadata = createPublicMetadata({
   title: homeTitle,
   absoluteTitle: true,
-  description: DEFAULT_DESCRIPTION,
+  description: homeDescription,
   path: '/',
   keywords: [
-    'website health monitoring',
-    'website quality monitoring',
-    'frontend monitoring',
-    'website accessibility checker',
-    'technical SEO monitoring',
-    'website security checks',
-    'frontend regression detection'
+    'clone website without code',
+    'AI website builder',
+    'no-code website recreation',
+    'website importer',
+    'website builder for beginners'
   ]
 })
 
@@ -51,7 +44,7 @@ const homeStructuredData = {
       '@id': `${SITE_URL}/#website`,
       name: SITE_NAME,
       url: SITE_URL,
-      description: DEFAULT_DESCRIPTION,
+      description: homeDescription,
       inLanguage: 'en',
       publisher: { '@id': `${SITE_URL}/#organization` }
     }
@@ -62,8 +55,7 @@ export default function HomePage() {
   return (
     <main>
       <JsonLd data={homeStructuredData} />
-      <Hero />
-      <Benefits />
+      <BuilderMarketing />
     </main>
   )
 }

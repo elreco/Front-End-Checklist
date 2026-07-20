@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createStripeClient, stripeAiOveragePrice, stripePriceForPlan } from '@/lib/stripe'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { parseUpgradeSource } from '@/lib/upgrade'
+import { normalizeWebsiteDraft } from '@/lib/website-draft'
 
 /** Start a plan checkout while preserving the safe in-product upgrade attribution. */
 export async function POST(request: Request) {
@@ -12,8 +13,10 @@ export async function POST(request: Request) {
   const plan = formData.get('plan')
   if (plan !== 'solo' && plan !== 'agency') redirect('/pricing?checkout=invalid')
   const source = parseUpgradeSource(formData.get('source'))
+  const websiteDraft = normalizeWebsiteDraft(String(formData.get('website') ?? ''))
+  const websiteQuery = websiteDraft ? `&url=${encodeURIComponent(websiteDraft)}` : ''
   const attributedPricingPath = source
-    ? `/pricing?source=${source}&recommended=${plan}`
+    ? `/pricing?source=${source}&recommended=${plan}${websiteQuery}`
     : '/pricing'
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase.auth.getUser()
@@ -37,7 +40,9 @@ export async function POST(request: Request) {
     automatic_tax: { enabled: true },
     tax_id_collection: { enabled: true },
     allow_promotion_codes: true,
-    success_url: `${siteUrl}/settings/billing?checkout=success`,
+    success_url: websiteDraft
+      ? `${siteUrl}/create?url=${encodeURIComponent(websiteDraft)}&checkout=success`
+      : `${siteUrl}/settings/billing?checkout=success`,
     cancel_url: `${siteUrl}${attributedPricingPath}${source ? '&' : '?'}checkout=cancelled`,
     metadata: { ownerId: data.user.id, planId: plan, upgradeSource: source ?? 'pricing' },
     subscription_data: {

@@ -294,6 +294,9 @@ user-facing message.
   a prerequisite for the default journey.
 - Keep the default path minimal. Adding a website should normally require only its URL; detect,
   configure, and explain everything else progressively.
+- Treat website cloning, editing, and publishing as CodeRocket's primary journey. Website Health
+  and check history are complementary tools and must not receive equal visual weight in the landing,
+  dashboard, or primary navigation.
 - Lead with the outcome, then the reason and next action. Keep implementation details behind
   clearly labelled progressive disclosure.
 - Use plain, concrete language. Do not expose internal terms such as ruleset hashes, workers,

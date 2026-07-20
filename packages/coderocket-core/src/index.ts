@@ -30,6 +30,18 @@ export {
   type SafeTextResponse
 } from './safe-fetch'
 export { auditSubmissionSchema, type ValidAuditSubmission } from './schemas'
+export {
+  createSiteBundleDocument,
+  createSiteDocument,
+  getBuilderPlanEntitlements,
+  type SiteDocument,
+  type SiteDocumentPage,
+  type SiteGoal,
+  type SiteSourceBlueprint,
+  type SiteSourceMode,
+  type SourceSectionBlueprint,
+  siteDocumentSchema
+} from './site-document'
 export { auditSiteInfrastructure } from './site-infrastructure'
 export {
   extractSiteImageUrls,

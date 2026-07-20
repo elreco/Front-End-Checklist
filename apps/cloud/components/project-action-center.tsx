@@ -207,7 +207,7 @@ export function ProjectActionCenter({ project }: { project: ProjectDetail }) {
               <div className="flex items-center gap-3">
                 <BellRing aria-hidden className="h-5 w-5 text-accent" />
                 <p className="font-mono text-accent text-xs uppercase tracking-[.12em]">
-                  Personal plan
+                  Launch plan
                 </p>
               </div>
               <h2 className="mt-3 font-heading font-semibold text-xl">

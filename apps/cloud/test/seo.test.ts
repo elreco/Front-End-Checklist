@@ -11,6 +11,7 @@ describe('CodeRocket search foundations', () => {
     const entries = sitemap()
     assert.ok(entries.every(entry => entry.url.startsWith('https://www.coderocket.app')))
     assert.ok(entries.some(entry => entry.url === 'https://www.coderocket.app/support'))
+    assert.ok(entries.some(entry => entry.url === 'https://www.coderocket.app/monitoring'))
     assert.ok(entries.some(entry => entry.url === 'https://www.coderocket.app/legal/privacy'))
     assert.ok(
       entries.some(

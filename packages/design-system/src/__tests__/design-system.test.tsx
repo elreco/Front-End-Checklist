@@ -87,6 +87,8 @@ describe('@repo/design-system', () => {
 
     const action = screen.getByRole('button', { name: 'Run audit' })
     expect(action.className).toContain('cursor-pointer')
+    expect(action.className).toContain('text-accent-foreground')
+    expect(action.className).toContain('hover:bg-accent-hover')
     expect(screen.getByRole('link', { name: 'View pricing' }).getAttribute('href')).toBe('/pricing')
   })
 

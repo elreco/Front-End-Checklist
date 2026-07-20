@@ -7,6 +7,7 @@ import { JobCancelledError, processAuditJob, type WorkerJob } from './audit-job'
 import { sendAlertEmail } from './email'
 import { allowsEmailAlert, readEmailAlertKind } from './email-policy'
 import { log } from './log'
+import { failSiteImportJob, processSiteImportJob } from './site-import-job'
 
 const workerId = `fly-${process.env.FLY_MACHINE_ID ?? randomUUID()}`
 let stopping = false
@@ -76,6 +77,7 @@ async function handle(job: WorkerJob) {
   if (job.payload.kind === 'audit') return processAuditJob(job)
   if (job.payload.kind === 'ai_analysis') return processAiAnalysisJob(job)
   if (job.payload.kind === 'ai_usage') return processAiUsageJob(job)
+  if (job.payload.kind === 'site_import') return processSiteImportJob(job)
   throw new Error(`Unsupported worker job kind: ${String(job.payload.kind)}`)
 }
 
@@ -114,6 +116,7 @@ async function tick() {
         id: job.id,
         owner_id: job.owner_id,
         project_id: job.project_id,
+        builder_site_id: job.builder_site_id,
         attempts: job.attempts,
         payload: { ...job.payload, kind: job.kind }
       }
@@ -152,6 +155,18 @@ async function tick() {
             id: job.id,
             owner_id: job.owner_id,
             project_id: job.project_id,
+            attempts: job.attempts,
+            payload: { ...job.payload, kind: job.kind }
+          },
+          message
+        )
+      if (job.kind === 'site_import' && job.attempts >= 3)
+        await failSiteImportJob(
+          {
+            id: job.id,
+            owner_id: job.owner_id,
+            project_id: job.project_id,
+            builder_site_id: job.builder_site_id,
             attempts: job.attempts,
             payload: { ...job.payload, kind: job.kind }
           },

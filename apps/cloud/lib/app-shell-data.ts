@@ -1,4 +1,9 @@
-import { getPlanEntitlements, type PlanEntitlements, type PlanId } from '@coderocket/core'
+import {
+  getBuilderPlanEntitlements,
+  getPlanEntitlements,
+  type PlanEntitlements,
+  type PlanId
+} from '@coderocket/core'
 import { getInitials } from './format'
 import { getSupabaseServerConfig } from './supabase/config'
 import { createSupabaseServerClient } from './supabase/server'
@@ -9,6 +14,8 @@ export interface AppShellContext {
   initials: string
   plan: PlanId
   limits: PlanEntitlements
+  builderLimits: ReturnType<typeof getBuilderPlanEntitlements>
+  builderSiteCount: number
   projectCount: number
   hasBillingAccount: boolean
 }
@@ -19,6 +26,8 @@ const demoContext: AppShellContext = {
   initials: 'AM',
   plan: 'free',
   limits: getPlanEntitlements('free'),
+  builderLimits: getBuilderPlanEntitlements('free'),
+  builderSiteCount: 0,
   projectCount: 1,
   hasBillingAccount: false
 }
@@ -46,7 +55,12 @@ export async function getAppShellContext(): Promise<AppShellContext> {
       projectCount: 0
     }
 
-  const [{ data: profile }, { data: subscription }, { count: projectCount }] = await Promise.all([
+  const [
+    { data: profile },
+    { data: subscription },
+    { count: projectCount },
+    { count: builderSiteCount }
+  ] = await Promise.all([
     supabase.from('cr_profiles').select('display_name').eq('id', auth.user.id).maybeSingle(),
     supabase
       .from('cr_subscriptions')
@@ -55,6 +69,11 @@ export async function getAppShellContext(): Promise<AppShellContext> {
       .maybeSingle(),
     supabase
       .from('cr_projects')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', auth.user.id)
+      .is('archived_at', null),
+    supabase
+      .from('cr_builder_sites')
       .select('id', { count: 'exact', head: true })
       .eq('owner_id', auth.user.id)
       .is('archived_at', null)
@@ -77,6 +96,8 @@ export async function getAppShellContext(): Promise<AppShellContext> {
     initials: getInitials(displayName),
     plan,
     limits: getPlanEntitlements(plan),
+    builderLimits: getBuilderPlanEntitlements(plan),
+    builderSiteCount: builderSiteCount ?? 0,
     projectCount: projectCount ?? 0,
     hasBillingAccount: Boolean(subscription?.stripe_customer_id)
   }

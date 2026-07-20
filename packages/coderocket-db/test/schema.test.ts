@@ -275,4 +275,26 @@ describe('CodeRocket database migration', () => {
     assert.match(sql, /billed_overage_microeur < overage_cap_microeur/)
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
+
+  it('versions recreated websites and reserves provider cost before queueing work', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607190001_site_builder_foundation.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /create table public\.cr_builder_sites/)
+    assert.match(sql, /create table public\.cr_site_revisions/)
+    assert.match(sql, /create table public\.cr_builder_usage_accounts/)
+    assert.match(sql, /create table public\.cr_builder_cost_ledger/)
+    assert.match(sql, /create or replace function public\.cr_request_site_import/)
+    assert.match(sql, /pg_advisory_xact_lock/)
+    assert.match(sql, /reserved_cost_microeur = reserved_cost_microeur \+ reservation/)
+    assert.match(sql, /create or replace function public\.cr_settle_site_import/)
+    assert.match(sql, /Provider cost exceeded the reserved margin budget/)
+    assert.match(sql, /jsonb_array_length\(site_document -> 'pages'\) between 1 and 50/)
+    assert.match(sql, /pg_column_size\(site_document\) <= 2097152/)
+    assert.match(sql, /create or replace function public\.cr_record_published_site_visit/)
+    assert.match(sql, /hosted_visits < hosted_visit_limit/)
+    assert.match(sql, /Never raw HTML, JavaScript, credentials, or executable source/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
 })

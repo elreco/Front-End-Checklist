@@ -1,16 +1,21 @@
-import { DashboardOverview } from '@/components/dashboard/dashboard-overview'
+import { BuilderDashboardOverview } from '@/components/dashboard/builder-dashboard-overview'
 import { ProductShell } from '@/components/product-shell'
 import { getAppShellContext } from '@/lib/app-shell-data'
-import { getDashboardData } from '@/lib/dashboard-data'
+import { listBuilderSites } from '@/lib/builder-data'
 import { createPrivateMetadata } from '@/lib/seo'
 
 export const metadata = createPrivateMetadata('Dashboard')
 
 export default async function DashboardPage() {
-  const [data, context] = await Promise.all([getDashboardData(), getAppShellContext()])
+  const [sites, context] = await Promise.all([listBuilderSites(), getAppShellContext()])
   return (
-    <ProductShell eyebrow="Your workspace" title="Overview">
-      <DashboardOverview data={data} displayName={context.displayName} />
+    <ProductShell eyebrow="Your workspace" title="Website builder">
+      <BuilderDashboardOverview
+        displayName={context.displayName}
+        plan={context.plan}
+        projectCount={context.projectCount}
+        sites={sites}
+      />
     </ProductShell>
   )
 }

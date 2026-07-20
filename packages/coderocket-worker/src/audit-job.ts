@@ -21,6 +21,7 @@ export interface WorkerJob {
   id: string
   owner_id: string
   project_id: string | null
+  builder_site_id?: string | null
   attempts: number
   payload: Record<string, unknown>
 }

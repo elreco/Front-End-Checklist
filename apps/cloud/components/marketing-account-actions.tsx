@@ -1,6 +1,6 @@
 'use client'
 
-import { UserRound } from '@repo/design-system/icons'
+import { UserRound, WandSparkles } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -46,8 +46,8 @@ export function MarketingAccountActions() {
         </Link>
       </CodeRocketButton>
       <CodeRocketButton asChild className="hidden sm:inline-flex" size="sm">
-        <Link aria-current={pathname === '/onboarding' ? 'page' : undefined} href="/onboarding">
-          Start free
+        <Link aria-current={pathname === '/create' ? 'page' : undefined} href="/create">
+          <WandSparkles aria-hidden /> Clone website
         </Link>
       </CodeRocketButton>
     </span>
