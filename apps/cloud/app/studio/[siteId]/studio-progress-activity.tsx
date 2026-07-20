@@ -3,12 +3,15 @@ import {
   Circle,
   Globe2,
   Image,
+  LoaderCircle,
   Monitor,
   Smartphone,
   Sparkles,
   TriangleAlert
 } from '@repo/design-system/icons'
 import type { StudioImportEvent } from './studio-progress-model'
+
+const captureSlots: Array<'desktop' | 'mobile'> = ['desktop', 'mobile']
 
 /** Show private source captures as recognisable previews rather than technical image artifacts. */
 export function StudioProgressCaptures({
@@ -18,7 +21,7 @@ export function StudioProgressCaptures({
   events: StudioImportEvent[]
   pending: boolean
 }) {
-  const captures = events.filter(event => event.kind === 'capture' && event.artifactUrl)
+  const captureEvents = events.filter(event => event.kind === 'capture')
 
   return (
     <section
@@ -28,10 +31,11 @@ export function StudioProgressCaptures({
       <div className="flex flex-wrap items-start justify-between gap-3 border-border border-b p-4">
         <div>
           <h3 className="font-heading font-semibold text-lg" id="captured-views-heading">
-            Views CodeRocket studied
+            Views CodeRocket checked
           </h3>
           <p className="mt-1 text-muted text-sm">
-            Private previews from the public page. They are removed after 24 hours.
+            Private snapshots used to understand the computer and phone layouts. Deleted after 24
+            hours.
           </p>
         </div>
         <span className="font-mono text-[10px] text-signal uppercase tracking-[.12em]">
@@ -39,34 +43,14 @@ export function StudioProgressCaptures({
         </span>
       </div>
       <div className="grid gap-3 p-4 sm:grid-cols-2">
-        {captures.length > 0 ? (
-          captures.map(event => <CaptureCard event={event} key={event.id} pending={pending} />)
-        ) : pending ? (
-          ['Computer view', 'Phone view'].map((label, index) => (
-            <div className="overflow-hidden border border-border bg-surface" key={label}>
-              <div className="flex items-center gap-2 border-border border-b px-3 py-2 font-mono text-[10px] text-muted uppercase tracking-[.08em]">
-                {index === 0 ? (
-                  <Monitor aria-hidden className="h-3.5 w-3.5" />
-                ) : (
-                  <Smartphone aria-hidden className="h-3.5 w-3.5" />
-                )}
-                {label}
-              </div>
-              <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden bg-surface-raised">
-                <div className="absolute inset-x-0 top-0 h-px animate-pulse bg-signal motion-reduce:animate-none" />
-                <Image aria-hidden className="h-7 w-7 text-muted" />
-                <span className="sr-only">Waiting for the private capture</span>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="border border-border bg-surface p-5 sm:col-span-2">
-            <p className="font-semibold text-sm">No view was captured</p>
-            <p className="mt-1 text-muted text-sm leading-6">
-              Creation stopped before CodeRocket could save a computer or phone preview.
-            </p>
-          </div>
-        )}
+        {captureSlots.map(kind => (
+          <CaptureCard
+            event={captureEvents.find(event => captureMatches(event, kind))}
+            key={kind}
+            kind={kind}
+            pending={pending}
+          />
+        ))}
       </div>
     </section>
   )
@@ -84,10 +68,10 @@ export function StudioProgressActivity({
     <section aria-labelledby="live-activity-heading" className="border border-border bg-background">
       <div className="border-border border-b p-4">
         <h3 className="font-heading font-semibold text-lg" id="live-activity-heading">
-          What is happening
+          Live progress
         </h3>
         <p className="mt-1 text-muted text-sm">
-          A simple, live explanation of each completed step.
+          Each update appears here as soon as a step finishes.
         </p>
       </div>
       <ol aria-live="polite" className="max-h-[25rem] space-y-0 overflow-y-auto p-4">
@@ -149,26 +133,48 @@ export function StudioProgressActivity({
   )
 }
 
-function CaptureCard({ event, pending }: { event: StudioImportEvent; pending: boolean }) {
-  if (!event.artifactUrl) return null
-  const mobile = event.artifactKind === 'mobile'
+function CaptureCard({
+  event,
+  kind,
+  pending
+}: {
+  event?: StudioImportEvent
+  kind: 'desktop' | 'mobile'
+  pending: boolean
+}) {
+  const mobile = kind === 'mobile'
+  const Icon = mobile ? Smartphone : Monitor
+  const label = mobile ? 'Phone view' : 'Computer view'
+  const ready = Boolean(event?.artifactUrl)
   return (
-    <figure className="overflow-hidden border border-border bg-surface">
-      <figcaption className="flex items-center gap-2 border-border border-b px-3 py-2 font-mono text-[10px] uppercase tracking-[.08em]">
-        {mobile ? (
-          <Smartphone aria-hidden className="h-3.5 w-3.5 text-signal" />
-        ) : (
-          <Monitor aria-hidden className="h-3.5 w-3.5 text-signal" />
-        )}
-        {mobile ? 'Phone view' : 'Computer view'}
+    <figure
+      aria-busy={pending && !event}
+      className="overflow-hidden border border-border bg-surface"
+    >
+      <figcaption className="flex items-center justify-between gap-3 border-border border-b px-3 py-2 font-mono text-[10px] uppercase tracking-[.08em]">
+        <span className="flex items-center gap-2">
+          <Icon aria-hidden className={`h-3.5 w-3.5 ${ready ? 'text-signal' : 'text-muted'}`} />
+          {label}
+        </span>
+        <span className={ready ? 'text-success' : 'text-muted'}>
+          {ready ? 'Ready' : pending && !event ? 'In progress' : 'Unavailable'}
+        </span>
       </figcaption>
       <div className="relative aspect-[16/10] overflow-hidden bg-surface-raised">
-        <img
-          alt={`${mobile ? 'Phone' : 'Computer'} capture of the public source page`}
-          className="h-full w-full object-cover object-top"
-          loading="lazy"
-          src={event.artifactUrl}
-        />
+        {event?.artifactUrl ? (
+          <img
+            alt={`${mobile ? 'Phone' : 'Computer'} capture of the public source page`}
+            className={
+              mobile
+                ? 'h-full w-full object-contain object-top'
+                : 'h-full w-full object-cover object-top'
+            }
+            decoding="async"
+            src={event.artifactUrl}
+          />
+        ) : (
+          <CapturePlaceholder event={event} label={label} pending={pending} />
+        )}
         {pending ? (
           <span
             aria-hidden
@@ -178,6 +184,44 @@ function CaptureCard({ event, pending }: { event: StudioImportEvent; pending: bo
       </div>
     </figure>
   )
+}
+
+function CapturePlaceholder({
+  event,
+  label,
+  pending
+}: {
+  event?: StudioImportEvent
+  label: string
+  pending: boolean
+}) {
+  const waiting = pending && !event
+  return (
+    <div className="flex h-full flex-col items-center justify-center p-5 text-center">
+      {waiting ? (
+        <LoaderCircle
+          aria-hidden
+          className="h-6 w-6 animate-spin text-signal motion-reduce:animate-none"
+        />
+      ) : (
+        <Image aria-hidden className="h-6 w-6 text-muted" />
+      )}
+      <p className="mt-3 font-semibold text-sm">
+        {waiting ? `Preparing the ${label.toLowerCase()}` : 'Preview image unavailable'}
+      </p>
+      <p className="mt-1 max-w-xs text-muted text-xs leading-5">
+        {waiting
+          ? 'It will appear here automatically as soon as it is ready.'
+          : event
+            ? 'The layout was still checked and the website can continue to be rebuilt.'
+            : 'CodeRocket could not save this private snapshot.'}
+      </p>
+    </div>
+  )
+}
+
+function captureMatches(event: StudioImportEvent, kind: 'desktop' | 'mobile'): boolean {
+  return event.artifactKind === kind || event.key === `capture-${kind}`
 }
 
 function eventIcon(kind: StudioImportEvent['kind']) {

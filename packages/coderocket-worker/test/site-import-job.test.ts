@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { estimateVisualAiCostMicroeur } from '../src/site-import-job'
+import {
+  estimateBrowserRuntimeCostMicroeur,
+  estimateVisualAiCostMicroeur
+} from '../src/site-import-job'
 
 describe('responsive website import cost', () => {
   it('keeps a bounded vision request inside both per-import reservations', () => {
@@ -22,5 +25,11 @@ describe('responsive website import cost', () => {
     assert.equal(visualCost, 158_750)
     assert.ok(visualCost + 10 * 5_000 < 250_000)
     assert.ok(visualCost + 50 * 5_000 < 750_000)
+  })
+
+  it('meters slow browser work in conservative whole-minute blocks', () => {
+    assert.equal(estimateBrowserRuntimeCostMicroeur(0, 0), 0)
+    assert.equal(estimateBrowserRuntimeCostMicroeur(0, 1), 5_000)
+    assert.equal(estimateBrowserRuntimeCostMicroeur(0, 60_001), 10_000)
   })
 })

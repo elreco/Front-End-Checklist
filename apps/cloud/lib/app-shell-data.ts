@@ -15,6 +15,7 @@ export interface AppShellContext {
   plan: PlanId
   limits: PlanEntitlements
   builderLimits: ReturnType<typeof getBuilderPlanEntitlements>
+  builderCreditsRemaining: number
   builderSiteCount: number
   projectCount: number
   hasBillingAccount: boolean
@@ -27,6 +28,7 @@ const demoContext: AppShellContext = {
   plan: 'free',
   limits: getPlanEntitlements('free'),
   builderLimits: getBuilderPlanEntitlements('free'),
+  builderCreditsRemaining: 0,
   builderSiteCount: 0,
   projectCount: 1,
   hasBillingAccount: false
@@ -59,7 +61,8 @@ export async function getAppShellContext(): Promise<AppShellContext> {
     { data: profile },
     { data: subscription },
     { count: projectCount },
-    { count: builderSiteCount }
+    { count: builderSiteCount },
+    { data: builderUsage }
   ] = await Promise.all([
     supabase.from('cr_profiles').select('display_name').eq('id', auth.user.id).maybeSingle(),
     supabase
@@ -76,7 +79,12 @@ export async function getAppShellContext(): Promise<AppShellContext> {
       .from('cr_builder_sites')
       .select('id', { count: 'exact', head: true })
       .eq('owner_id', auth.user.id)
-      .is('archived_at', null)
+      .is('archived_at', null),
+    supabase
+      .from('cr_builder_usage_accounts')
+      .select('creation_credit_limit,creation_credits_used,credits_period_ends_at')
+      .eq('owner_id', auth.user.id)
+      .maybeSingle()
   ])
   const plan: PlanId =
     subscription?.plan_id === 'solo' || subscription?.plan_id === 'agency'
@@ -89,6 +97,17 @@ export async function getAppShellContext(): Promise<AppShellContext> {
       : undefined
   const displayName =
     profile?.display_name || metadataName || email.split('@')[0] || 'CodeRocket user'
+  const builderLimits = getBuilderPlanEntitlements(plan)
+  const usageIsCurrent =
+    builderUsage?.credits_period_ends_at &&
+    new Date(builderUsage.credits_period_ends_at).getTime() > Date.now()
+  const builderCreditsRemaining = usageIsCurrent
+    ? Math.max(
+        0,
+        (builderUsage?.creation_credit_limit ?? builderLimits.creationCreditsPerMonth) -
+          (builderUsage?.creation_credits_used ?? 0)
+      )
+    : builderLimits.creationCreditsPerMonth
 
   return {
     displayName,
@@ -96,7 +115,8 @@ export async function getAppShellContext(): Promise<AppShellContext> {
     initials: getInitials(displayName),
     plan,
     limits: getPlanEntitlements(plan),
-    builderLimits: getBuilderPlanEntitlements(plan),
+    builderLimits,
+    builderCreditsRemaining,
     builderSiteCount: builderSiteCount ?? 0,
     projectCount: projectCount ?? 0,
     hasBillingAccount: Boolean(subscription?.stripe_customer_id)

@@ -8,6 +8,7 @@ export { createDocumentProof } from './document-proof'
 export {
   type DiscoveredPage,
   discoverPublicPagePaths,
+  discoverRenderedPagePaths,
   type PageDiscoverySource,
   type PublicPageDiscovery
 } from './page-discovery'
@@ -31,6 +32,7 @@ export {
 } from './safe-fetch'
 export { auditSubmissionSchema, type ValidAuditSubmission } from './schemas'
 export {
+  BUILDER_CREDIT_COSTS,
   createSiteBundleDocument,
   createSiteDocument,
   getBuilderPlanEntitlements,
@@ -39,10 +41,23 @@ export {
   type SiteGoal,
   type SiteSourceBlueprint,
   type SiteSourceMode,
+  type SourceContentItem,
   type SourceSectionBlueprint,
   siteDocumentSchema
 } from './site-document'
+export {
+  applySiteEditPlan,
+  type SiteEditPlan,
+  type SiteEditSelection,
+  siteEditPlanSchema,
+  siteEditSelectionSchema
+} from './site-edit'
 export { auditSiteInfrastructure } from './site-infrastructure'
+export {
+  pageTemplate,
+  type RepresentativePageTarget,
+  selectRepresentativePageTargets
+} from './site-page-selection'
 export {
   extractSiteImageUrls,
   extractSocialImageUrl,

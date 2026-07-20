@@ -355,6 +355,78 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('charges plain-language builder credits and refunds terminal failures', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607200007_builder_creation_credits.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /create table public\.cr_builder_credit_ledger/)
+    assert.match(sql, /when 'agency' then 600 else 100/)
+    assert.match(sql, /credit_cost := 20/)
+    assert.match(sql, /create trigger cr_jobs_charge_builder_credits/)
+    assert.match(sql, /create or replace function public\.cr_refund_builder_job_credits/)
+    assert.match(sql, /create trigger cr_jobs_refund_failed_builder_credits/)
+    assert.match(sql, /creation_credits_used = greatest/)
+    assert.match(sql, /Provider prices and model tokens stay in internal ledgers/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('adds durable studio conversations and managed full-stack foundations', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607200008_full_stack_studio_foundation.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /'site_edit'/)
+    assert.match(sql, /create table public\.cr_builder_messages/)
+    assert.match(sql, /create table public\.cr_builder_collections/)
+    assert.match(sql, /create table public\.cr_builder_records/)
+    assert.match(sql, /create table public\.cr_builder_connections/)
+    assert.match(sql, /create or replace function public\.cr_request_site_edit/)
+    assert.match(sql, /creation_credits_used = creation_credits_used \+ credit_cost/)
+    assert.match(sql, /create or replace function public\.cr_settle_site_edit/)
+    assert.match(sql, /Provider cost exceeded the reserved margin budget/)
+    assert.match(sql, /alter publication supabase_realtime add table public\.cr_builder_messages/)
+    assert.match(sql, /Credentials belong in encrypted service storage/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('stores bounded visual selections without exposing DOM or source code', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607200009_visual_edit_selection.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /add column selection jsonb/)
+    assert.match(sql, /pg_column_size\(selection\) <= 4096/)
+    assert.match(sql, /create or replace function public\.cr_request_site_edit_with_selection/)
+    assert.match(sql, /queued_job_id := public\.cr_request_site_edit/)
+    assert.match(sql, /set selection = p_selection/)
+    assert.match(sql, /no DOM, HTML, CSS selector, or source code/)
+    assert.match(sql, /Bounded plain-language context/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('uses a short-lived encrypted test account for authorised SaaS imports', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607200010_authenticated_saas_import.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /create table public\.cr_builder_access_connections/)
+    assert.match(sql, /encrypted_credentials text/)
+    assert.match(sql, /expires_at timestamptz/)
+    assert.match(sql, /create or replace function public\.cr_connect_builder_test_account/)
+    assert.match(sql, /public\.cr_retry_site_import\(p_site_id\)/)
+    assert.match(sql, /status in \('failed', 'removed'\) and encrypted_credentials is null/)
+    assert.match(sql, /Never plaintext credentials, cookies, DOM, or source code/)
+    assert.doesNotMatch(
+      sql.toLowerCase(),
+      /password\s+(?:text|varchar)|username\s+(?:text|varchar)/
+    )
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
   it('refunds imports claimed by an incompatible worker before provider work starts', async () => {
     const sql = await readFile(
       new URL(

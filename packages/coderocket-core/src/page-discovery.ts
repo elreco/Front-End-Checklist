@@ -26,6 +26,26 @@ export interface PublicPageDiscovery {
   usedHomepage: boolean
 }
 
+/** Read bounded same-origin navigation paths from an already rendered, authorised app page. */
+export function discoverRenderedPagePaths(
+  html: string,
+  pageUrl: string,
+  maximumPages = 200
+): string[] {
+  const source = new URL(pageUrl)
+  if (source.protocol !== 'https:') throw new Error('Website address must use HTTPS')
+  const limit = Math.max(1, Math.min(MAX_DISCOVERED_PAGES, maximumPages))
+  const paths = new Set<string>()
+  addRenderedPath(paths, source, source)
+  for (const href of extractHtmlLinks(html)) {
+    if (paths.size >= limit) break
+    try {
+      addRenderedPath(paths, new URL(href, source), source)
+    } catch {}
+  }
+  return [...paths]
+}
+
 /** Find same-origin HTML page candidates without crawling every discovered URL. */
 export async function discoverPublicPagePaths(
   rawUrl: string,
@@ -116,6 +136,28 @@ function addPage(
   try {
     const path = normalizeProjectPagePath(pageUrl.pathname)
     if (!discovered.has(path) || source === 'sitemap') discovered.set(path, source)
+  } catch {}
+}
+
+/** Keep navigation-like private routes while excluding authentication and destructive actions. */
+function addRenderedPath(paths: Set<string>, candidate: URL, source: URL) {
+  if (
+    candidate.protocol !== 'https:' ||
+    candidate.origin !== source.origin ||
+    candidate.username ||
+    candidate.password ||
+    !isLikelyHtmlPath(candidate.pathname)
+  )
+    return
+  const segments = candidate.pathname.toLowerCase().split('/').filter(Boolean)
+  if (
+    segments.some(segment =>
+      /^(?:delete|destroy|log-?out|remove|sign-?out|unsubscribe)$/.test(segment)
+    )
+  )
+    return
+  try {
+    paths.add(normalizeProjectPagePath(candidate.pathname))
   } catch {}
 }
 

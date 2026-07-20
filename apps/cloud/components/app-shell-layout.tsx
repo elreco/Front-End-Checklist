@@ -6,18 +6,16 @@ import {
   CodeRocketLogo,
   CodeRocketMark
 } from '@repo/design-system/coderocket-logo'
-import { ArrowUpRight, LogOut, PanelLeftClose, PanelLeftOpen } from '@repo/design-system/icons'
+import { LogOut, PanelLeftClose, PanelLeftOpen } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { TooltipHint, TooltipProvider } from '@repo/design-system/ui/tooltip'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from 'react'
 import { signOut } from '@/app/actions'
-import { getPlanLabel } from '@/lib/product-language'
 import { isStudioWorkspaceRoute, resolveSidebarCollapsed } from '@/lib/sidebar-layout'
-import { getNextPlan } from '@/lib/upgrade'
 import { AppNavigation } from './app-navigation'
-import { UpgradeLink } from './plan-limit-upsell'
+import { AppPlanPrompt } from './app-plan-prompt'
 
 const SIDEBAR_STORAGE_KEY = 'coderocket:sidebar-collapsed'
 const SIDEBAR_COOKIE_KEY = 'coderocket-sidebar-collapsed'
@@ -78,6 +76,8 @@ async function writeSidebarCookie(collapsed: boolean): Promise<void> {
 
 interface AppShellLayoutProps {
   children: ReactNode
+  creditLimit: number
+  creditsRemaining: number
   displayName: string
   email: string
   initials: string
@@ -90,6 +90,8 @@ interface AppShellLayoutProps {
 /** Owns the responsive desktop sidebar state around private product screens. */
 export function AppShellLayout({
   children,
+  creditLimit,
+  creditsRemaining,
   displayName,
   email,
   initials,
@@ -191,7 +193,13 @@ export function AppShellLayout({
           >
             <AppNavigation collapsed={collapsed} />
             {collapsed ? null : (
-              <PlanPrompt plan={plan} projectCount={projectCount} projectLimit={projectLimit} />
+              <AppPlanPrompt
+                creditLimit={creditLimit}
+                creditsRemaining={creditsRemaining}
+                plan={plan}
+                projectCount={projectCount}
+                projectLimit={projectLimit}
+              />
             )}
           </div>
 
@@ -231,66 +239,6 @@ export function AppShellLayout({
       </aside>
 
       <div className="min-w-0">{children}</div>
-    </div>
-  )
-}
-
-/** Summarize plan usage and expose one contextual next-plan action. */
-function PlanPrompt({
-  plan,
-  projectCount,
-  projectLimit
-}: {
-  plan: PlanId
-  projectCount: number
-  projectLimit: number
-}) {
-  const isAgency = plan === 'agency'
-  const nextPlan = getNextPlan(plan)
-  const builderIncluded = projectLimit > 0
-  return (
-    <div className="mt-4 border border-border bg-background p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-mono text-[10px] uppercase tracking-[.14em]">
-          {getPlanLabel(plan)} plan
-        </p>
-        <span className="text-muted text-xs">
-          {builderIncluded ? `${projectCount}/${projectLimit} created` : 'Builder locked'}
-        </span>
-      </div>
-      <div
-        aria-label="Sites used"
-        aria-valuemax={Math.max(projectLimit, 1)}
-        aria-valuemin={0}
-        aria-valuenow={projectCount}
-        className="mt-2.5 h-1 bg-surface-raised"
-        role="progressbar"
-      >
-        <span
-          className="block h-full bg-accent"
-          style={{
-            width: builderIncluded ? `${Math.min(100, (projectCount / projectLimit) * 100)}%` : '0%'
-          }}
-        />
-      </div>
-      <p className="mt-2.5 text-muted text-xs leading-5">
-        {isAgency
-          ? '10 websites included. Monitoring remains optional.'
-          : builderIncluded
-            ? `${projectLimit - projectCount} created website${projectLimit - projectCount === 1 ? '' : 's'} remaining.`
-            : 'Unlock your first hosted website with Launch. Website checks stay available separately.'}
-      </p>
-      {nextPlan ? (
-        <UpgradeLink
-          className="mt-2.5 inline-flex items-center gap-1 font-mono text-accent text-xs hover:text-signal"
-          currentPlan={plan}
-          source="sidebar_plan"
-          targetPlan={nextPlan}
-        >
-          {plan === 'free' ? 'Unlock website creation' : 'Grow to Studio'}{' '}
-          <ArrowUpRight aria-hidden className="h-3.5 w-3.5" />
-        </UpgradeLink>
-      ) : null}
     </div>
   )
 }

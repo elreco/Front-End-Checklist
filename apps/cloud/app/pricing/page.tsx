@@ -82,17 +82,43 @@ export default async function PricingPage({
             No runaway AI bill.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted">
-            Website cloning and hosting have hard monthly limits before work starts. CodeRocket
-            pauses at the included ceiling instead of charging an automatic overage. Optional
-            website checks remain available on every plan.
+            Credits make every creation predictable. CodeRocket shows the credit cost before work
+            starts and pauses when the balance is empty. Hosting has its own included limit, so a
+            popular website never silently consumes the credits used to improve it.
           </p>
         </div>
         <PricingCards currency={currency} websiteDraft={websiteDraft} {...upgradeContext} />
+        <section className="mt-12 border border-border">
+          <div className="border-border border-b p-6 sm:p-8">
+            <p className="font-mono text-signal text-xs uppercase tracking-[.18em]">
+              Creation credits
+            </p>
+            <h2 className="mt-3 font-editorial text-4xl">Simple actions, known cost.</h2>
+            <p className="mt-3 max-w-2xl text-muted leading-7">
+              CodeRocket estimates the complete task before it begins. Technical details such as
+              tokens, browser time, and model choice stay behind the scenes.
+            </p>
+          </div>
+          <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-5">
+            {[
+              ['Free', 'Edit text, a link, or a colour yourself'],
+              ['Up to 6', 'Ask CodeRocket for one guided change'],
+              ['6 credits', 'Add structured data such as products or contacts'],
+              ['6 credits', 'Create one new page'],
+              ['20 credits', 'Rebuild a useful first version from an existing site']
+            ].map(([cost, detail]) => (
+              <div className="bg-background p-5" key={detail}>
+                <p className="font-heading font-semibold text-xl">{cost}</p>
+                <p className="mt-2 text-muted text-sm leading-6">{detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
         <div className="mt-8 grid gap-px border border-border bg-border sm:grid-cols-3">
           {[
             [
-              'Cost reserved first',
-              'Every paid generation reserves provider budget before it enters the queue.'
+              'Credits reserved first',
+              'The displayed credit cost is reserved before work enters the queue, then recorded in your history.'
             ],
             [
               'No automatic overage',

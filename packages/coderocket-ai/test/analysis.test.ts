@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { createSiteDocument } from '@coderocket/core'
 import {
   aiFindingAnalysisSchema,
   buildAnalysisInput,
   buildAnalysisInstructions,
   buildRuleSnapshot,
+  buildSiteEditInput,
+  buildSiteEditInstructions,
   buildSiteVisualInput,
   buildSiteVisualInstructions,
   legacyAiFindingAnalysisSchema,
@@ -152,5 +155,42 @@ describe('CodeRocket AI grounding', () => {
     assert.match(buildSiteVisualInstructions(), /private draft/)
     assert.match(blueprintInput, /untrustedSourceBlueprint/)
     assert.doesNotMatch(blueprintInput, /data:image/)
+  })
+
+  it('grounds vague edit wording in the exact element selected by the owner', () => {
+    const document = createSiteDocument(
+      {
+        accentColor: '#3366ff',
+        backgroundColor: '#ffffff',
+        brandName: 'Example',
+        capturedAt: '2026-07-20T10:00:00.000Z',
+        description: 'A simple private draft.',
+        foregroundColor: '#111111',
+        navigation: [],
+        sections: [
+          {
+            backgroundColor: '#ffffff',
+            body: 'A short explanation.',
+            foregroundColor: '#111111',
+            heading: 'A clear heading',
+            links: [{ href: 'https://example.com/contact', label: 'Talk to us' }]
+          }
+        ],
+        sourceUrl: 'https://example.com/',
+        title: 'Example'
+      },
+      'owned'
+    )
+    const input = buildSiteEditInput(document, 'Make this shorter', {
+      kind: 'button',
+      label: 'Talk to us',
+      pagePath: '/',
+      sectionId: document.sections[0]?.id ?? 'section-1'
+    })
+
+    assert.match(buildSiteEditInstructions(), /exact target/)
+    assert.match(input, /selectedElement/)
+    assert.match(input, /Talk to us/)
+    assert.match(input, /Make this shorter/)
   })
 })

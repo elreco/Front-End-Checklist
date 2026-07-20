@@ -11,6 +11,23 @@ import {
 export type SiteSourceMode = 'owned' | 'inspiration'
 export type SiteGoal = 'contact' | 'booking' | 'sell' | 'present'
 
+export const BUILDER_CREDIT_COSTS = {
+  firstVersion: 20,
+  guidedChange: 6,
+  newPage: 6,
+  quickEdit: 0,
+  structuredData: 6
+} as const
+
+export interface SourceContentItem {
+  body: string
+  imageAlt?: string
+  imageUrl?: string
+  links: Array<{ href: string; label: string }>
+  price?: string
+  title: string
+}
+
 export interface SourceSectionBlueprint {
   backgroundColor: string
   body: string
@@ -18,6 +35,7 @@ export interface SourceSectionBlueprint {
   heading: string
   imageAlt?: string
   imageUrl?: string
+  items?: SourceContentItem[]
   layout?: 'centered' | 'split' | 'stacked'
   links: Array<{ href: string; label: string }>
   visual?: SiteSectionVisualStyle
@@ -47,13 +65,33 @@ const siteLinkSchema = z.object({
   href: httpsUrlSchema,
   label: z.string().trim().min(1).max(80)
 })
+const siteContentItemSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]{1,80}$/),
+  title: z.string().trim().min(1).max(180),
+  body: z.string().trim().max(500),
+  imageAlt: z.string().trim().max(240).optional(),
+  imageUrl: httpsUrlSchema.optional(),
+  links: z.array(siteLinkSchema).max(2),
+  price: z.string().trim().max(80).optional()
+})
 const siteSectionSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]{1,80}$/),
-  kind: z.enum(['hero', 'content', 'features', 'cta']),
+  kind: z.enum([
+    'hero',
+    'content',
+    'features',
+    'collection',
+    'gallery',
+    'testimonials',
+    'pricing',
+    'form',
+    'cta'
+  ]),
   heading: z.string().trim().min(1).max(180),
   body: z.string().trim().max(1200),
   imageAlt: z.string().trim().max(240).optional(),
   imageUrl: httpsUrlSchema.optional(),
+  items: z.array(siteContentItemSchema).max(12).optional(),
   links: z.array(siteLinkSchema).max(4),
   backgroundColor: z.string().max(80),
   foregroundColor: z.string().max(80),
@@ -175,6 +213,24 @@ export function createSiteDocument(
       imageUrl: mode === 'owned' ? safeHttpsUrl(section.imageUrl) : undefined,
       imageAlt:
         mode === 'owned' && section.imageUrl ? cleanText(section.imageAlt ?? '', 240) : undefined,
+      items:
+        mode === 'owned' && section.items
+          ? section.items.slice(0, 12).flatMap((item, itemIndex) => {
+              const title = cleanText(item.title, 180)
+              if (!title) return []
+              return [
+                {
+                  id: `section-${index + 1}-item-${itemIndex + 1}`,
+                  title,
+                  body: cleanText(item.body, 500),
+                  imageUrl: safeHttpsUrl(item.imageUrl),
+                  imageAlt: item.imageUrl ? cleanText(item.imageAlt ?? '', 240) : undefined,
+                  links: normalizeLinks(item.links, sourceOrigin).slice(0, 2),
+                  price: item.price ? cleanText(item.price, 80) : undefined
+                }
+              ]
+            })
+          : undefined,
       links:
         mode === 'owned'
           ? normalizeLinks(section.links, sourceOrigin).slice(0, 4)
@@ -284,8 +340,10 @@ export function getBuilderPlanEntitlements(plan: 'free' | 'solo' | 'agency') {
   if (plan === 'agency')
     return {
       sites: 10,
-      pagesPerImport: 50,
-      importsPerMonth: 50,
+      pagesPerImport: 5,
+      importsPerMonth: 30,
+      creationCreditsPerMonth: 600,
+      firstVersionCreditCost: BUILDER_CREDIT_COSTS.firstVersion,
       hostedVisitsPerMonth: 250_000,
       storageMegabytes: 10_240,
       variableCostBudgetMicroeur: 40_000_000
@@ -293,8 +351,10 @@ export function getBuilderPlanEntitlements(plan: 'free' | 'solo' | 'agency') {
   if (plan === 'solo')
     return {
       sites: 1,
-      pagesPerImport: 10,
+      pagesPerImport: 5,
       importsPerMonth: 5,
+      creationCreditsPerMonth: 100,
+      firstVersionCreditCost: BUILDER_CREDIT_COSTS.firstVersion,
       hostedVisitsPerMonth: 20_000,
       storageMegabytes: 1024,
       variableCostBudgetMicroeur: 6_000_000
@@ -303,6 +363,8 @@ export function getBuilderPlanEntitlements(plan: 'free' | 'solo' | 'agency') {
     sites: 0,
     pagesPerImport: 0,
     importsPerMonth: 0,
+    creationCreditsPerMonth: 0,
+    firstVersionCreditCost: 0,
     hostedVisitsPerMonth: 0,
     storageMegabytes: 0,
     variableCostBudgetMicroeur: 0
@@ -365,8 +427,24 @@ function inferSectionKind(
   section: SourceSectionBlueprint,
   index: number,
   total: number
-): 'content' | 'features' | 'cta' {
+): 'content' | 'features' | 'collection' | 'gallery' | 'pricing' | 'testimonials' | 'cta' {
   if (index === total - 1 && section.links.length > 0) return 'cta'
+  if (section.items && section.items.length > 1) {
+    const searchable = [
+      section.heading,
+      section.body,
+      ...section.items.flatMap(item => [item.title, item.body, item.price ?? ''])
+    ]
+      .join(' ')
+      .toLowerCase()
+    if (section.items.some(item => Boolean(item.price))) return 'pricing'
+    if (
+      /\b(review|reviews|testimonial|testimonials|avis|témoignage|témoignages)\b/.test(searchable)
+    )
+      return 'testimonials'
+    if (section.items.every(item => item.imageUrl && !item.body)) return 'gallery'
+    return 'collection'
+  }
   if (section.links.length > 1) return 'features'
   return 'content'
 }

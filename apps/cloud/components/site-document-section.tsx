@@ -1,4 +1,5 @@
 import type { SiteDocument } from '@coderocket/core'
+import { SiteDocumentCollection } from './site-document-collection'
 import { resolvePublishedSiteHref } from './site-document-href'
 
 type SiteSection = SiteDocument['sections'][number]
@@ -27,6 +28,10 @@ export function SiteDocumentSection({
       : 'text-left'
   return (
     <section
+      data-cr-select-key={!published ? `section-${section.id}` : undefined}
+      data-cr-select-kind={!published ? 'section' : undefined}
+      data-cr-select-label={!published ? section.heading : undefined}
+      data-cr-select-section={!published ? section.id : undefined}
       style={{
         backgroundColor: section.backgroundColor,
         backgroundImage: usesBackgroundImage
@@ -77,10 +82,14 @@ export function SiteDocumentSection({
                 : undefined
             }
           >
-            <SectionHeading index={index} section={section} />
+            <SectionHeading index={index} published={published} section={section} />
             {section.body ? (
               <p
                 className="mt-6 max-w-2xl whitespace-pre-line"
+                data-cr-select-key={!published ? `text-${section.id}` : undefined}
+                data-cr-select-kind={!published ? 'text' : undefined}
+                data-cr-select-label={!published ? section.body.slice(0, 240) : undefined}
+                data-cr-select-section={!published ? section.id : undefined}
                 style={{
                   fontSize: visual
                     ? `clamp(${visual.mobile.bodySize}px, 2vw, ${visual.desktop.bodySize}px)`
@@ -118,13 +127,19 @@ export function SiteDocumentSection({
                       {link.label}
                     </a>
                   ) : (
-                    <span
+                    <button
                       className="inline-flex min-h-11 items-center border px-5 py-3 font-semibold text-sm"
+                      data-cr-select-key={`button-${section.id}-${linkIndex}`}
+                      data-cr-select-kind="button"
+                      data-cr-select-label={link.label}
+                      data-cr-select-section={section.id}
                       key={`${link.href}-${link.label}`}
                       style={primaryStyle}
+                      tabIndex={-1}
+                      type="button"
                     >
                       {link.label}
-                    </span>
+                    </button>
                   )
                 })}
               </div>
@@ -139,6 +154,10 @@ export function SiteDocumentSection({
                   : 'h-full w-full'
               }
               height={900}
+              data-cr-select-key={!published ? `image-${section.id}` : undefined}
+              data-cr-select-kind={!published ? 'image' : undefined}
+              data-cr-select-label={!published ? section.imageAlt || section.heading : undefined}
+              data-cr-select-section={!published ? section.id : undefined}
               loading={index === 0 ? 'eager' : 'lazy'}
               referrerPolicy="no-referrer"
               src={section.imageUrl}
@@ -151,6 +170,12 @@ export function SiteDocumentSection({
             />
           ) : null}
         </div>
+        <SiteDocumentCollection
+          document={document}
+          publicBasePath={publicBasePath}
+          published={published}
+          section={section}
+        />
       </div>
     </section>
   )
@@ -173,7 +198,15 @@ function responsiveTextAlignment(
 }
 
 /** Use one page heading followed by section headings while preserving captured typography. */
-function SectionHeading({ index, section }: { index: number; section: SiteSection }) {
+function SectionHeading({
+  index,
+  published,
+  section
+}: {
+  index: number
+  published: boolean
+  section: SiteSection
+}) {
   const visual = section.visual
   const className = visual
     ? index === 0
@@ -192,11 +225,25 @@ function SectionHeading({ index, section }: { index: number; section: SiteSectio
       }
     : undefined
   return index === 0 ? (
-    <h1 className={className} style={style}>
+    <h1
+      className={className}
+      data-cr-select-key={!published ? `heading-${section.id}` : undefined}
+      data-cr-select-kind={!published ? 'heading' : undefined}
+      data-cr-select-label={!published ? section.heading : undefined}
+      data-cr-select-section={!published ? section.id : undefined}
+      style={style}
+    >
       {section.heading}
     </h1>
   ) : (
-    <h2 className={className} style={style}>
+    <h2
+      className={className}
+      data-cr-select-key={!published ? `heading-${section.id}` : undefined}
+      data-cr-select-kind={!published ? 'heading' : undefined}
+      data-cr-select-label={!published ? section.heading : undefined}
+      data-cr-select-section={!published ? section.id : undefined}
+      style={style}
+    >
       {section.heading}
     </h2>
   )

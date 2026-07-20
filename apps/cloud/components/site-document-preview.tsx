@@ -33,7 +33,12 @@ export function SiteDocumentPreview({
           color: visualTheme?.header.foregroundColor
         }}
       >
-        <div className="flex min-w-0 items-center gap-3">
+        <div
+          className="flex min-w-0 items-center gap-3"
+          data-cr-select-key={!published ? 'brand' : undefined}
+          data-cr-select-kind={!published ? 'brand' : undefined}
+          data-cr-select-label={!published ? document.identity.name : undefined}
+        >
           {document.identity.logoUrl ? (
             <img
               alt=""

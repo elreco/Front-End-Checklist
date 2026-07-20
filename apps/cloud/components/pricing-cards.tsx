@@ -20,7 +20,7 @@ const plans: Array<{
     name: 'Free',
     description: 'Monitor one existing website and explore how CodeRocket works.',
     features: [
-      'Website builder demo · no paid work starts',
+      'Explore the complete website studio demo',
       'Monitor 1 website · 5 important pages',
       'Weekly automatic health check',
       '10 extra health checks / month',
@@ -34,10 +34,12 @@ const plans: Array<{
     description: 'Create and run one professional website without code.',
     features: [
       '1 created and hosted website',
-      '5 responsive recreations / month · up to 10 public pages each',
+      '100 creation credits every month',
+      'A first useful version costs 20 credits · up to 5 key page types',
+      'Manual edits are free · guided AI changes cost up to 6 credits',
       '20,000 hosted visits / month',
-      'Simple editor, safe versions, and publishing',
-      'Stripe, Calendly, and booking links without API setup',
+      'Managed data, safe versions, and publishing',
+      'Stripe and scheduling links · managed data included',
       'Monitor 3 websites daily · 90-day history'
     ]
   },
@@ -47,9 +49,11 @@ const plans: Array<{
     description: 'Create and maintain a small portfolio of client websites.',
     features: [
       '10 created and hosted websites',
-      '50 responsive recreations / month · up to 50 public pages each',
+      '600 shared creation credits every month',
+      'The same clear credit cost for every project',
+      'Credits can build, refine, add pages, or structure data',
       '250,000 hosted visits / month across the workspace',
-      'Versioned editing and one-click publishing',
+      'Version history, collaboration-ready projects, and publishing',
       'Monitor 50 websites daily · 365-day history',
       'Reports without secondary branding'
     ]

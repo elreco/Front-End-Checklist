@@ -75,19 +75,27 @@ export class BrowserAuditSession {
   }
 
   /** Capture a bounded visual and content blueprint without persisting executable source code. */
-  async captureSiteBlueprint(url: string): Promise<SiteSourceBlueprint> {
-    return (await this.captureSiteStudy(url, false)).blueprint
+  async captureSiteBlueprint(url: string, authenticated = false): Promise<SiteSourceBlueprint> {
+    return (await this.captureSiteStudy(url, false, undefined, authenticated)).blueprint
   }
 
   /**
    * Inspect desktop, tablet, and mobile layouts and optionally retain two bounded screenshots only
-   * for the transient visual-analysis request.
+   * for the transient visual-analysis request. Report each retained screenshot as soon as it is
+   * ready so long-running imports can show honest incremental progress.
    */
-  async captureSiteStudy(url: string, includeScreenshots = true): Promise<SiteCaptureStudy> {
+  async captureSiteStudy(
+    url: string,
+    includeScreenshots = true,
+    onCapture?: (capture: SiteViewportCapture) => Promise<void>,
+    authenticated = false
+  ): Promise<SiteCaptureStudy> {
     const requestedUrl = await assertPublicHttpsUrl(url)
     if (requestedUrl.origin !== this.siteOrigin)
       throw new Error('The page is outside the source website')
-    const context = await this.getPublicContext()
+    const context = authenticated
+      ? await this.getAuthenticatedContext()
+      : await this.getPublicContext()
     const page = await context.newPage()
     try {
       let desktopBlueprint: SiteSourceBlueprint | undefined
@@ -99,8 +107,9 @@ export class BrowserAuditSession {
         if (!desktopBlueprint) await this.readPage(page, requestedUrl)
         else {
           await page.evaluate(() => window.scrollTo(0, 0))
-          await page.waitForTimeout(180)
+          await waitForResponsiveLayout(page)
         }
+        await dismissOptionalCookieNotice(page)
         const blueprint = await capturePageBlueprint(page)
         if (viewport.name === 'desktop') desktopBlueprint = blueprint
         if (viewport.name === 'tablet') tabletBlueprint = blueprint
@@ -112,10 +121,12 @@ export class BrowserAuditSession {
             quality: 65,
             type: 'jpeg'
           })
-          captures.push({
+          const capture = {
             ...viewport,
             dataUrl: `data:image/jpeg;base64,${screenshot.toString('base64')}`
-          })
+          }
+          captures.push(capture)
+          await onCapture?.(capture)
         }
       }
       if (!(desktopBlueprint && tabletBlueprint && mobileBlueprint))
@@ -219,6 +230,14 @@ export class BrowserAuditSession {
       return
     }
     if (url.protocol !== 'https:') {
+      await route.abort('blockedbyclient')
+      return
+    }
+    if (
+      url.origin !== this.siteOrigin &&
+      request.method() !== 'GET' &&
+      request.method() !== 'HEAD'
+    ) {
       await route.abort('blockedbyclient')
       return
     }
@@ -367,6 +386,54 @@ async function waitForReadableDocument(page: Page): Promise<void> {
       )
       .catch(() => undefined)
   ])
+}
+
+/**
+ * Give responsive applications time to replace their layout after a viewport change. This keeps
+ * mobile previews from recording a temporary blank frame without waiting indefinitely.
+ */
+async function waitForResponsiveLayout(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('resize'))
+    window.scrollTo(0, 0)
+  })
+  await page
+    .waitForFunction(
+      `(() => {
+        const main = document.querySelector('main, [role="main"]')
+        if (!main) return document.body?.children.length > 1
+        const text = (main.textContent ?? '').trim()
+        return text.length >= 20 || main.querySelector('img, picture, video, svg') !== null
+      })()`,
+      undefined,
+      { timeout: SETTLE_TIMEOUT_MS }
+    )
+    .catch(() => undefined)
+  await page.waitForLoadState('networkidle', { timeout: SETTLE_TIMEOUT_MS }).catch(() => undefined)
+  await page.waitForTimeout(350)
+}
+
+/**
+ * Dismiss only an explicit privacy-preserving cookie choice in the isolated browser. Never accept
+ * optional tracking or guess at an unnamed control merely to reveal the page.
+ */
+async function dismissOptionalCookieNotice(page: Page): Promise<void> {
+  const reject = page
+    .getByRole('button', {
+      name: /^(tout refuser|refuser tout|reject all|decline all|reject optional|necessary only)$/i
+    })
+    .first()
+  if (!(await reject.isVisible().catch(() => false))) return
+  const navigation = page
+    .waitForEvent('framenavigated', {
+      predicate: frame => frame === page.mainFrame(),
+      timeout: 1_500
+    })
+    .catch(() => undefined)
+  await reject.click({ timeout: 1_500 }).catch(() => undefined)
+  await navigation
+  await waitForReadableDocument(page)
+  await settlePage(page)
 }
 
 /** Find the first visible field without requiring non-technical users to provide CSS selectors. */

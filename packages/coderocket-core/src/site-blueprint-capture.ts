@@ -76,6 +76,64 @@ export async function capturePageBlueprint(page: Page): Promise<SiteSourceBluepr
           }
         })
         .slice(0, 8)
+    /** Resolve common native and lazy-loaded image attributes to one public HTTPS asset. */
+    const imageUrlFrom = (image: HTMLImageElement | null) => {
+      if (!image) return undefined
+      const candidates = [
+        image.currentSrc,
+        image.src,
+        image.getAttribute('data-src'),
+        image.getAttribute('data-lazy-src'),
+        image.getAttribute('data-original')
+      ]
+      for (const candidate of candidates) {
+        if (!candidate) continue
+        try {
+          const url = new URL(candidate, window.location.href)
+          if (url.protocol === 'https:') return url.toString()
+        } catch {}
+      }
+      return undefined
+    }
+    /** Capture repeated visible cards as structured content rather than separate website pages. */
+    const itemsFrom = (container: HTMLElement): NonNullable<SourceSectionBlueprint['items']> => {
+      const candidates = Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'article, li, [class*="card" i], [class*="product" i], [data-testid*="product" i]'
+        )
+      )
+        .filter(candidate => visible(candidate))
+        .filter(candidate => {
+          const parentCandidate = candidate.parentElement?.closest(
+            'article, li, [class*="card" i], [class*="product" i], [data-testid*="product" i]'
+          )
+          return !parentCandidate || !container.contains(parentCandidate)
+        })
+        .slice(0, 12)
+      if (candidates.length < 2) return []
+      return candidates.flatMap(candidate => {
+        const titleElement = candidate.querySelector<HTMLElement>(
+          'h2, h3, h4, [class*="title" i], [class*="name" i]'
+        )
+        const title = compact(titleElement?.textContent, 180)
+        const body = compact(candidate.querySelector<HTMLElement>('p')?.textContent, 500)
+        const image = candidate.querySelector<HTMLImageElement>('img')
+        const text = compact(candidate.textContent, 500)
+        const price =
+          text.match(/(?:€|\$|£)\s?\d[\d\s,.]*|\d[\d\s,.]*\s?(?:€|\$|£)/)?.[0]?.trim() ?? undefined
+        if (!title && !imageUrlFrom(image)) return []
+        return [
+          {
+            title: title || compact(image?.alt, 180) || 'Item',
+            body,
+            imageAlt: compact(image?.alt, 240),
+            imageUrl: imageUrlFrom(image),
+            links: linksFrom(candidate).slice(0, 2),
+            price
+          }
+        ]
+      })
+    }
     /** Classify visible shadow depth without storing arbitrary CSS. */
     const elevation = (shadow: string): 'none' | 'soft' | 'strong' => {
       if (!shadow || shadow === 'none') return 'none'
@@ -194,7 +252,8 @@ export async function capturePageBlueprint(page: Page): Promise<SiteSourceBluepr
           foregroundColor: style.color,
           heading: compact(heading?.textContent, 180),
           imageAlt: compact(image?.alt, 240),
-          imageUrl: image?.currentSrc || image?.src || undefined,
+          imageUrl: imageUrlFrom(image),
+          items: itemsFrom(container),
           layout: layoutFrom(container, heading, image),
           links: linksFrom(container).slice(0, 4),
           visual: {

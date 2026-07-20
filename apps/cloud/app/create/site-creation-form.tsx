@@ -10,10 +10,13 @@ export function SiteCreationForm({ initialUrl }: { initialUrl: string }) {
     <form action={createBuilderSite} className="divide-y divide-border">
       <section className="p-5 sm:p-7">
         <p className="font-mono text-signal text-xs uppercase tracking-[.16em]">1 · The source</p>
-        <h2 className="mt-3 font-heading font-semibold text-2xl">Which website should we study?</h2>
+        <h2 className="mt-3 font-heading font-semibold text-2xl">
+          Which website or app should we study?
+        </h2>
         <p className="mt-2 max-w-2xl text-muted leading-7">
-          Use a public page that opens without a password. CodeRocket follows public links and
-          images, but it never copies server code, accounts, or private data.
+          Paste the first screen you want to recreate. If it needs a sign-in, CodeRocket will ask
+          you for a temporary test account on the next step. It never copies the original server or
+          database.
         </p>
         <label className="mt-6 block max-w-2xl font-semibold text-sm" htmlFor="builder-url">
           Website address

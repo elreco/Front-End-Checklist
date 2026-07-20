@@ -34,6 +34,8 @@ export async function ProductShell({
         initials={context.initials}
         initialCollapsed={initialSidebarCollapsed}
         plan={context.plan}
+        creditLimit={context.builderLimits.creationCreditsPerMonth}
+        creditsRemaining={context.builderCreditsRemaining}
         projectCount={context.builderSiteCount}
         projectLimit={context.builderLimits.sites}
       >

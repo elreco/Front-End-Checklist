@@ -2,11 +2,14 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { mergeResponsiveBlueprints } from '../src/site-blueprint-capture'
 import {
+  BUILDER_CREDIT_COSTS,
   createSiteBundleDocument,
   createSiteDocument,
   getBuilderPlanEntitlements,
   type SiteSourceBlueprint
 } from '../src/site-document'
+import { applySiteEditPlan, siteEditPlanSchema, siteEditSelectionSchema } from '../src/site-edit'
+import { pageTemplate, selectRepresentativePageTargets } from '../src/site-page-selection'
 import {
   applySiteVisualRefinement,
   type SiteSectionVisualStyle,
@@ -75,6 +78,44 @@ describe('site document', () => {
     assert.equal(document.sections[0]?.heading, 'Ideas that move people')
     assert.equal(document.sections[0]?.imageUrl, 'https://example.com/hero.jpg')
     assert.equal(document.navigation[0]?.href, 'https://example.com/work')
+  })
+
+  it('keeps repeated visible cards as one structured collection', () => {
+    const document = createSiteDocument(
+      {
+        ...source,
+        sections: [
+          {
+            ...source.sections[0],
+            items: [
+              {
+                body: 'A lightweight everyday shoe.',
+                imageUrl: 'https://example.com/shoe-one.jpg',
+                links: [{ href: '/products/shoe-one', label: 'View shoe' }],
+                price: '€120',
+                title: 'Everyday One'
+              },
+              {
+                body: 'A responsive running shoe.',
+                imageUrl: 'https://example.com/shoe-two.jpg',
+                links: [{ href: '/products/shoe-two', label: 'View shoe' }],
+                price: '€140',
+                title: 'Runner Two'
+              }
+            ]
+          }
+        ]
+      },
+      'owned'
+    )
+
+    assert.equal(document.sections[0]?.kind, 'hero')
+    assert.equal(document.sections[0]?.items?.length, 2)
+    assert.equal(document.sections[0]?.items?.[0]?.price, '€120')
+    assert.equal(
+      document.sections[0]?.items?.[0]?.links[0]?.href,
+      'https://example.com/products/shoe-one'
+    )
   })
 
   it('removes source identity and copy when used only as inspiration', () => {
@@ -172,6 +213,57 @@ describe('site document', () => {
       getBuilderPlanEntitlements('solo').variableCostBudgetMicroeur <
         getBuilderPlanEntitlements('agency').variableCostBudgetMicroeur
     )
+    assert.equal(getBuilderPlanEntitlements('solo').creationCreditsPerMonth, 100)
+    assert.equal(getBuilderPlanEntitlements('agency').creationCreditsPerMonth, 600)
+    assert.equal(BUILDER_CREDIT_COSTS.firstVersion, 20)
+    assert.equal(BUILDER_CREDIT_COSTS.quickEdit, 0)
+  })
+
+  it('selects representative page types instead of every repeated URL', () => {
+    const targets = selectRepresentativePageTargets(
+      'https://example.com/',
+      [
+        '/products',
+        '/products/shoe-one',
+        '/products/shoe-two',
+        '/products/shoe-three',
+        '/about',
+        '/contact',
+        '/checkout',
+        '/assets/logo.svg'
+      ],
+      5
+    )
+
+    assert.deepEqual(
+      targets.map(target => target.path),
+      ['/', '/contact', '/products', '/products/shoe-one', '/about']
+    )
+    assert.equal(pageTemplate('/fr/w/hommes-chaussures'), 'catalog')
+    assert.equal(pageTemplate('/fr/t/air-max-123'), 'catalog-detail')
+  })
+
+  it('keeps useful account screens only for an authorised app import', () => {
+    const publicTargets = selectRepresentativePageTargets(
+      'https://app.example.com/dashboard',
+      ['/account', '/settings', '/login'],
+      5
+    )
+    const privateTargets = selectRepresentativePageTargets(
+      'https://app.example.com/dashboard',
+      ['/account', '/settings', '/login'],
+      5,
+      true
+    )
+
+    assert.deepEqual(
+      publicTargets.map(target => target.path),
+      ['/dashboard', '/settings']
+    )
+    assert.deepEqual(
+      privateTargets.map(target => target.path),
+      ['/dashboard', '/account', '/settings']
+    )
   })
 
   it('bundles multiple captured pages with an honest coverage receipt', () => {
@@ -205,5 +297,101 @@ describe('site document', () => {
       discoveredPages: 3,
       failedPaths: ['/private']
     })
+  })
+
+  it('applies one bounded no-code edit without changing the captured source receipt', () => {
+    const document = createSiteDocument(source, 'owned', 'contact')
+    const edited = applySiteEditPlan(document, {
+      operations: [
+        {
+          body: 'A clearer introduction for the people we want to reach.',
+          pagePath: '/',
+          sectionId: document.sections[0]?.id ?? 'hero',
+          type: 'update_section'
+        },
+        {
+          backgroundColor: '#10141d',
+          body: 'Everything a prospective customer needs before getting in touch.',
+          foregroundColor: '#ffffff',
+          heading: 'How we can help',
+          kind: 'features',
+          layout: 'stacked',
+          pagePath: '/',
+          type: 'add_section'
+        }
+      ],
+      response: 'The introduction is clearer and a benefits section is ready to review.',
+      summary: 'Clarified the homepage'
+    })
+
+    assert.equal(
+      edited.sections[0]?.body,
+      'A clearer introduction for the people we want to reach.'
+    )
+    assert.equal(edited.sections[1]?.heading, 'How we can help')
+    assert.equal(edited.source.url, document.source.url)
+    assert.equal(document.sections.length, 1)
+  })
+
+  it('rejects insecure destinations before an assistant plan can change a website', () => {
+    assert.equal(
+      siteEditPlanSchema.safeParse({
+        operations: [
+          {
+            actionLabel: 'Pay now',
+            actionUrl: 'http://example.com/pay',
+            pagePath: '/',
+            sectionId: 'hero',
+            type: 'update_section'
+          }
+        ],
+        response: 'Updated the payment action.',
+        summary: 'Payment action'
+      }).success,
+      false
+    )
+  })
+
+  it('keeps selected preview context bounded and updates only the chosen collection item', () => {
+    const document = createSiteDocument(
+      {
+        ...source,
+        sections: [
+          {
+            ...source.sections[0],
+            items: [
+              { body: 'A daily shoe.', links: [], title: 'Everyday One' },
+              { body: 'A running shoe.', links: [], price: '€140', title: 'Runner Two' }
+            ]
+          }
+        ]
+      },
+      'owned'
+    )
+    const selection = siteEditSelectionSchema.parse({
+      itemId: document.sections[0]?.items?.[1]?.id,
+      kind: 'collection_item',
+      label: 'Runner Two',
+      pagePath: '/',
+      sectionId: document.sections[0]?.id
+    })
+    const edited = applySiteEditPlan(document, {
+      operations: [
+        {
+          itemId: selection.itemId ?? '',
+          pagePath: '/',
+          price: '€129',
+          sectionId: document.sections[0]?.id ?? '',
+          title: 'Runner Two — New edition',
+          type: 'update_item'
+        }
+      ],
+      response: 'The selected product card is updated.',
+      summary: 'Updated one product card'
+    })
+
+    assert.equal(edited.sections[0]?.items?.[0]?.title, 'Everyday One')
+    assert.equal(edited.sections[0]?.items?.[1]?.title, 'Runner Two — New edition')
+    assert.equal(edited.sections[0]?.items?.[1]?.price, '€129')
   })
 })

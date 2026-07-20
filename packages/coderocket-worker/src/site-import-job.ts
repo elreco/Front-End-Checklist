@@ -10,19 +10,27 @@ import {
   createSiteBundleDocument,
   createSiteDocument,
   discoverPublicPagePaths,
+  discoverRenderedPagePaths,
   getBuilderPlanEntitlements,
-  type PlanId,
   type SiteDocument,
-  type SiteSourceMode
+  selectRepresentativePageTargets
 } from '@coderocket/core'
 import { BrowserAuditSession } from '@coderocket/core/browser'
 import { applySiteVisualRefinement, applySiteVisualTheme } from '@coderocket/core/site-visual'
 import { createServiceClient } from '@coderocket/db'
 import { z } from 'zod'
 import type { WorkerJob } from './audit-job'
+import {
+  clearBuilderImportAccess,
+  loadBuilderImportAccess,
+  markBuilderAccessVerified
+} from './site-import-access'
+import { readablePageName, readBuilderPlan, readSourceMode } from './site-import-model'
 import { reportSiteImportCapture, reportSiteImportProgress } from './site-import-progress'
 
 const PAGE_IMPORT_COST_MICROEUR = 5_000
+const BROWSER_RUNTIME_COST_MICROEUR_PER_MINUTE = 5_000
+const NEXT_PAGE_RUNTIME_RESERVE_MICROEUR = 15_000
 const FAILED_IMPORT_COST_MICROEUR = 25_000
 const FAILED_VISUAL_AI_COST_MICROEUR = 75_000
 const LAUNCH_IMPORT_RESERVATION_MICROEUR = 250_000
@@ -35,10 +43,11 @@ const visualPricingSchema = z.object({
   output_microusd_per_million: z.number().nonnegative()
 })
 
-/** Discover public pages and store one bounded, editable multi-page site-document revision. */
+/** Discover public or authorised screens and store one bounded, editable site-document revision. */
 export async function processSiteImportJob(job: WorkerJob): Promise<void> {
   if (!job.builder_site_id) throw new Error('Website import job has no website')
   const db = createServiceClient()
+  const startedAt = Date.now()
   const { data: site, error } = await db
     .from('cr_builder_sites')
     .select('id,owner_id,source_url,source_mode')
@@ -52,11 +61,13 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     .select('plan_id')
     .eq('owner_id', site.owner_id)
     .maybeSingle()
-  const plan = readPlan(subscription?.plan_id)
+  const plan = readBuilderPlan(subscription?.plan_id)
   const pageLimit = getBuilderPlanEntitlements(plan).pagesPerImport
   const reservedCost =
     plan === 'agency' ? STUDIO_IMPORT_RESERVATION_MICROEUR : LAUNCH_IMPORT_RESERVATION_MICROEUR
   const visualCostBudget = Math.max(0, reservedCost - pageLimit * PAGE_IMPORT_COST_MICROEUR)
+  const access = await loadBuilderImportAccess(db, site.id, site.owner_id)
+  const sourceDescription = access.authenticated ? 'private app' : 'public website'
 
   await reportSiteImportProgress(job, {
     eventKey: 'starting',
@@ -65,7 +76,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     progress: 8,
     stage: 'starting',
     title: 'Creation started',
-    detail: 'CodeRocket is opening the public website in a safe, private workspace.'
+    detail: `CodeRocket is opening the ${sourceDescription} in a safe, isolated workspace.`
   })
   const { error: progressError } = await db
     .from('cr_builder_sites')
@@ -79,40 +90,54 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     .eq('owner_id', site.owner_id)
   if (progressError) throw new Error(progressError.message)
 
-  const browser = new BrowserAuditSession({ siteUrl: site.source_url })
+  const browser = new BrowserAuditSession({ login: access.login, siteUrl: site.source_url })
   try {
     const sourceMode = readSourceMode(site.source_mode)
-    const discovery = await discoverPublicPagePaths(site.source_url).catch(() => undefined)
-    const targets = buildPageTargets(
+    const authorisedSource = access.authenticated
+      ? await browser.loadPage(site.source_url, true)
+      : undefined
+    if (authorisedSource) await markBuilderAccessVerified(db, site.id, site.owner_id)
+    const discovery = access.authenticated
+      ? undefined
+      : await discoverPublicPagePaths(site.source_url).catch(() => undefined)
+    const discoveredPaths = authorisedSource
+      ? discoverRenderedPagePaths(authorisedSource.renderedHtml, authorisedSource.url)
+      : (discovery?.pages.map(page => page.path) ?? [])
+    const targets = selectRepresentativePageTargets(
       site.source_url,
-      discovery?.pages.map(page => page.path) ?? [],
-      pageLimit
+      discoveredPaths,
+      pageLimit,
+      access.authenticated
     )
     await reportSiteImportProgress(job, {
       eventKey: 'pages-found',
       kind: 'progress',
-      message: 'Opening the visible pages',
+      message: 'Checking the first screen on computer and phone',
       progress: 18,
       stage: 'checking_pages',
-      title: targets.length === 1 ? 'Homepage found' : `${targets.length} pages found`,
+      title:
+        targets.length === 1
+          ? 'First screen selected'
+          : `${targets.length} useful page types selected`,
       detail:
         targets.length === 1
-          ? 'The homepage is public and ready to study.'
-          : `CodeRocket found ${targets.length} public pages to recreate in this first version.`,
+          ? access.authenticated
+            ? 'The first signed-in screen is ready to study.'
+            : 'The homepage is public and ready to study.'
+          : `CodeRocket chose ${targets.length} representative screens for a useful first version instead of copying every repeated URL.`,
       total: targets.length
     })
-    const homepageStudy = await browser.captureSiteStudy(targets[0]?.url ?? site.source_url)
-    await Promise.all(
-      homepageStudy.captures.flatMap(capture =>
+    const homepageStudy = await browser.captureSiteStudy(
+      targets[0]?.url ?? site.source_url,
+      true,
+      capture =>
         capture.name === 'desktop' || capture.name === 'mobile'
-          ? [
-              reportSiteImportCapture(job, {
-                dataUrl: capture.dataUrl,
-                name: capture.name
-              })
-            ]
-          : []
-      )
+          ? reportSiteImportCapture(job, {
+              dataUrl: capture.dataUrl,
+              name: capture.name
+            })
+          : Promise.resolve(),
+      access.authenticated
     )
     let homepageBlueprint = homepageStudy.blueprint
     let visualAiCostMicroeur = 0
@@ -142,7 +167,9 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
           reasoningTokens: 0,
           totalTokens: SITE_VISUAL_MAX_INPUT_TOKENS + SITE_VISUAL_MAX_OUTPUT_TOKENS
         })
-        if (maximumVisualCost > visualCostBudget)
+        const remainingVisualBudget =
+          visualCostBudget - estimateBrowserRuntimeCostMicroeur(startedAt, Date.now())
+        if (maximumVisualCost > remainingVisualBudget)
           throw new Error('The configured visual model exceeds the protected import budget')
         await db
           .from('cr_builder_sites')
@@ -219,13 +246,35 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
           : `Recreating page 2 of ${targets.length}`,
       progress: 58,
       stage: 'checking_pages',
-      title: 'Homepage recreated',
+      title: 'First screen recreated',
       detail: 'Its visible content and layout are now safe, editable sections.',
       total: targets.length
     })
     const failedPaths: string[] = []
     for (const [index, target] of targets.slice(1).entries()) {
       const pageNumber = index + 2
+      const costBeforePage =
+        capturedPages.length * PAGE_IMPORT_COST_MICROEUR +
+        visualAiCostMicroeur +
+        estimateBrowserRuntimeCostMicroeur(startedAt, Date.now())
+      if (
+        costBeforePage + PAGE_IMPORT_COST_MICROEUR + NEXT_PAGE_RUNTIME_RESERVE_MICROEUR >
+        reservedCost
+      ) {
+        await reportSiteImportProgress(job, {
+          current: capturedPages.length,
+          eventKey: 'focused-first-version',
+          kind: 'progress',
+          message: 'Preparing your private preview',
+          progress: 88,
+          stage: 'checking_pages',
+          title: 'The useful first version is complete',
+          detail:
+            'CodeRocket stopped after the representative pages that fit this creation, instead of spending credits on repeated URLs.',
+          total: targets.length
+        })
+        break
+      }
       await db
         .from('cr_builder_sites')
         .update({
@@ -235,7 +284,10 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
         .eq('id', site.id)
         .eq('owner_id', site.owner_id)
       try {
-        const capturedBlueprint = await browser.captureSiteBlueprint(target.url)
+        const capturedBlueprint = await browser.captureSiteBlueprint(
+          target.url,
+          access.authenticated
+        )
         const blueprint = homepageBlueprint.visualTheme
           ? applySiteVisualTheme(capturedBlueprint, homepageBlueprint.visualTheme)
           : capturedBlueprint
@@ -278,10 +330,13 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     const siteDocument = createSiteBundleDocument(
       homepage,
       capturedPages,
-      Math.max(targets.length, discovery?.pages.length ?? 0),
+      Math.max(targets.length, discoveredPaths.length),
       failedPaths
     )
-    const actualCost = capturedPages.length * PAGE_IMPORT_COST_MICROEUR + visualAiCostMicroeur
+    const actualCost =
+      capturedPages.length * PAGE_IMPORT_COST_MICROEUR +
+      visualAiCostMicroeur +
+      estimateBrowserRuntimeCostMicroeur(startedAt, Date.now())
     if (actualCost > reservedCost)
       throw new Error('The website study reached its protected cost ceiling')
     await reportSiteImportProgress(job, {
@@ -309,8 +364,8 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
       .update({
         status_message:
           failedPaths.length > 0
-            ? `${capturedPages.length} pages ready · ${failedPaths.length} could not be opened`
-            : `${capturedPages.length} pages recreated`,
+            ? `${capturedPages.length} useful page types ready · ${failedPaths.length} could not be opened`
+            : `${capturedPages.length} useful page types ready`,
         updated_at: new Date().toISOString()
       })
       .eq('id', site.id)
@@ -329,6 +384,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
           : `${capturedPages.length} page${capturedPages.length === 1 ? ' is' : 's are'} ready to review and edit.`,
       total: targets.length
     })
+    await clearBuilderImportAccess(db, site.id, site.owner_id, true).catch(() => undefined)
   } finally {
     await browser.close()
   }
@@ -387,6 +443,13 @@ export function estimateVisualAiCostMicroeur(
   return Math.ceil((providerCostMicrousd * USD_TO_EUR_SAFETY_BUFFER_BPS) / 10_000)
 }
 
+/** Meter browser execution conservatively so long-running imports cannot hide infrastructure cost. */
+export function estimateBrowserRuntimeCostMicroeur(startedAt: number, completedAt: number): number {
+  const elapsedMilliseconds = Math.max(0, completedAt - startedAt)
+  if (elapsedMilliseconds === 0) return 0
+  return Math.ceil(elapsedMilliseconds / 60_000) * BROWSER_RUNTIME_COST_MICROEUR_PER_MINUTE
+}
+
 /** Validate the active database pricing snapshot before calculating provider cost. */
 function readVisualPricing(value: unknown): VisualPricing {
   const parsed = visualPricingSchema.safeParse(value)
@@ -406,6 +469,13 @@ export async function failSiteImportJob(job: WorkerJob, errorMessage: string): P
     p_error: errorMessage
   })
   if (error) throw new Error(error.message)
+  await clearBuilderImportAccess(
+    createServiceClient(),
+    job.builder_site_id,
+    job.owner_id,
+    false,
+    errorMessage
+  ).catch(() => undefined)
   await reportSiteImportProgress(job, {
     eventKey: 'failed',
     kind: 'failed',
@@ -414,43 +484,7 @@ export async function failSiteImportJob(job: WorkerJob, errorMessage: string): P
     stage: 'completed',
     title: 'Creation stopped safely',
     detail:
-      'CodeRocket could not finish this public website after several attempts. Nothing was published.',
+      'CodeRocket could not finish this source after several attempts. Nothing was published.',
     total: 0
   })
-}
-
-/** Normalize stored source permission to the two supported recreation modes. */
-function readSourceMode(value: string): SiteSourceMode {
-  return value === 'inspiration' ? 'inspiration' : 'owned'
-}
-
-/** Keep unknown or missing subscriptions on the non-billable free plan. */
-function readPlan(value?: string): PlanId {
-  if (value === 'agency' || value === 'solo') return value
-  return 'free'
-}
-
-/** Map the entered page to public root and add bounded, unique same-origin discovered pages. */
-function buildPageTargets(
-  sourceUrl: string,
-  discoveredPaths: string[],
-  limit: number
-): Array<{ path: string; url: string }> {
-  const source = new URL(sourceUrl)
-  const targets = [{ path: '/', url: source.toString() }]
-  const seenPaths = new Set<string>(['/', source.pathname])
-  for (const path of discoveredPaths) {
-    if (targets.length >= Math.max(1, limit) || seenPaths.has(path)) continue
-    seenPaths.add(path)
-    targets.push({ path, url: new URL(path, source.origin).toString() })
-  }
-  return targets
-}
-
-/** Turn one public path into a short label that remains understandable outside technical details. */
-function readablePageName(path: string): string {
-  if (path === '/') return 'The homepage'
-  const lastPart = path.split('/').filter(Boolean).at(-1) ?? 'This page'
-  const label = lastPart.replace(/[-_]+/g, ' ').trim()
-  return label ? `“${label.slice(0, 60)}”` : 'This page'
 }

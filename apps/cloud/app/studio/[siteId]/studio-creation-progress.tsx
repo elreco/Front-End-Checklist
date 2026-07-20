@@ -1,17 +1,6 @@
 'use client'
 
-import {
-  Check,
-  Clock3,
-  FileCheck2,
-  Globe2,
-  LayoutTemplate,
-  LoaderCircle,
-  Radio,
-  Sparkles,
-  TriangleAlert,
-  WifiOff
-} from '@repo/design-system/icons'
+import { Check, Clock3, LoaderCircle, Sparkles, TriangleAlert } from '@repo/design-system/icons'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -20,18 +9,17 @@ import { StudioProgressActivity, StudioProgressCaptures } from './studio-progres
 import {
   parseStudioImportProgress,
   type StudioImportProgress,
-  studioProgressPercent
+  studioProgressGuidance,
+  studioProgressPercent,
+  studioQueueIsDelayed
 } from './studio-progress-model'
-
-const creationSteps = [
-  { label: 'Getting ready', threshold: 3, icon: Clock3 },
-  { label: 'Opening the website', threshold: 15, icon: Globe2 },
-  { label: 'Understanding the design', threshold: 38, icon: Sparkles },
-  { label: 'Recreating the pages', threshold: 55, icon: LayoutTemplate },
-  { label: 'Preparing your preview', threshold: 90, icon: FileCheck2 }
-]
-
-type ConnectionMode = 'connecting' | 'live' | 'fallback'
+import {
+  currentStudioStepLabel,
+  formatStudioElapsed,
+  StudioConnectionBadge,
+  type StudioConnectionMode,
+  StudioCreationSteps
+} from './studio-progress-status'
 
 /** Show owner-friendly live recreation progress with Realtime updates and automatic polling backup. */
 export function StudioCreationProgress({
@@ -47,7 +35,7 @@ export function StudioCreationProgress({
   const terminalHandled = useRef(false)
   const refreshTimer = useRef<number | undefined>(undefined)
   const [now, setNow] = useState(0)
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('connecting')
+  const [connectionMode, setConnectionMode] = useState<StudioConnectionMode>('connecting')
   const [progress, setProgress] = useState<StudioImportProgress>(() => ({
     status: 'queued',
     message: initialMessage,
@@ -117,33 +105,34 @@ export function StudioCreationProgress({
   const percent = studioProgressPercent(progress)
   const elapsedMs = now > 0 ? Math.max(0, now - new Date(progress.createdAt).getTime()) : 0
   const pending = progress.status === 'queued' || progress.status === 'analyzing'
-  const unavailable = pending && !progress.workerAvailable && elapsedMs > 15_000
+  const queueDelayed = studioQueueIsDelayed(progress, now)
   const completed = progress.status === 'ready' || progress.status === 'published'
   const failed = progress.status === 'failed'
   const headline = completed
     ? 'Your first version is ready'
     : failed
       ? 'Creation stopped safely'
-      : unavailable
-        ? 'Your creation is waiting safely'
-        : 'Creating your first version'
+      : queueDelayed
+        ? 'Your website is in the queue'
+        : 'Building your first version'
   const message = completed
     ? 'Opening your private, editable preview…'
     : failed
       ? 'CodeRocket could not finish this website after several attempts. Nothing was published.'
-      : unavailable
-        ? 'The creation service is not responding yet. Your request is saved and will start automatically.'
+      : queueDelayed
+        ? 'CodeRocket is temporarily busy. Your request is saved and will start automatically.'
         : (progress.message ??
           'CodeRocket is studying the public website and rebuilding it as editable sections.')
+  const guidance = studioProgressGuidance(progress, elapsedMs)
 
   return (
     <section aria-busy={pending} className="border border-border bg-surface">
       <div className="border-border border-b p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <ConnectionBadge mode={connectionMode} />
+          <StudioConnectionBadge mode={connectionMode} />
           <span className="flex items-center gap-2 font-mono text-muted text-xs">
             <Clock3 aria-hidden className="h-3.5 w-3.5" />
-            {formatElapsed(elapsedMs)}
+            Working for {formatStudioElapsed(elapsedMs)}
           </span>
         </div>
         <div className="mt-7 max-w-3xl">
@@ -156,9 +145,9 @@ export function StudioCreationProgress({
               <span className="flex h-10 w-10 items-center justify-center border border-danger text-danger">
                 <TriangleAlert aria-hidden className="h-5 w-5" />
               </span>
-            ) : unavailable ? (
-              <span className="flex h-10 w-10 items-center justify-center border border-warning text-warning">
-                <WifiOff aria-hidden className="h-5 w-5" />
+            ) : queueDelayed ? (
+              <span className="flex h-10 w-10 items-center justify-center border border-signal text-signal">
+                <Clock3 aria-hidden className="h-5 w-5" />
               </span>
             ) : (
               <span className="flex h-10 w-10 items-center justify-center border border-signal text-signal">
@@ -173,12 +162,21 @@ export function StudioCreationProgress({
           <p aria-live="polite" className="mt-4 text-muted leading-7">
             {message}
           </p>
+          {pending ? (
+            <div className="mt-5 flex gap-3 border border-border bg-background p-3">
+              <Sparkles aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-signal" />
+              <div>
+                <p className="font-semibold text-sm">Right now</p>
+                <p className="mt-1 text-muted text-sm leading-6">{guidance}</p>
+              </div>
+            </div>
+          ) : null}
           {failed ? <RetrySiteImportForm className="mt-6" siteId={siteId} /> : null}
         </div>
 
         <div className="mt-7">
           <div className="flex items-center justify-between gap-4 font-mono text-[10px] uppercase tracking-[.1em]">
-            <span>{failed ? 'Stopped safely' : currentStepLabel(percent)}</span>
+            <span>{failed ? 'Stopped safely' : currentStudioStepLabel(percent)}</span>
             <span className="text-muted">{percent}%</span>
           </div>
           <div
@@ -198,7 +196,7 @@ export function StudioCreationProgress({
           </div>
         </div>
 
-        {failed ? null : <CreationSteps percent={percent} />}
+        {failed ? null : <StudioCreationSteps percent={percent} />}
       </div>
 
       <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,.75fr)]">
@@ -211,71 +209,4 @@ export function StudioCreationProgress({
       </p>
     </section>
   )
-}
-
-function CreationSteps({ percent }: { percent: number }) {
-  const activeIndex = activeStepIndex(percent)
-  return (
-    <ol className="mt-6 grid gap-px border border-border bg-border sm:grid-cols-5">
-      {creationSteps.map(({ icon: Icon, label }, index) => {
-        const complete = index < activeIndex || percent === 100
-        const active = index === activeIndex && percent < 100
-        return (
-          <li
-            className={`flex items-center gap-2 bg-background px-3 py-3 font-mono text-[10px] uppercase tracking-[.06em] ${
-              complete || active ? 'text-foreground' : 'text-muted'
-            }`}
-            key={label}
-          >
-            {complete ? (
-              <Check aria-hidden className="h-3.5 w-3.5 text-success" />
-            ) : active ? (
-              <LoaderCircle
-                aria-hidden
-                className="h-3.5 w-3.5 animate-spin text-signal motion-reduce:animate-none"
-              />
-            ) : (
-              <Icon aria-hidden className="h-3.5 w-3.5" />
-            )}
-            {label}
-          </li>
-        )
-      })}
-    </ol>
-  )
-}
-
-function ConnectionBadge({ mode }: { mode: ConnectionMode }) {
-  const live = mode === 'live'
-  return (
-    <span
-      className={`inline-flex items-center gap-2 border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[.12em] ${
-        live ? 'border-signal text-signal' : 'border-border text-muted'
-      }`}
-    >
-      <Radio
-        aria-hidden
-        className={`h-3.5 w-3.5 ${live ? 'animate-pulse motion-reduce:animate-none' : ''}`}
-      />
-      {live ? 'Live creation' : mode === 'connecting' ? 'Connecting' : 'Updating automatically'}
-    </span>
-  )
-}
-
-function currentStepLabel(percent: number): string {
-  return creationSteps[activeStepIndex(percent)]?.label ?? creationSteps[0].label
-}
-
-function activeStepIndex(percent: number): number {
-  return creationSteps.reduce(
-    (activeIndex, step, index) => (percent >= step.threshold ? index : activeIndex),
-    0
-  )
-}
-
-function formatElapsed(milliseconds: number): string {
-  const totalSeconds = Math.floor(milliseconds / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return minutes > 0 ? `${minutes}m ${seconds.toString().padStart(2, '0')}s` : `${seconds}s`
 }

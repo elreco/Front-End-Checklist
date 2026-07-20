@@ -59,3 +59,35 @@ export function studioProgressPercent(progress: StudioImportProgress): number {
   if (progress.stage === 'completed') return 100
   return 3
 }
+
+/** Detect a queued request whose worker signal is late without mislabelling active long work. */
+export function studioQueueIsDelayed(progress: StudioImportProgress, now: number): boolean {
+  if (progress.status !== 'queued' || progress.workerAvailable) return false
+  return now - new Date(progress.updatedAt).getTime() > 15_000
+}
+
+/** Explain the current milestone in plain language without inventing a completion estimate. */
+export function studioProgressGuidance(
+  progress: StudioImportProgress,
+  elapsedMilliseconds: number
+): string {
+  if (progress.stage === 'retrying')
+    return 'No action is needed. CodeRocket will continue from the saved request automatically.'
+  if (progress.stage === 'queued' || progress.stage === 'starting')
+    return 'The request is saved. You can leave this page without stopping the work.'
+  if (progress.stage === 'checking_pages' && progress.current === 0) {
+    const remaining = Math.max(0, progress.total - 1)
+    return remaining > 0
+      ? `The first screen is checked on computer and phone. The other ${remaining} page${remaining === 1 ? '' : 's'} will follow.`
+      : 'The first screen is being checked on computer and phone before it is rebuilt.'
+  }
+  if (progress.stage === 'checking_pages' && progress.total > 0)
+    return `${Math.min(progress.current, progress.total)} of ${progress.total} pages rebuilt. Each finished page is saved as the work continues.`
+  if (progress.stage === 'comparing')
+    return elapsedMilliseconds > 60_000
+      ? 'Visual and animated websites can take a few minutes here. CodeRocket is still working.'
+      : 'CodeRocket is turning the colours, type, spacing, and layout into an editable design.'
+  if (progress.stage === 'saving')
+    return 'The last checks are running now. Your private preview is almost ready.'
+  return 'You can leave this page. The work continues safely in the background.'
+}

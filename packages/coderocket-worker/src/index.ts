@@ -7,11 +7,13 @@ import { JobCancelledError, processAuditJob, type WorkerJob } from './audit-job'
 import { sendAlertEmail } from './email'
 import { allowsEmailAlert, readEmailAlertKind } from './email-policy'
 import { log } from './log'
+import { failSiteEditJob, processSiteEditJob } from './site-edit-job'
+import { cleanupExpiredBuilderAccess } from './site-import-access'
 import { failSiteImportJob, processSiteImportJob } from './site-import-job'
 import { cleanupExpiredSiteImportArtifacts, reportSiteImportProgress } from './site-import-progress'
 
 const workerId = `fly-${process.env.FLY_MACHINE_ID ?? randomUUID()}`
-const JOB_LEASE_RENEW_INTERVAL_MS = 60_000
+const JOB_LEASE_RENEW_INTERVAL_MS = 15_000
 let stopping = false
 let lastRetentionAt = 0
 
@@ -80,6 +82,7 @@ async function handle(job: WorkerJob) {
   if (job.payload.kind === 'ai_analysis') return processAiAnalysisJob(job)
   if (job.payload.kind === 'ai_usage') return processAiUsageJob(job)
   if (job.payload.kind === 'site_import') return processSiteImportJob(job)
+  if (job.payload.kind === 'site_edit') return processSiteEditJob(job)
   throw new Error(`Unsupported worker job kind: ${String(job.payload.kind)}`)
 }
 
@@ -93,10 +96,18 @@ function startJobLeaseGuard(jobId: string): { stop: () => Promise<boolean> } {
 
   /** Extend the database lease only while this worker still owns it. */
   const renew = async () => {
-    const { data, error } = await createServiceClient().rpc('cr_renew_job_lease', {
-      p_job_id: jobId,
-      p_worker_id: workerId
-    })
+    const [{ data, error }] = await Promise.all([
+      createServiceClient().rpc('cr_renew_job_lease', {
+        p_job_id: jobId,
+        p_worker_id: workerId
+      }),
+      heartbeat().catch(heartbeatError => {
+        log('error', 'worker.heartbeat_failed', {
+          message:
+            heartbeatError instanceof Error ? heartbeatError.message : 'Unknown heartbeat error'
+        })
+      })
+    ])
     if (!error && data === true) return
     active = false
     log('error', 'job.lease_lost', {
@@ -157,6 +168,7 @@ async function tick() {
       .delete()
       .lt('created_at', new Date(Date.now() - 31 * 86_400_000).toISOString())
     await cleanupExpiredSiteImportArtifacts()
+    await cleanupExpiredBuilderAccess(db)
     lastRetentionAt = Date.now()
   }
   const { data, error } = await db.rpc('cr_claim_jobs', { p_worker_id: workerId, p_limit: 1 })
@@ -237,6 +249,18 @@ async function tick() {
         )
       if (job.kind === 'site_import' && job.attempts >= 3)
         await failSiteImportJob(
+          {
+            id: job.id,
+            owner_id: job.owner_id,
+            project_id: job.project_id,
+            builder_site_id: job.builder_site_id,
+            attempts: job.attempts,
+            payload: { ...job.payload, kind: job.kind }
+          },
+          message
+        )
+      if (job.kind === 'site_edit' && job.attempts >= 3)
+        await failSiteEditJob(
           {
             id: job.id,
             owner_id: job.owner_id,

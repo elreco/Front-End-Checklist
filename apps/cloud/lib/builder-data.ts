@@ -2,8 +2,10 @@ import {
   createSiteBundleDocument,
   createSiteDocument,
   type SiteDocument,
+  type SiteEditSelection,
   type SiteSourceBlueprint,
-  siteDocumentSchema
+  siteDocumentSchema,
+  siteEditSelectionSchema
 } from '@coderocket/core'
 import type { SiteSectionVisualStyle, SiteVisualTheme } from '@coderocket/core/site-visual'
 import { createServiceClient } from '@coderocket/db'
@@ -23,9 +25,36 @@ export interface BuilderSiteSummary {
 }
 
 export interface BuilderSiteDetail extends BuilderSiteSummary {
+  collections: BuilderCollectionSummary[]
+  connections: BuilderConnectionSummary[]
   document?: SiteDocument
   error?: string
+  messages: BuilderMessage[]
   revisionNumber?: number
+}
+
+export interface BuilderMessage {
+  content: string
+  createdAt: string
+  creditCost: number
+  id: string
+  role: 'assistant' | 'user'
+  selection?: SiteEditSelection
+  status: 'queued' | 'working' | 'completed' | 'failed'
+}
+
+export interface BuilderCollectionSummary {
+  id: string
+  kind: 'products' | 'contacts' | 'bookings' | 'content' | 'custom'
+  name: string
+}
+
+export interface BuilderConnectionSummary {
+  displayName?: string
+  id: string
+  provider: 'coderocket_data' | 'stripe' | 'supabase' | 'calendly' | 'shopify'
+  publicUrl?: string
+  status: 'available' | 'setup' | 'connected' | 'attention'
 }
 
 export interface PublishedBuilderSite {
@@ -181,6 +210,19 @@ const demoSite: BuilderSiteDetail = {
   statusMessage: 'Your first version is ready',
   updatedAt: '2026-07-19T10:02:00.000Z',
   revisionNumber: 1,
+  collections: [],
+  connections: [],
+  messages: [
+    {
+      content:
+        'Your first private version is ready. Tell me what you want to change, in your own words.',
+      createdAt: '2026-07-19T10:02:00.000Z',
+      creditCost: 0,
+      id: 'demo-welcome',
+      role: 'assistant',
+      status: 'completed'
+    }
+  ],
   document: demoDocument
 }
 
@@ -227,14 +269,36 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
     .is('archived_at', null)
     .maybeSingle()
   if (!site) return undefined
-  const { data: revision } = await supabase
-    .from('cr_site_revisions')
-    .select('revision_number,site_document')
-    .eq('site_id', site.id)
-    .eq('owner_id', auth.user.id)
-    .order('revision_number', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const [{ data: revision }, { data: messages }, { data: collections }, { data: connections }] =
+    await Promise.all([
+      supabase
+        .from('cr_site_revisions')
+        .select('revision_number,site_document')
+        .eq('site_id', site.id)
+        .eq('owner_id', auth.user.id)
+        .order('revision_number', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('cr_builder_messages')
+        .select('id,role,content,status,credit_cost,selection,created_at')
+        .eq('site_id', site.id)
+        .eq('owner_id', auth.user.id)
+        .order('created_at', { ascending: true })
+        .limit(50),
+      supabase
+        .from('cr_builder_collections')
+        .select('id,name,kind')
+        .eq('site_id', site.id)
+        .eq('owner_id', auth.user.id)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('cr_builder_connections')
+        .select('id,provider,status,display_name,public_config')
+        .eq('site_id', site.id)
+        .eq('owner_id', auth.user.id)
+        .order('created_at', { ascending: true })
+    ])
   const parsedDocument = siteDocumentSchema.safeParse(revision?.site_document)
   return {
     id: site.id,
@@ -248,6 +312,42 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
     updatedAt: site.updated_at,
     error: site.last_error ?? undefined,
     revisionNumber: revision?.revision_number,
+    messages: (messages ?? []).flatMap(message => {
+      const role = message.role === 'assistant' ? 'assistant' : 'user'
+      const status = readMessageStatus(message.status)
+      const selection = siteEditSelectionSchema.safeParse(message.selection)
+      return typeof message.content === 'string'
+        ? [
+            {
+              id: message.id,
+              content: message.content,
+              createdAt: message.created_at,
+              creditCost: message.credit_cost ?? 0,
+              role,
+              ...(selection.success ? { selection: selection.data } : {}),
+              status
+            }
+          ]
+        : []
+    }),
+    collections: (collections ?? []).map(collection => ({
+      id: collection.id,
+      name: collection.name,
+      kind: readCollectionKind(collection.kind)
+    })),
+    connections: (connections ?? []).map(connection => ({
+      id: connection.id,
+      provider: readConnectionProvider(connection.provider),
+      status: readConnectionStatus(connection.status),
+      displayName: connection.display_name ?? undefined,
+      publicUrl:
+        connection.public_config &&
+        typeof connection.public_config === 'object' &&
+        'url' in connection.public_config &&
+        typeof connection.public_config.url === 'string'
+          ? connection.public_config.url
+          : undefined
+    })),
     document: parsedDocument.success ? parsedDocument.data : undefined
   }
 }
@@ -291,4 +391,26 @@ function readStatus(value: string): BuilderSiteSummary['status'] {
   if (value === 'analyzing' || value === 'ready' || value === 'failed' || value === 'published')
     return value
   return 'queued'
+}
+
+function readMessageStatus(value: string): BuilderMessage['status'] {
+  if (value === 'working' || value === 'completed' || value === 'failed') return value
+  return 'queued'
+}
+
+function readCollectionKind(value: string): BuilderCollectionSummary['kind'] {
+  if (value === 'products' || value === 'contacts' || value === 'bookings' || value === 'content')
+    return value
+  return 'custom'
+}
+
+function readConnectionProvider(value: string): BuilderConnectionSummary['provider'] {
+  if (value === 'stripe' || value === 'supabase' || value === 'calendly' || value === 'shopify')
+    return value
+  return 'coderocket_data'
+}
+
+function readConnectionStatus(value: string): BuilderConnectionSummary['status'] {
+  if (value === 'setup' || value === 'connected' || value === 'attention') return value
+  return 'available'
 }

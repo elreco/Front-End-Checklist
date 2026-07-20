@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { discoverPublicPagePaths } from '../src/page-discovery'
+import { discoverPublicPagePaths, discoverRenderedPagePaths } from '../src/page-discovery'
 import type { SafeHtmlResponse, SafeTextResponse } from '../src/safe-fetch'
 
 function htmlResponse(url: string, html: string): SafeHtmlResponse {
@@ -88,5 +88,31 @@ describe('public page discovery', () => {
 
     assert.deepEqual(result.pages, [{ path: '/public', source: 'sitemap' }])
     assert.equal(result.usedHomepage, false)
+  })
+})
+
+describe('authorised app page discovery', () => {
+  it('keeps same-origin screens and ignores sign-out or destructive links', () => {
+    const paths = discoverRenderedPagePaths(
+      [
+        '<a href="/dashboard">Dashboard</a>',
+        '<a href="/projects/alpha">Project</a>',
+        '<a href="/settings?tab=billing">Settings</a>',
+        '<a href="/logout">Sign out</a>',
+        '<a href="/projects/alpha/delete">Delete</a>',
+        '<a href="https://other.example/private">Other</a>'
+      ].join(''),
+      'https://app.example.com/dashboard'
+    )
+
+    assert.deepEqual(paths, ['/dashboard', '/projects/alpha', '/settings'])
+  })
+
+  it('bounds the number of private routes returned', () => {
+    const html = Array.from(
+      { length: 20 },
+      (_, index) => `<a href="/screen-${index}">Page</a>`
+    ).join('')
+    assert.equal(discoverRenderedPagePaths(html, 'https://app.example.com/start', 4).length, 4)
   })
 })

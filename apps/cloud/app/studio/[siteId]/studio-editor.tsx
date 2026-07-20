@@ -1,8 +1,8 @@
-import { ExternalLink, Save, Send } from '@repo/design-system/icons'
+import { Save } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput, CodeRocketTextarea } from '@repo/design-system/ui/coderocket-field'
 import type { BuilderSiteDetail } from '@/lib/builder-data'
-import { publishBuilderSite, updateBuilderSite } from './actions'
+import { updateBuilderSite } from './actions'
 
 /** Expose the highest-value website changes as normal fields, with connections reduced to URLs. */
 export function StudioEditor({
@@ -89,26 +89,6 @@ export function StudioEditor({
           <Save aria-hidden /> Save a new version
         </CodeRocketButton>
       </form>
-      <div className="border-border border-t p-5">
-        <form action={publishBuilderSite}>
-          <input name="siteId" type="hidden" value={site.id} />
-          <CodeRocketButton fullWidth type="submit">
-            <Send aria-hidden /> {site.publishedAt ? 'Publish these changes' : 'Publish website'}
-          </CodeRocketButton>
-        </form>
-        {site.publishedAt ? (
-          <a
-            className="mt-3 flex items-center justify-center gap-2 font-mono text-signal text-xs hover:underline"
-            href={`/s/${site.slug}`}
-            rel="noreferrer"
-            target="_blank"
-          >
-            Open published website <ExternalLink aria-hidden className="h-3.5 w-3.5" />
-          </a>
-        ) : (
-          <p className="mt-3 text-center text-muted text-xs">You choose when it goes online.</p>
-        )}
-      </div>
     </aside>
   )
 }

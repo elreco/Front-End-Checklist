@@ -98,6 +98,21 @@ export async function reportSiteImportCapture(
   }
 
   const db = createServiceClient()
+  const progress = capture.name === 'desktop' ? 28 : 34
+  const message =
+    capture.name === 'desktop'
+      ? 'Checking how the homepage adapts to a phone'
+      : 'Understanding the design and layout'
+  const now = new Date().toISOString()
+  await db
+    .from('cr_jobs')
+    .update({
+      progress_stage: 'checking_pages',
+      progress_message: message,
+      progress_updated_at: now
+    })
+    .eq('id', job.id)
+    .eq('owner_id', job.owner_id)
   await db.from('cr_builder_import_events').upsert(
     {
       owner_id: job.owner_id,
@@ -108,10 +123,12 @@ export async function reportSiteImportCapture(
       event_kind: 'capture',
       title: capture.name === 'desktop' ? 'Computer view captured' : 'Phone view captured',
       detail:
-        capture.name === 'desktop'
+        storedPath && capture.name === 'desktop'
           ? 'CodeRocket measured the wide layout, spacing, colours, and visible sections.'
-          : 'CodeRocket checked how the same page adapts to a smaller screen.',
-      progress: capture.name === 'desktop' ? 28 : 34,
+          : storedPath
+            ? 'CodeRocket checked how the same page adapts to a smaller screen.'
+            : 'The layout was checked, but its private image preview could not be saved.',
+      progress,
       artifact_path: storedPath ?? null,
       artifact_kind: storedPath ? capture.name : null,
       artifact_expires_at: storedPath
