@@ -25,7 +25,7 @@ export function StudioAppLayout({
       >
         <button
           aria-pressed={mobileView === 'conversation'}
-          className={`flex min-h-11 items-center justify-center gap-2 border-border border-r text-sm ${
+          className={`flex min-h-11 items-center justify-center gap-1.5 border-border border-r text-xs ${
             mobileView === 'conversation'
               ? 'bg-surface-raised text-foreground'
               : 'text-muted hover:text-foreground'
@@ -37,7 +37,7 @@ export function StudioAppLayout({
         </button>
         <button
           aria-pressed={mobileView === 'preview'}
-          className={`flex min-h-11 items-center justify-center gap-2 text-sm ${
+          className={`flex min-h-11 items-center justify-center gap-1.5 text-xs ${
             mobileView === 'preview'
               ? 'bg-surface-raised text-foreground'
               : 'text-muted hover:text-foreground'
@@ -48,7 +48,7 @@ export function StudioAppLayout({
           <Monitor aria-hidden className="h-4 w-4" /> Preview
         </button>
       </div>
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[340px_minmax(0,1fr)]">
         <div
           className={`${mobileView === 'conversation' ? 'flex' : 'hidden'} min-h-0 flex-col border-border bg-surface lg:flex lg:border-r`}
         >

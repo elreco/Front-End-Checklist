@@ -1,19 +1,13 @@
 'use client'
 
-import {
-  Check,
-  Clock3,
-  ExternalLink,
-  LoaderCircle,
-  ShieldCheck,
-  X
-} from '@repo/design-system/icons'
+import { Check, Clock3, ExternalLink, LoaderCircle, ShieldCheck } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import type { BuilderBrowserHandoff } from '@/lib/builder-browser-handoff-data'
-import { cancelBuilderBrowserHandoff, confirmBuilderBrowserHandoff } from './actions'
+import { cancelBuilderBrowserHandoff, confirmBuilderBrowserHandoff } from './access-actions'
+import { StudioStopGeneration } from './studio-stop-generation'
 
 /** Give the owner a full-height interactive browser and one obvious continuation action. */
 export function StudioBrowserHandoff({
@@ -79,10 +73,11 @@ export function StudioBrowserHandoff({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <form action={cancelBuilderBrowserHandoff}>
-            <input name="siteId" type="hidden" value={siteId} />
-            <StopBrowserButton />
-          </form>
+          <StudioStopGeneration
+            action={cancelBuilderBrowserHandoff}
+            mode="creation"
+            siteId={siteId}
+          />
           <CodeRocketButton asChild size="sm" variant="outline">
             <a href={handoff.liveUrl} rel="noreferrer" target="_blank">
               Larger window <ExternalLink aria-hidden />
@@ -118,7 +113,8 @@ export function StudioBrowserHandoff({
   )
 }
 
-function StopBrowserButton({ label = 'Stop' }: { label?: string }) {
+/** Submit the fallback cleanup once a guided browser is already closing. */
+function StopBrowserButton({ label }: { label: string }) {
   const { pending } = useFormStatus()
   return (
     <CodeRocketButton
@@ -130,14 +126,13 @@ function StopBrowserButton({ label = 'Stop' }: { label?: string }) {
     >
       {pending ? (
         <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />
-      ) : (
-        <X aria-hidden />
-      )}
+      ) : null}
       {pending ? 'Closing…' : label}
     </CodeRocketButton>
   )
 }
 
+/** Disable duplicate confirmations while the protected import is resumed. */
 function ContinueButton() {
   const { pending } = useFormStatus()
   return (
@@ -157,6 +152,7 @@ function ContinueButton() {
   )
 }
 
+/** Format the short-lived browser countdown without exposing provider details. */
 function formatRemainingTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const remaining = seconds % 60

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { inferSiteGoal } from './site-goal'
 import {
   type SiteSectionVisualStyle,
   type SiteVisualTheme,
@@ -8,16 +9,10 @@ import {
   siteVisualThemeSchema
 } from './site-visual-style'
 
+export { BUILDER_CREDIT_COSTS, getBuilderPlanEntitlements } from './builder-entitlements'
+
 export type SiteSourceMode = 'owned' | 'inspiration'
 export type SiteGoal = 'contact' | 'booking' | 'sell' | 'present'
-
-export const BUILDER_CREDIT_COSTS = {
-  firstVersion: 20,
-  guidedChange: 6,
-  newPage: 6,
-  quickEdit: 0,
-  structuredData: 6
-} as const
 
 export interface SourceContentItem {
   body: string
@@ -98,13 +93,27 @@ const siteSectionSchema = z.object({
   layout: z.enum(['centered', 'split', 'stacked']),
   visual: siteSectionVisualStyleSchema.optional()
 })
+const siteIdentitySchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  logoUrl: httpsUrlSchema.optional()
+})
+const siteThemeSchema = z.object({
+  backgroundColor: z.string().max(80),
+  foregroundColor: z.string().max(80),
+  accentColor: z.string().max(80),
+  fontStyle: z.enum(['sans', 'editorial', 'technical']),
+  visual: siteVisualThemeSchema.optional()
+})
 const sitePageSchema = z.object({
   path: z
     .string()
     .regex(/^\/(?:[^?#\s]*)$/)
     .max(1024),
   title: z.string().trim().min(1).max(180),
-  sections: z.array(siteSectionSchema).min(1).max(12)
+  sections: z.array(siteSectionSchema).min(1).max(12),
+  identity: siteIdentitySchema.optional(),
+  theme: siteThemeSchema.optional(),
+  navigation: z.array(siteLinkSchema).max(8).optional()
 })
 
 export const siteDocumentSchema = z.object({
@@ -114,17 +123,8 @@ export const siteDocumentSchema = z.object({
     mode: z.enum(['owned', 'inspiration']),
     capturedAt: z.iso.datetime()
   }),
-  identity: z.object({
-    name: z.string().trim().min(1).max(120),
-    logoUrl: httpsUrlSchema.optional()
-  }),
-  theme: z.object({
-    backgroundColor: z.string().max(80),
-    foregroundColor: z.string().max(80),
-    accentColor: z.string().max(80),
-    fontStyle: z.enum(['sans', 'editorial', 'technical']),
-    visual: siteVisualThemeSchema.optional()
-  }),
+  identity: siteIdentitySchema,
+  theme: siteThemeSchema,
   navigation: z.array(siteLinkSchema).max(8),
   sections: z.array(siteSectionSchema).min(1).max(12),
   pages: z.array(sitePageSchema).min(1).max(50).optional(),
@@ -276,40 +276,6 @@ export function createSiteDocument(
   })
 }
 
-/** Infer the most useful default visitor action from bounded visible source content. */
-function inferSiteGoal(blueprint: SiteSourceBlueprint): SiteGoal {
-  const searchableContent = [
-    blueprint.title,
-    blueprint.description,
-    blueprint.brandName,
-    ...blueprint.navigation.flatMap(item => [item.label, item.href]),
-    ...blueprint.sections.flatMap(section => [
-      section.heading,
-      section.body,
-      ...section.links.flatMap(link => [link.label, link.href])
-    ])
-  ]
-    .join(' ')
-    .normalize('NFD')
-    .replaceAll(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-
-  if (
-    /\b(appointment|book|booking|calendly|calendar|rendez-vous|reservation|reserve|reserver)\b/.test(
-      searchableContent
-    )
-  )
-    return 'booking'
-  if (
-    /\b(acheter|boutique|buy|cart|checkout|commander|panier|product|shop|store)\b/.test(
-      searchableContent
-    )
-  )
-    return 'sell'
-  if (/\b(appel|call|contact|devis|estimate|quote)\b/.test(searchableContent)) return 'contact'
-  return 'present'
-}
-
 /** Combine independently captured pages into one bounded website with an explicit coverage receipt. */
 export function createSiteBundleDocument(
   homepage: SiteDocument,
@@ -321,7 +287,10 @@ export function createSiteBundleDocument(
     sitePageSchema.parse({
       path: page.path,
       title: page.document.sections[0]?.heading ?? page.document.identity.name,
-      sections: page.document.sections
+      sections: page.document.sections,
+      identity: page.document.identity,
+      theme: page.document.theme,
+      navigation: page.document.navigation
     })
   )
   return siteDocumentSchema.parse({
@@ -335,39 +304,20 @@ export function createSiteBundleDocument(
   })
 }
 
-/** Return the builder limits whose variable-cost ceilings protect plan margin. */
-export function getBuilderPlanEntitlements(plan: 'free' | 'solo' | 'agency') {
-  if (plan === 'agency')
-    return {
-      sites: 10,
-      pagesPerImport: 5,
-      importsPerMonth: 30,
-      creationCreditsPerMonth: 600,
-      firstVersionCreditCost: BUILDER_CREDIT_COSTS.firstVersion,
-      hostedVisitsPerMonth: 250_000,
-      storageMegabytes: 10_240,
-      variableCostBudgetMicroeur: 40_000_000
-    }
-  if (plan === 'solo')
-    return {
-      sites: 1,
-      pagesPerImport: 5,
-      importsPerMonth: 5,
-      creationCreditsPerMonth: 100,
-      firstVersionCreditCost: BUILDER_CREDIT_COSTS.firstVersion,
-      hostedVisitsPerMonth: 20_000,
-      storageMegabytes: 1024,
-      variableCostBudgetMicroeur: 6_000_000
-    }
+/** Select one captured path with the identity, theme, and navigation measured on that page. */
+export function selectSiteDocumentPage(
+  document: SiteDocument,
+  requestedPath: string
+): SiteDocument | undefined {
+  if (requestedPath === '/' && !document.pages) return document
+  const page = document.pages?.find(candidate => candidate.path === requestedPath)
+  if (!page) return undefined
   return {
-    sites: 0,
-    pagesPerImport: 0,
-    importsPerMonth: 0,
-    creationCreditsPerMonth: 0,
-    firstVersionCreditCost: 0,
-    hostedVisitsPerMonth: 0,
-    storageMegabytes: 0,
-    variableCostBudgetMicroeur: 0
+    ...document,
+    identity: page.identity ?? document.identity,
+    theme: page.theme ?? document.theme,
+    navigation: page.navigation ?? document.navigation,
+    sections: page.sections
   }
 }
 

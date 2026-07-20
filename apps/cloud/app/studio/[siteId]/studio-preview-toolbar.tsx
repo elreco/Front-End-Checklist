@@ -1,0 +1,182 @@
+'use client'
+
+import type { SiteEditSelection } from '@coderocket/core/site-edit'
+import {
+  Check,
+  ChevronDown,
+  Monitor,
+  MousePointerClick,
+  Smartphone,
+  Tablet,
+  X
+} from '@repo/design-system/icons'
+import Link from 'next/link'
+import type { ComponentType, SVGProps } from 'react'
+
+export type PreviewViewport = 'desktop' | 'tablet' | 'mobile'
+
+/** Minimal page information needed by the compact preview navigator. */
+export interface StudioPageOption {
+  path: string
+  title: string
+}
+
+interface ViewportOption {
+  icon: ComponentType<SVGProps<SVGSVGElement>>
+  label: string
+  value: PreviewViewport
+}
+
+const viewportOptions: ViewportOption[] = [
+  { icon: Monitor, label: 'Desktop', value: 'desktop' },
+  { icon: Tablet, label: 'Tablet', value: 'tablet' },
+  { icon: Smartphone, label: 'Phone', value: 'mobile' }
+]
+
+/** Keep page navigation, responsive sizes, and precise selection beside the preview they affect. */
+export function StudioPreviewToolbar({
+  clearSelection,
+  pages,
+  selectedPath,
+  selection,
+  selecting,
+  setSelecting,
+  setViewport,
+  siteId,
+  viewport
+}: {
+  clearSelection: () => void
+  pages: StudioPageOption[]
+  selectedPath: string
+  selection?: SiteEditSelection
+  selecting: boolean
+  setSelecting: (selecting: boolean) => void
+  setViewport: (viewport: PreviewViewport) => void
+  siteId: string
+  viewport: PreviewViewport
+}) {
+  const currentPage = pages.find(page => page.path === selectedPath)
+  return (
+    <div className="relative z-20 grid h-10 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-border border-b bg-background px-2">
+      <div
+        aria-label="Preview size"
+        className="flex min-w-0 items-center justify-self-start border border-border"
+        role="group"
+      >
+        {viewportOptions.map(option => {
+          const Icon = option.icon
+          const current = viewport === option.value
+          return (
+            <button
+              aria-label={`${option.label} preview`}
+              aria-pressed={current}
+              className={`grid h-7 w-8 place-items-center transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-signal focus-visible:outline-offset-2 ${
+                current
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted hover:bg-surface-raised hover:text-foreground'
+              }`}
+              key={option.value}
+              onClick={() => setViewport(option.value)}
+              title={option.label}
+              type="button"
+            >
+              <Icon aria-hidden className="h-3.5 w-3.5" />
+            </button>
+          )
+        })}
+      </div>
+
+      {selecting ? (
+        <p className="w-[min(18rem,42vw)] truncate text-center text-[11px] text-foreground">
+          Click an element · Esc to cancel
+        </p>
+      ) : (
+        <details className="group relative min-w-0 justify-self-center">
+          <summary className="flex h-8 w-[min(16rem,36vw)] cursor-pointer list-none items-center justify-center gap-1.5 border border-transparent px-2 text-xs hover:border-border hover:bg-surface-raised group-open:border-border group-open:bg-surface-raised [&::-webkit-details-marker]:hidden">
+            <span className="truncate font-medium">{pageLabel(currentPage)}</span>
+            <ChevronDown
+              aria-hidden
+              className="h-3.5 w-3.5 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none"
+            />
+          </summary>
+          <div className="absolute top-[calc(100%+0.3rem)] left-1/2 z-50 w-[min(22rem,calc(100vw-1rem))] -translate-x-1/2 border border-border bg-surface p-1.5 shadow-lg">
+            <div className="flex items-center justify-between gap-3 px-2 py-1.5">
+              <p className="font-mono text-[9px] text-muted uppercase tracking-[.16em]">Pages</p>
+              <span className="font-mono text-[9px] text-muted">{pages.length}</span>
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              {pages.map(page => {
+                const current = page.path === selectedPath
+                return (
+                  <Link
+                    aria-current={current ? 'page' : undefined}
+                    className={`flex min-h-9 items-center gap-2 px-2 text-xs hover:bg-surface-raised ${
+                      current ? 'bg-surface-raised text-foreground' : 'text-muted'
+                    }`}
+                    href={studioPageHref(siteId, page.path)}
+                    key={page.path}
+                  >
+                    <Check
+                      aria-hidden
+                      className={`h-3.5 w-3.5 shrink-0 ${current ? 'opacity-100' : 'opacity-0'}`}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{pageLabel(page)}</span>
+                    <span className="max-w-28 shrink-0 truncate font-mono text-[10px]">
+                      {page.path}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </details>
+      )}
+
+      <div className="flex min-w-0 items-center justify-self-end">
+        {selection ? (
+          <button
+            aria-label="Clear selected element"
+            className="grid h-8 w-8 place-items-center text-muted hover:bg-surface-raised hover:text-foreground focus-visible:outline-2 focus-visible:outline-signal focus-visible:outline-offset-2"
+            onClick={clearSelection}
+            title="Clear selection"
+            type="button"
+          >
+            <X aria-hidden className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+        <button
+          aria-label={
+            selecting
+              ? 'Cancel page selection'
+              : selection
+                ? 'Select another element on the page'
+                : 'Select an element on the page'
+          }
+          aria-pressed={selecting}
+          className={`flex h-8 items-center justify-center gap-1.5 px-2 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-signal focus-visible:outline-offset-2 ${
+            selecting
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted hover:bg-surface-raised hover:text-foreground'
+          }`}
+          onClick={() => setSelecting(!selecting)}
+          title={selecting ? 'Cancel selection' : 'Select on page'}
+          type="button"
+        >
+          <MousePointerClick aria-hidden className="h-3.5 w-3.5" />
+          <span className="hidden xl:inline">{selecting ? 'Cancel' : 'Select'}</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Use a familiar home label while preserving the captured title for every other page. */
+function pageLabel(page?: StudioPageOption): string {
+  if (!page || page.path === '/') return 'Homepage'
+  return page.title
+}
+
+/** Preserve the selected Studio page while keeping the root URL clean. */
+function studioPageHref(siteId: string, path: string): string {
+  return path === '/' ? `/studio/${siteId}` : `/studio/${siteId}?page=${encodeURIComponent(path)}`
+}

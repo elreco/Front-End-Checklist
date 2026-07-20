@@ -1,10 +1,14 @@
 import {
   SiBitbucket,
+  SiCalendly,
   SiClaude,
   SiFacebook,
   SiGithub,
   SiGitlab,
   SiGoogle,
+  SiShopify,
+  SiStripe,
+  SiSupabase,
   SiX,
   SiYoutube
 } from '@icons-pack/react-simple-icons'
@@ -23,16 +27,24 @@ const FacebookBrandIcon = createBrandIcon(SiFacebook)
 const GitHubBrandIcon = createBrandIcon(SiGithub)
 const GitLabBrandIcon = createBrandIcon(SiGitlab)
 const GoogleBrandIcon = createBrandIcon(SiGoogle)
+const ShopifyBrandIcon = createBrandIcon(SiShopify)
+const StripeBrandIcon = createBrandIcon(SiStripe)
+const SupabaseBrandIcon = createBrandIcon(SiSupabase)
+const CalendlyBrandIcon = createBrandIcon(SiCalendly)
 const XBrandIcon = createBrandIcon(SiX)
 const YouTubeBrandIcon = createBrandIcon(SiYoutube)
 
 export {
   BitbucketBrandIcon,
+  CalendlyBrandIcon,
   ClaudeBrandIcon,
   FacebookBrandIcon,
   GitHubBrandIcon,
   GitLabBrandIcon,
   GoogleBrandIcon,
+  ShopifyBrandIcon,
+  StripeBrandIcon,
+  SupabaseBrandIcon,
   XBrandIcon,
   YouTubeBrandIcon
 }

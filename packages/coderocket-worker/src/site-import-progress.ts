@@ -1,5 +1,6 @@
 import { createServiceClient } from '@coderocket/db'
 import type { WorkerJob } from './audit-job'
+import { assertJobActive, JobCancelledError } from './job-cancellation'
 
 const ARTIFACT_BUCKET = 'cr-builder-imports'
 const ARTIFACT_RETENTION_MS = 24 * 60 * 60 * 1000
@@ -44,7 +45,8 @@ export async function reportSiteImportProgress(
   if (!job.builder_site_id) return
   const db = createServiceClient()
   const now = new Date().toISOString()
-  const { error } = await db
+  const activeStatus = progress.kind === 'failed' ? 'failed' : 'leased'
+  const { data, error } = await db
     .from('cr_jobs')
     .update({
       progress_stage: progress.stage,
@@ -55,7 +57,12 @@ export async function reportSiteImportProgress(
     })
     .eq('id', job.id)
     .eq('owner_id', job.owner_id)
+    .eq('status', activeStatus)
+    .is('cancelled_at', null)
+    .select('id')
+    .maybeSingle()
   if (error) throw new Error(error.message)
+  if (!data) throw new JobCancelledError()
 
   await db.from('cr_builder_import_events').upsert(
     {
@@ -79,6 +86,7 @@ export async function reportSiteImportCapture(
   capture: { dataUrl: string; name: 'desktop' | 'mobile' }
 ): Promise<void> {
   if (!job.builder_site_id) return
+  await assertJobActive(job)
   const encoded = capture.dataUrl.match(/^data:image\/jpeg;base64,([a-z0-9+/=]+)$/i)?.[1]
   const bytes = encoded ? Buffer.from(encoded, 'base64') : undefined
   const artifactPath =
@@ -104,7 +112,7 @@ export async function reportSiteImportCapture(
       ? 'Checking how the homepage adapts to a phone'
       : 'Understanding the design and layout'
   const now = new Date().toISOString()
-  await db
+  const { data: activeJob, error: progressError } = await db
     .from('cr_jobs')
     .update({
       progress_stage: 'checking_pages',
@@ -113,6 +121,19 @@ export async function reportSiteImportCapture(
     })
     .eq('id', job.id)
     .eq('owner_id', job.owner_id)
+    .eq('status', 'leased')
+    .is('cancelled_at', null)
+    .select('id')
+    .maybeSingle()
+  if (progressError) throw new Error(progressError.message)
+  if (!activeJob) {
+    if (storedPath)
+      await db.storage
+        .from(ARTIFACT_BUCKET)
+        .remove([storedPath])
+        .catch(() => undefined)
+    throw new JobCancelledError()
+  }
   await db.from('cr_builder_import_events').upsert(
     {
       owner_id: job.owner_id,

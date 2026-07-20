@@ -1,14 +1,21 @@
 import type { SiteDocument } from '@coderocket/core'
+import type { BuilderConnectionSummary } from '@/lib/builder-connections'
 import { resolvePublishedSiteHref } from './site-document-href'
 import { SiteDocumentSection } from './site-document-section'
 
 /** Render a versioned site document through audited components rather than arbitrary source code. */
 export function SiteDocumentPreview({
+  checkoutPath,
+  connections = [],
   document,
+  pagePath = '/',
   published = false,
   publicBasePath
 }: {
+  checkoutPath?: string
+  connections?: BuilderConnectionSummary[]
   document: SiteDocument
+  pagePath?: string
   published?: boolean
   publicBasePath?: string
 }) {
@@ -42,11 +49,11 @@ export function SiteDocumentPreview({
           {document.identity.logoUrl ? (
             <img
               alt=""
-              className="h-8 w-8 object-contain"
+              className="h-8 w-auto max-w-40 object-contain"
               height={32}
               referrerPolicy="no-referrer"
               src={document.identity.logoUrl}
-              width={32}
+              width={160}
             />
           ) : null}
           <span className="truncate font-semibold">{document.identity.name}</span>
@@ -105,9 +112,12 @@ export function SiteDocumentPreview({
       <main>
         {document.sections.map((section, index) => (
           <SiteDocumentSection
+            checkoutPath={checkoutPath}
+            connections={connections}
             document={document}
             index={index}
             key={section.id}
+            pagePath={pagePath}
             publicBasePath={publicBasePath}
             published={published}
             section={section}

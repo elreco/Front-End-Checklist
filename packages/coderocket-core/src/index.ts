@@ -32,6 +32,20 @@ export {
 } from './safe-fetch'
 export { auditSubmissionSchema, type ValidAuditSubmission } from './schemas'
 export {
+  applyPublicSiteConnection,
+  removePublicSiteConnection,
+  type SiteConnectionCapability,
+  type SiteConnectionContext,
+  type SiteConnectionMode,
+  type SiteConnectionPlacement,
+  type SiteConnectionProvider,
+  type SiteConnectionStatus,
+  siteConnectionCapabilitySchema,
+  siteConnectionModeSchema,
+  siteConnectionProviderSchema,
+  siteConnectionStatusSchema
+} from './site-connection'
+export {
   BUILDER_CREDIT_COSTS,
   createSiteBundleDocument,
   createSiteDocument,

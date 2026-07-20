@@ -14,6 +14,7 @@ import { BrowserAuditSession } from '@coderocket/core/browser'
 import { readBrowserLoginCredential } from '@coderocket/core/browser-login'
 import { createServiceClient, decryptAccessHeaders, persistAudit } from '@coderocket/db'
 import { allowsEmailAlert } from './email-policy'
+import { JobCancelledError } from './job-cancellation'
 
 const PAGE_CONCURRENCY = 4
 
@@ -24,14 +25,6 @@ export interface WorkerJob {
   builder_site_id?: string | null
   attempts: number
   payload: Record<string, unknown>
-}
-
-/** Signal that an owner stopped a job while the worker was processing it. */
-export class JobCancelledError extends Error {
-  constructor() {
-    super('Audit job was cancelled by its owner')
-    this.name = 'JobCancelledError'
-  }
 }
 
 type AccessHeaderResolver = (url: string) => Record<string, string> | undefined

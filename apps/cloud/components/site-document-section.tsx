@@ -1,25 +1,32 @@
 import type { SiteDocument } from '@coderocket/core'
+import type { BuilderConnectionSummary } from '@/lib/builder-connections'
+import { SiteDocumentActions } from './site-document-actions'
 import { SiteDocumentCollection } from './site-document-collection'
-import { resolvePublishedSiteHref } from './site-document-href'
+import { SiteDocumentImage } from './site-document-image'
 
 type SiteSection = SiteDocument['sections'][number]
 
 /** Render one bounded site section with its captured responsive visual system. */
 export function SiteDocumentSection({
+  checkoutPath,
+  connections,
   document,
   index,
+  pagePath,
   publicBasePath,
   published,
   section
 }: {
+  checkoutPath?: string
+  connections: BuilderConnectionSummary[]
   document: SiteDocument
   index: number
+  pagePath: string
   publicBasePath?: string
   published: boolean
   section: SiteSection
 }) {
   const visual = section.visual
-  const visualTheme = document.theme.visual
   const usesBackgroundImage = visual?.imagePosition === 'background' && Boolean(section.imageUrl)
   const textAlignment = visual
     ? responsiveTextAlignment(visual.mobile.textAlign, visual.desktop.textAlign)
@@ -55,6 +62,9 @@ export function SiteDocumentSection({
         className="mx-auto @[640px]:px-10 px-6"
         style={{
           maxWidth: visual?.desktop.contentWidth ?? 1152,
+          width: visual
+            ? `clamp(${visual.mobile.contentWidth}px, ${(visual.desktop.contentWidth / 14.4).toFixed(2)}cqw, ${visual.desktop.contentWidth}px)`
+            : undefined,
           paddingBottom: visual
             ? `clamp(${visual.mobile.paddingBlock}px, 8vw, ${visual.desktop.paddingBlock}px)`
             : undefined,
@@ -66,10 +76,10 @@ export function SiteDocumentSection({
         <div
           className={
             section.layout === 'centered'
-              ? `mx-auto max-w-3xl ${textAlignment}`
+              ? `mx-auto grid max-w-3xl ${textAlignment}`
               : section.layout === 'split' && section.imageUrl && !usesBackgroundImage
                 ? `grid @[720px]:grid-cols-2 items-center ${textAlignment}`
-                : `max-w-4xl ${textAlignment}`
+                : `grid max-w-4xl ${textAlignment}`
           }
           style={{
             gap: visual ? `clamp(${visual.mobile.gap}px, 6vw, ${visual.desktop.gap}px)` : undefined
@@ -100,78 +110,26 @@ export function SiteDocumentSection({
                 {section.body}
               </p>
             ) : null}
-            {section.links.length > 0 ? (
-              <div className="mt-8 flex flex-wrap gap-3">
-                {section.links.map((link, linkIndex) => {
-                  const primaryStyle =
-                    linkIndex === 0
-                      ? {
-                          backgroundColor:
-                            visualTheme?.button.style === 'outline'
-                              ? 'transparent'
-                              : (visualTheme?.button.backgroundColor ?? document.theme.accentColor),
-                          borderColor:
-                            visualTheme?.button.borderColor ?? document.theme.accentColor,
-                          borderRadius: visualTheme?.button.radius,
-                          color: visualTheme?.button.foregroundColor ?? '#ffffff'
-                        }
-                      : undefined
-                  return published ? (
-                    <a
-                      className="inline-flex min-h-11 items-center border px-5 py-3 font-semibold text-sm"
-                      href={resolvePublishedSiteHref(document, link.href, publicBasePath)}
-                      key={`${link.href}-${link.label}`}
-                      rel="noreferrer"
-                      style={primaryStyle}
-                    >
-                      {link.label}
-                    </a>
-                  ) : (
-                    <button
-                      className="inline-flex min-h-11 items-center border px-5 py-3 font-semibold text-sm"
-                      data-cr-select-key={`button-${section.id}-${linkIndex}`}
-                      data-cr-select-kind="button"
-                      data-cr-select-label={link.label}
-                      data-cr-select-section={section.id}
-                      key={`${link.href}-${link.label}`}
-                      style={primaryStyle}
-                      tabIndex={-1}
-                      type="button"
-                    >
-                      {link.label}
-                    </button>
-                  )
-                })}
-              </div>
-            ) : null}
-          </div>
-          {section.imageUrl && !usesBackgroundImage ? (
-            <img
-              alt={section.imageAlt ?? ''}
-              className={
-                visual?.imagePosition === 'before' && section.layout === 'split'
-                  ? 'order-1 h-full w-full'
-                  : 'h-full w-full'
-              }
-              height={900}
-              data-cr-select-key={!published ? `image-${section.id}` : undefined}
-              data-cr-select-kind={!published ? 'image' : undefined}
-              data-cr-select-label={!published ? section.imageAlt || section.heading : undefined}
-              data-cr-select-section={!published ? section.id : undefined}
-              loading={index === 0 ? 'eager' : 'lazy'}
-              referrerPolicy="no-referrer"
-              src={section.imageUrl}
-              style={{
-                aspectRatio: visual?.imageAspectRatio,
-                borderRadius: visual?.borderRadius,
-                objectFit: visual?.imageFit ?? 'cover'
-              }}
-              width={1200}
+            <SiteDocumentActions
+              connections={connections}
+              document={document}
+              publicBasePath={publicBasePath}
+              published={published}
+              section={section}
             />
-          ) : null}
+          </div>
+          <SiteDocumentImage
+            index={index}
+            published={published}
+            section={section}
+            usesBackgroundImage={usesBackgroundImage}
+          />
         </div>
         <SiteDocumentCollection
+          checkoutPath={checkoutPath}
+          connections={connections}
           document={document}
+          pagePath={pagePath}
           publicBasePath={publicBasePath}
           published={published}
           section={section}

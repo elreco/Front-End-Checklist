@@ -181,16 +181,43 @@ describe('CodeRocket AI grounding', () => {
       },
       'owned'
     )
-    const input = buildSiteEditInput(document, 'Make this shorter', {
-      kind: 'button',
-      label: 'Talk to us',
-      pagePath: '/',
-      sectionId: document.sections[0]?.id ?? 'section-1'
-    })
+    const input = buildSiteEditInput(
+      document,
+      'Make this shorter',
+      {
+        kind: 'button',
+        label: 'Talk to us',
+        pagePath: '/',
+        sectionId: document.sections[0]?.id ?? 'section-1'
+      },
+      [
+        {
+          dataUrl: 'data:image/png;base64,cHJpdmF0ZQ==',
+          id: '6efac071-1520-465d-a6b7-c896005162cd',
+          mimeType: 'image/png',
+          name: 'new-hero.png'
+        }
+      ],
+      [
+        {
+          capability: 'payments',
+          mode: 'account',
+          provider: 'stripe',
+          status: 'connected'
+        }
+      ]
+    )
 
     assert.match(buildSiteEditInstructions(), /exact target/)
+    assert.match(buildSiteEditInstructions(), /attachmentId/)
     assert.match(input, /selectedElement/)
+    assert.match(input, /referenceFiles/)
+    assert.match(input, /availableConnections/)
+    assert.match(input, /"provider":"stripe"/)
+    assert.match(input, /new-hero\.png/)
+    assert.doesNotMatch(input, /cHJpdmF0ZQ/)
     assert.match(input, /Talk to us/)
     assert.match(input, /Make this shorter/)
+    assert.match(buildSiteEditInstructions(), /request_connection/)
   })
 })

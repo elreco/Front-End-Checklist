@@ -4,7 +4,7 @@ import { KeyRound, LoaderCircle, ShieldCheck } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
 import { useFormStatus } from 'react-dom'
-import { connectBuilderTestAccount } from './actions'
+import { connectBuilderTestAccount } from './access-actions'
 
 /** Guide a non-developer through a bounded, revocable private-app connection. */
 export function StudioPrivateAccessForm({
@@ -115,6 +115,7 @@ export function StudioPrivateAccessForm({
   )
 }
 
+/** Keep the private-app submission state clear while credentials are encrypted. */
 function ConnectPrivateAppButton() {
   const { pending } = useFormStatus()
   return (

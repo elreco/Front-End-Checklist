@@ -9,8 +9,11 @@ import {
 } from '@coderocket/core'
 import type { SiteSectionVisualStyle, SiteVisualTheme } from '@coderocket/core/site-visual'
 import { createServiceClient } from '@coderocket/db'
+import { type BuilderConnectionSummary, readBuilderConnections } from './builder-connections'
 import { getSupabaseServerConfig } from './supabase/config'
 import { createSupabaseServerClient } from './supabase/server'
+
+export type { BuilderConnectionSummary } from './builder-connections'
 
 export interface BuilderSiteSummary {
   id: string
@@ -41,6 +44,11 @@ export interface BuilderRevisionSummary {
 }
 
 export interface BuilderMessage {
+  attachments?: Array<{
+    id: string
+    name: string
+    type: string
+  }>
   content: string
   createdAt: string
   creditCost: number
@@ -56,15 +64,8 @@ export interface BuilderCollectionSummary {
   name: string
 }
 
-export interface BuilderConnectionSummary {
-  displayName?: string
-  id: string
-  provider: 'coderocket_data' | 'stripe' | 'supabase' | 'calendly' | 'shopify'
-  publicUrl?: string
-  status: 'available' | 'setup' | 'connected' | 'attention'
-}
-
 export interface PublishedBuilderSite {
+  connections: BuilderConnectionSummary[]
   document: SiteDocument
   name: string
 }
@@ -281,6 +282,7 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
     { data: revision },
     { data: revisions },
     { data: messages },
+    { data: messageAttachments },
     { data: collections },
     { data: connections }
   ] = await Promise.all([
@@ -307,6 +309,14 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
       .order('created_at', { ascending: true })
       .limit(50),
     supabase
+      .from('cr_builder_message_attachments')
+      .select('id,message_id,file_name,mime_type')
+      .eq('site_id', site.id)
+      .eq('owner_id', auth.user.id)
+      .eq('status', 'attached')
+      .order('created_at', { ascending: true })
+      .limit(150),
+    supabase
       .from('cr_builder_collections')
       .select('id,name,kind')
       .eq('site_id', site.id)
@@ -319,6 +329,17 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
       .eq('owner_id', auth.user.id)
       .order('created_at', { ascending: true })
   ])
+  const attachmentsByMessage = new Map<string, BuilderMessage['attachments']>()
+  for (const attachment of messageAttachments ?? []) {
+    if (!attachment.message_id) continue
+    const current = attachmentsByMessage.get(attachment.message_id) ?? []
+    current.push({
+      id: attachment.id,
+      name: attachment.file_name,
+      type: attachment.mime_type
+    })
+    attachmentsByMessage.set(attachment.message_id, current)
+  }
   const parsedDocument = siteDocumentSchema.safeParse(revision?.site_document)
   return {
     id: site.id,
@@ -348,6 +369,9 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
               content: message.content,
               createdAt: message.created_at,
               creditCost: message.credit_cost ?? 0,
+              ...(attachmentsByMessage.has(message.id)
+                ? { attachments: attachmentsByMessage.get(message.id) }
+                : {}),
               role,
               ...(selection.success ? { selection: selection.data } : {}),
               status
@@ -360,19 +384,7 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
       name: collection.name,
       kind: readCollectionKind(collection.kind)
     })),
-    connections: (connections ?? []).map(connection => ({
-      id: connection.id,
-      provider: readConnectionProvider(connection.provider),
-      status: readConnectionStatus(connection.status),
-      displayName: connection.display_name ?? undefined,
-      publicUrl:
-        connection.public_config &&
-        typeof connection.public_config === 'object' &&
-        'url' in connection.public_config &&
-        typeof connection.public_config.url === 'string'
-          ? connection.public_config.url
-          : undefined
-    })),
+    connections: readBuilderConnections(connections ?? []),
     document: parsedDocument.success ? parsedDocument.data : undefined
   }
 }
@@ -382,24 +394,40 @@ export async function getPublishedBuilderSite(
   slug: string
 ): Promise<PublishedBuilderSite | undefined> {
   if (process.env.CODEROCKET_DEMO_MODE === 'true' && slug === demoSite.slug)
-    return { document: demoSite.document ?? demoDocument, name: demoSite.name }
+    return {
+      connections: demoSite.connections,
+      document: demoSite.document ?? demoDocument,
+      name: demoSite.name
+    }
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return undefined
   const db = createServiceClient()
   const { data: site } = await db
     .from('cr_builder_sites')
-    .select('name,published_revision_id')
+    .select('id,name,published_revision_id')
     .eq('slug', slug)
     .eq('status', 'published')
     .not('published_revision_id', 'is', null)
     .maybeSingle()
   if (!site?.published_revision_id) return undefined
-  const { data: revision } = await db
-    .from('cr_site_revisions')
-    .select('site_document')
-    .eq('id', site.published_revision_id)
-    .maybeSingle()
+  const [{ data: revision }, { data: connections }] = await Promise.all([
+    db
+      .from('cr_site_revisions')
+      .select('site_document')
+      .eq('id', site.published_revision_id)
+      .maybeSingle(),
+    db
+      .from('cr_builder_connections')
+      .select('id,provider,status,display_name,public_config')
+      .eq('site_id', site.id)
+  ])
   const parsed = siteDocumentSchema.safeParse(revision?.site_document)
-  return parsed.success ? { document: parsed.data, name: site.name } : undefined
+  return parsed.success
+    ? {
+        connections: readBuilderConnections(connections ?? []),
+        document: parsed.data,
+        name: site.name
+      }
+    : undefined
 }
 
 /** Count one valid published-page view and enforce the owner's included hosting ceiling. */
@@ -433,15 +461,4 @@ function readCollectionKind(value: string): BuilderCollectionSummary['kind'] {
   if (value === 'products' || value === 'contacts' || value === 'bookings' || value === 'content')
     return value
   return 'custom'
-}
-
-function readConnectionProvider(value: string): BuilderConnectionSummary['provider'] {
-  if (value === 'stripe' || value === 'supabase' || value === 'calendly' || value === 'shopify')
-    return value
-  return 'coderocket_data'
-}
-
-function readConnectionStatus(value: string): BuilderConnectionSummary['status'] {
-  if (value === 'setup' || value === 'connected' || value === 'attention') return value
-  return 'available'
 }

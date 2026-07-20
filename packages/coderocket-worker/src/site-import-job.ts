@@ -2,9 +2,7 @@ import { createHash } from 'node:crypto'
 import {
   DEFAULT_SITE_VISUAL_MODEL,
   OpenAiSiteVisualAnalysisProvider,
-  SITE_VISUAL_MAX_OUTPUT_TOKENS,
-  type SiteVisualCaptureInput,
-  type SiteVisualTokenUsage
+  SITE_VISUAL_MAX_OUTPUT_TOKENS
 } from '@coderocket/ai'
 import {
   createSiteBundleDocument,
@@ -16,9 +14,8 @@ import {
   selectRepresentativePageTargets
 } from '@coderocket/core'
 import { BrowserAuditSession } from '@coderocket/core/browser'
-import { applySiteVisualRefinement, applySiteVisualTheme } from '@coderocket/core/site-visual'
+import { applySiteVisualRefinement } from '@coderocket/core/site-visual'
 import { createServiceClient } from '@coderocket/db'
-import { z } from 'zod'
 import type { WorkerJob } from './audit-job'
 import { buildBrowserHandoffEndpoint, estimateBrowserHandoffCostMicroeur } from './browser-handoff'
 import {
@@ -27,24 +24,19 @@ import {
   loadBuilderImportAccess,
   markBuilderAccessVerified
 } from './site-import-access'
+import { cacheSiteDocumentImages } from './site-import-assets'
+import {
+  estimateBrowserRuntimeCostMicroeur,
+  estimateVisualAiCostMicroeur,
+  loadVisualPricing,
+  readVisualCaptures,
+  SITE_IMPORT_COSTS,
+  SITE_VISUAL_MAX_INPUT_TOKENS
+} from './site-import-cost'
 import { sanitizeSiteImportFailure } from './site-import-failure'
 import { readablePageName, readBuilderPlan, readSourceMode } from './site-import-model'
+import { isSameWebsiteCapture } from './site-import-origin'
 import { reportSiteImportCapture, reportSiteImportProgress } from './site-import-progress'
-
-const PAGE_IMPORT_COST_MICROEUR = 5_000
-const BROWSER_RUNTIME_COST_MICROEUR_PER_MINUTE = 5_000
-const NEXT_PAGE_RUNTIME_RESERVE_MICROEUR = 15_000
-const FAILED_IMPORT_COST_MICROEUR = 25_000
-const FAILED_VISUAL_AI_COST_MICROEUR = 75_000
-const LAUNCH_IMPORT_RESERVATION_MICROEUR = 250_000
-const STUDIO_IMPORT_RESERVATION_MICROEUR = 750_000
-const SITE_VISUAL_MAX_INPUT_TOKENS = 40_000
-const USD_TO_EUR_SAFETY_BUFFER_BPS = 12_500
-const visualPricingSchema = z.object({
-  cached_input_microusd_per_million: z.number().nonnegative(),
-  input_microusd_per_million: z.number().nonnegative(),
-  output_microusd_per_million: z.number().nonnegative()
-})
 
 /** Discover public or authorised screens and store one bounded, editable site-document revision. */
 export async function processSiteImportJob(job: WorkerJob): Promise<void> {
@@ -67,7 +59,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
   const plan = readBuilderPlan(subscription?.plan_id)
   const pageLimit = getBuilderPlanEntitlements(plan).pagesPerImport
   const reservedCost =
-    plan === 'agency' ? STUDIO_IMPORT_RESERVATION_MICROEUR : LAUNCH_IMPORT_RESERVATION_MICROEUR
+    plan === 'agency' ? SITE_IMPORT_COSTS.studioReservation : SITE_IMPORT_COSTS.launchReservation
   const access = await loadBuilderImportAccess(db, site.id, site.owner_id)
   const handoffCostMicroeur = access.handoff
     ? estimateBrowserHandoffCostMicroeur(access.handoff)
@@ -78,7 +70,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
   const visualCostBudget = Math.max(
     0,
     reservedCost -
-      pageLimit * PAGE_IMPORT_COST_MICROEUR -
+      pageLimit * SITE_IMPORT_COSTS.page -
       handoffCostMicroeur -
       handoffCaptureReserveMicroeur
   )
@@ -126,7 +118,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     const targets = selectRepresentativePageTargets(
       site.source_url,
       discoveredPaths,
-      pageLimit,
+      1,
       access.authenticated
     )
     await reportSiteImportProgress(job, {
@@ -143,7 +135,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
         targets.length === 1
           ? access.authenticated
             ? 'The first signed-in screen is ready to study.'
-            : 'The homepage is public and ready to study.'
+            : 'The page is public and ready to study.'
           : `CodeRocket chose ${targets.length} representative screens for a useful first version instead of copying every repeated URL.`,
       total: targets.length
     })
@@ -220,7 +212,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
             'The main type, colours, spacing, and responsive behaviour are ready to reuse across the recreated pages.'
         })
       } catch {
-        visualAiCostMicroeur = visualRequestStarted ? FAILED_VISUAL_AI_COST_MICROEUR : 0
+        visualAiCostMicroeur = visualRequestStarted ? SITE_IMPORT_COSTS.failedVisualAi : 0
         await db
           .from('cr_builder_sites')
           .update({
@@ -254,7 +246,7 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     }
     const homepage = createSiteDocument(homepageBlueprint, sourceMode)
     const capturedPages: Array<{ document: SiteDocument; path: string }> = [
-      { document: homepage, path: '/' }
+      { document: homepage, path: targets[0]?.path ?? '/' }
     ]
     await reportSiteImportProgress(job, {
       current: 1,
@@ -274,12 +266,12 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
     for (const [index, target] of targets.slice(1).entries()) {
       const pageNumber = index + 2
       const costBeforePage =
-        capturedPages.length * PAGE_IMPORT_COST_MICROEUR +
+        capturedPages.length * SITE_IMPORT_COSTS.page +
         visualAiCostMicroeur +
         (access.handoff ? estimateBrowserHandoffCostMicroeur(access.handoff) : 0) +
         estimateBrowserRuntimeCostMicroeur(startedAt, Date.now())
       if (
-        costBeforePage + PAGE_IMPORT_COST_MICROEUR + NEXT_PAGE_RUNTIME_RESERVE_MICROEUR >
+        costBeforePage + SITE_IMPORT_COSTS.page + SITE_IMPORT_COSTS.nextPageReserve >
         reservedCost
       ) {
         await reportSiteImportProgress(job, {
@@ -309,11 +301,16 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
           target.url,
           access.authenticated
         )
-        const blueprint = homepageBlueprint.visualTheme
-          ? applySiteVisualTheme(capturedBlueprint, homepageBlueprint.visualTheme)
-          : capturedBlueprint
+        if (
+          !isSameWebsiteCapture(
+            site.source_url,
+            homepageBlueprint.sourceUrl,
+            capturedBlueprint.sourceUrl
+          )
+        )
+          throw new Error('The page opened a different website')
         capturedPages.push({
-          document: createSiteDocument(blueprint, sourceMode),
+          document: createSiteDocument(capturedBlueprint, sourceMode),
           path: target.path
         })
         await reportSiteImportProgress(job, {
@@ -348,14 +345,19 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
         })
       }
     }
-    const siteDocument = createSiteBundleDocument(
-      homepage,
-      capturedPages,
-      Math.max(targets.length, discoveredPaths.length),
-      failedPaths
+    const siteDocument = await cacheSiteDocumentImages(
+      db,
+      createSiteBundleDocument(
+        homepage,
+        capturedPages,
+        Math.max(targets.length, discoveredPaths.length),
+        failedPaths
+      ),
+      site.owner_id,
+      site.id
     )
     const actualCost =
-      capturedPages.length * PAGE_IMPORT_COST_MICROEUR +
+      capturedPages.length * SITE_IMPORT_COSTS.page +
       visualAiCostMicroeur +
       (access.handoff ? estimateBrowserHandoffCostMicroeur(access.handoff) : 0) +
       estimateBrowserRuntimeCostMicroeur(startedAt, Date.now())
@@ -454,73 +456,6 @@ export async function processSiteImportJob(job: WorkerJob): Promise<void> {
   }
 }
 
-type VisualPricing = z.infer<typeof visualPricingSchema>
-
-/** Narrow transient captures to the two viewport names accepted by visual analysis. */
-function readVisualCaptures(
-  captures: Array<{ dataUrl: string; height: number; name: string; width: number }>
-): SiteVisualCaptureInput[] {
-  return captures.flatMap(capture =>
-    capture.name === 'desktop' || capture.name === 'mobile'
-      ? [
-          {
-            dataUrl: capture.dataUrl,
-            height: capture.height,
-            name: capture.name,
-            width: capture.width
-          }
-        ]
-      : []
-  )
-}
-
-/** Load the active model price before sending any screenshots to the provider. */
-async function loadVisualPricing(
-  db: ReturnType<typeof createServiceClient>,
-  model: string
-): Promise<VisualPricing> {
-  const { data, error } = await db
-    .from('cr_ai_model_pricing')
-    .select(
-      'input_microusd_per_million,cached_input_microusd_per_million,output_microusd_per_million'
-    )
-    .eq('model', model)
-    .eq('active', true)
-    .maybeSingle()
-  if (error) throw new Error(error.message)
-  return readVisualPricing(data)
-}
-
-/** Price metered visual-analysis tokens with a conservative currency-conversion buffer. */
-export function estimateVisualAiCostMicroeur(
-  pricing: VisualPricing,
-  usage: SiteVisualTokenUsage
-): number {
-  const cachedTokens = Math.min(usage.inputTokens, Math.max(0, usage.cachedInputTokens))
-  const uncachedTokens = Math.max(0, usage.inputTokens - cachedTokens)
-  const providerCostMicrousd = Math.ceil(
-    (uncachedTokens * pricing.input_microusd_per_million +
-      cachedTokens * pricing.cached_input_microusd_per_million +
-      Math.max(0, usage.outputTokens) * pricing.output_microusd_per_million) /
-      1_000_000
-  )
-  return Math.ceil((providerCostMicrousd * USD_TO_EUR_SAFETY_BUFFER_BPS) / 10_000)
-}
-
-/** Meter browser execution conservatively so long-running imports cannot hide infrastructure cost. */
-export function estimateBrowserRuntimeCostMicroeur(startedAt: number, completedAt: number): number {
-  const elapsedMilliseconds = Math.max(0, completedAt - startedAt)
-  if (elapsedMilliseconds === 0) return 0
-  return Math.ceil(elapsedMilliseconds / 60_000) * BROWSER_RUNTIME_COST_MICROEUR_PER_MINUTE
-}
-
-/** Validate the active database pricing snapshot before calculating provider cost. */
-function readVisualPricing(value: unknown): VisualPricing {
-  const parsed = visualPricingSchema.safeParse(value)
-  if (!parsed.success) throw new Error('Visual AI pricing is unavailable')
-  return parsed.data
-}
-
 /** Release a terminal import reservation and expose a safe recovery message to its owner. */
 export async function failSiteImportJob(job: WorkerJob, errorMessage: string): Promise<void> {
   if (!job.builder_site_id) return
@@ -536,7 +471,7 @@ export async function failSiteImportJob(job: WorkerJob, errorMessage: string): P
     p_job_id: job.id,
     p_succeeded: false,
     p_site_document: {},
-    p_provider_cost_microeur: FAILED_IMPORT_COST_MICROEUR + handoffCostMicroeur,
+    p_provider_cost_microeur: SITE_IMPORT_COSTS.failedImport + handoffCostMicroeur,
     p_error: safeErrorMessage
   })
   if (error) throw new Error(error.message)

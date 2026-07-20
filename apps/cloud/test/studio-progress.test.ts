@@ -99,6 +99,25 @@ describe('website recreation progress', () => {
     assert.equal(studioQueueIsDelayed(active, Date.parse('2026-07-20T12:05:00.000Z')), false)
   })
 
+  it('treats an owner-requested stop as a distinct terminal creation state', () => {
+    const progress = parseStudioImportProgress({
+      status: 'cancelled',
+      message: 'Creation stopped by you',
+      stage: 'completed',
+      current: 0,
+      total: 1,
+      createdAt: '2026-07-20T12:00:00.000Z',
+      updatedAt: '2026-07-20T12:00:20.000Z',
+      attempts: 1,
+      workerAvailable: true,
+      events: []
+    })
+
+    assert.ok(progress)
+    assert.equal(studioProgressPercent(progress), 100)
+    assert.equal(studioQueueIsDelayed(progress, Date.parse('2026-07-20T12:05:00.000Z')), false)
+  })
+
   it('keeps computer and phone previews stable while preserving the full phone image', () => {
     const progress = parseStudioImportProgress({
       status: 'analyzing',

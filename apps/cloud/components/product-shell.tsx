@@ -49,8 +49,8 @@ export async function ProductShell({
             className={`${workspace ? 'shrink-0' : 'sticky top-0'} z-40 border-border border-b bg-background`}
           >
             <div
-              className={`flex items-center justify-between gap-4 px-4 sm:px-6 ${
-                workspace ? 'min-h-14' : 'min-h-16 xl:px-10'
+              className={`flex items-center justify-between ${
+                workspace ? 'min-h-12 gap-2 px-3 sm:px-4' : 'min-h-16 gap-4 px-4 sm:px-6 xl:px-10'
               }`}
             >
               <Link className="lg:hidden" href="/dashboard">
@@ -63,7 +63,7 @@ export async function ProductShell({
                 {eyebrow ? (
                   <p
                     className={`font-mono text-[10px] text-muted uppercase tracking-[.18em] ${
-                      workspace ? 'hidden sm:block' : ''
+                      workspace ? 'hidden xl:block' : ''
                     }`}
                   >
                     {eyebrow}
@@ -71,7 +71,7 @@ export async function ProductShell({
                 ) : null}
                 <h1
                   className={`truncate font-heading font-semibold tracking-tight ${
-                    workspace ? 'text-sm sm:text-base' : 'text-xl'
+                    workspace ? 'text-xs sm:text-sm' : 'text-xl'
                   }`}
                 >
                   {title}
@@ -88,7 +88,9 @@ export async function ProductShell({
                 {action}
                 <Link
                   aria-label={`Open account settings for ${context.displayName}`}
-                  className="flex h-9 w-9 items-center justify-center bg-surface-raised font-mono font-semibold text-xs hover:bg-accent hover:text-accent-foreground"
+                  className={`flex items-center justify-center bg-surface-raised font-mono font-semibold hover:bg-accent hover:text-accent-foreground ${
+                    workspace ? 'h-8 w-8 text-[10px]' : 'h-9 w-9 text-xs'
+                  }`}
                   href="/settings"
                 >
                   {context.initials}

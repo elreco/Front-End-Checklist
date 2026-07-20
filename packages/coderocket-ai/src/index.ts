@@ -22,6 +22,7 @@ export {
   type OpenAiSiteEditProviderOptions,
   SITE_EDIT_MAX_OUTPUT_TOKENS,
   SITE_EDIT_PROMPT_VERSION,
+  type SiteEditAttachmentInput,
   type SiteEditRequest,
   type SiteEditResult,
   type SiteEditTokenUsage
@@ -39,6 +40,11 @@ export {
   type SiteVisualCaptureInput,
   type SiteVisualTokenUsage
 } from './site-visual-analysis'
+export {
+  DEFAULT_TRANSCRIPTION_MODEL,
+  OpenAiTranscriptionProvider,
+  type OpenAiTranscriptionProviderOptions
+} from './transcription'
 
 export const AI_PROMPT_VERSION = 'coderocket-finding-analysis-v3'
 export const DEFAULT_AI_MODEL = 'gpt-5.6-terra'

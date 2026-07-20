@@ -9,25 +9,15 @@ export interface AuditHttpResponse {
   discard: () => Promise<void>
   headers: Headers
   readBody: () => Promise<string>
+  readBytes: (maximumBytes: number) => Promise<Uint8Array>
   status: number
 }
 
-/** Decode a bounded list of response chunks without relying on Node-only Buffer APIs. */
-function decodeChunks(chunks: Uint8Array[], length: number): string {
-  const merged = new Uint8Array(length)
-  let offset = 0
-  for (const chunk of chunks) {
-    merged.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  return new TextDecoder().decode(merged)
-}
-
-/** Read a fetch Response body while enforcing the shared two-megabyte ceiling. */
-async function readWebResponse(response: Response): Promise<string> {
+/** Read a fetch Response body while enforcing a caller-selected size ceiling. */
+async function readWebResponseBytes(response: Response, maximumBytes: number): Promise<Uint8Array> {
   const declaredLength = Number(response.headers.get('content-length') ?? 0)
-  if (declaredLength > MAX_HTML_BYTES) throw new Error('HTML response exceeds 2 MB')
-  if (!response.body) return ''
+  if (declaredLength > maximumBytes) throw new Error('Resource response is too large')
+  if (!response.body) return new Uint8Array()
   const reader = response.body.getReader()
   const chunks: Uint8Array[] = []
   let length = 0
@@ -35,34 +25,62 @@ async function readWebResponse(response: Response): Promise<string> {
     const { done, value } = await reader.read()
     if (done) break
     length += value.byteLength
-    if (length > MAX_HTML_BYTES) {
+    if (length > maximumBytes) {
       await reader.cancel()
-      throw new Error('HTML response exceeds 2 MB')
+      throw new Error('Resource response is too large')
     }
     chunks.push(value)
   }
-  return decodeChunks(chunks, length)
+  const merged = new Uint8Array(length)
+  let offset = 0
+  for (const chunk of chunks) {
+    merged.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return merged
 }
 
-/** Read a pinned Node HTTPS response while enforcing the shared size ceiling. */
-async function readNodeResponse(response: IncomingMessage, headers: Headers): Promise<string> {
+/** Read a fetch Response body while enforcing the shared two-megabyte ceiling. */
+async function readWebResponse(response: Response): Promise<string> {
+  const bytes = await readWebResponseBytes(response, MAX_HTML_BYTES)
+  return new TextDecoder().decode(bytes)
+}
+
+/** Read a pinned Node HTTPS response while enforcing a caller-selected size ceiling. */
+async function readNodeResponseBytes(
+  response: IncomingMessage,
+  headers: Headers,
+  maximumBytes: number
+): Promise<Uint8Array> {
   const declaredLength = Number(headers.get('content-length') ?? 0)
-  if (declaredLength > MAX_HTML_BYTES) {
+  if (declaredLength > maximumBytes) {
     response.destroy()
-    throw new Error('HTML response exceeds 2 MB')
+    throw new Error('Resource response is too large')
   }
   const chunks: Uint8Array[] = []
   let length = 0
   for await (const rawChunk of response) {
     const chunk = typeof rawChunk === 'string' ? Buffer.from(rawChunk) : rawChunk
     length += chunk.byteLength
-    if (length > MAX_HTML_BYTES) {
+    if (length > maximumBytes) {
       response.destroy()
-      throw new Error('HTML response exceeds 2 MB')
+      throw new Error('Resource response is too large')
     }
     chunks.push(chunk)
   }
-  return decodeChunks(chunks, length)
+  const merged = new Uint8Array(length)
+  let offset = 0
+  for (const chunk of chunks) {
+    merged.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return merged
+}
+
+/** Read a pinned Node HTTPS response while enforcing the shared HTML size ceiling. */
+async function readNodeResponse(response: IncomingMessage, headers: Headers): Promise<string> {
+  const bytes = await readNodeResponseBytes(response, headers, MAX_HTML_BYTES)
+  return new TextDecoder().decode(bytes)
 }
 
 /** Convert Node response headers into the web Headers interface used by the audit engine. */
@@ -110,6 +128,7 @@ async function requestPinnedAddress(
           },
           headers,
           readBody: () => readNodeResponse(response, headers),
+          readBytes: maximumBytes => readNodeResponseBytes(response, headers, maximumBytes),
           status: response.statusCode ?? 0
         })
       }
@@ -162,6 +181,7 @@ async function requestWithFetch(
     },
     headers: response.headers,
     readBody: () => readWebResponse(response),
+    readBytes: maximumBytes => readWebResponseBytes(response, maximumBytes),
     status: response.status
   }
 }

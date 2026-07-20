@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { createSiteBundleDocument, createSiteDocument } from '@coderocket/core'
 import {
   buildBrowserHandoffEndpoint,
   estimateBrowserHandoffCostMicroeur
 } from '../src/browser-handoff'
+import { rewriteSiteDocumentImageUrls } from '../src/site-import-assets'
 import {
   estimateBrowserRuntimeCostMicroeur,
   estimateVisualAiCostMicroeur
-} from '../src/site-import-job'
+} from '../src/site-import-cost'
+import { isSameWebsiteCapture } from '../src/site-import-origin'
 
 describe('responsive website import cost', () => {
   it('keeps a bounded vision request inside both per-import reservations', () => {
@@ -35,6 +38,64 @@ describe('responsive website import cost', () => {
     assert.equal(estimateBrowserRuntimeCostMicroeur(0, 0), 0)
     assert.equal(estimateBrowserRuntimeCostMicroeur(0, 1), 5_000)
     assert.equal(estimateBrowserRuntimeCostMicroeur(0, 60_001), 10_000)
+  })
+
+  it('keeps secondary captures on the requested or canonical website', () => {
+    assert.equal(
+      isSameWebsiteCapture(
+        'https://example.fr/',
+        'https://www.example.com/',
+        'https://www.example.com/about'
+      ),
+      true
+    )
+    assert.equal(
+      isSameWebsiteCapture(
+        'https://example.fr/',
+        'https://www.example.com/',
+        'https://workspace.example.com/product'
+      ),
+      false
+    )
+  })
+
+  it('rewrites durable images on the root and each captured page', () => {
+    const source = {
+      accentColor: '#1a73e8',
+      backgroundColor: '#ffffff',
+      brandName: 'Gmail',
+      capturedAt: '2026-07-20T10:00:00.000Z',
+      description: 'Email',
+      foregroundColor: '#202124',
+      logoUrl: 'https://source.example/logo.png',
+      navigation: [],
+      sections: [
+        {
+          backgroundColor: '#ffffff',
+          body: 'A secure inbox.',
+          foregroundColor: '#202124',
+          heading: 'Email for everyone',
+          imageUrl: 'https://source.example/hero.webp',
+          links: []
+        }
+      ],
+      sourceUrl: 'https://source.example/',
+      title: 'Gmail'
+    }
+    const page = createSiteDocument(source, 'owned')
+    const bundle = createSiteBundleDocument(page, [{ document: page, path: '/' }], 1, [])
+    const rewritten = rewriteSiteDocumentImageUrls(
+      bundle,
+      new Map([
+        ['https://source.example/logo.png', 'https://assets.example/logo.png'],
+        ['https://source.example/hero.webp', 'https://assets.example/hero.webp']
+      ])
+    )
+
+    assert.equal(rewritten.identity.logoUrl, 'https://assets.example/logo.png')
+    assert.equal(rewritten.sections[0]?.imageUrl, 'https://assets.example/hero.webp')
+    assert.equal(rewritten.pages?.[0]?.identity?.logoUrl, 'https://assets.example/logo.png')
+    assert.equal(rewritten.pages?.[0]?.sections[0]?.imageUrl, 'https://assets.example/hero.webp')
   })
 
   it('meters the human handoff and reconnects only to the configured provider host', () => {

@@ -1,5 +1,6 @@
 import { createServiceClient } from '@coderocket/db'
 import type Stripe from 'stripe'
+import { readConnectionPublicConfig } from '@/lib/builder-connections'
 import {
   createStripeClient,
   paidPlanItem,
@@ -8,9 +9,11 @@ import {
   stripeCustomerId,
   stripeSubscriptionPeriodEnd
 } from '@/lib/stripe'
+import { stripeConnectedAccountName, stripeConnectedAccountStatus } from '@/lib/stripe-connect'
 
 export const runtime = 'nodejs'
 
+/** Convert an optional Stripe epoch timestamp into the database date format. */
 function unixDate(value: number | null | undefined): string | null {
   return value ? new Date(value * 1000).toISOString() : null
 }
@@ -52,18 +55,47 @@ async function syncSubscription(subscription: Stripe.Subscription): Promise<void
   if (error) throw new Error(error.message)
 }
 
+/** Keep every project using this connected account aligned with Stripe requirements. */
+async function syncConnectedAccount(account: Stripe.Account): Promise<void> {
+  const db = createServiceClient()
+  const { data: connections, error: readError } = await db
+    .from('cr_builder_connections')
+    .select('id,public_config')
+    .eq('provider', 'stripe')
+    .contains('public_config', { accountId: account.id })
+  if (readError) throw new Error(readError.message)
+  for (const connection of connections ?? []) {
+    const publicConfig = readConnectionPublicConfig(connection.public_config)
+    const { error } = await db
+      .from('cr_builder_connections')
+      .update({
+        status: stripeConnectedAccountStatus(account),
+        display_name: stripeConnectedAccountName(account),
+        public_config: {
+          ...publicConfig,
+          defaultCurrency: account.default_currency ?? 'eur'
+        },
+        last_verified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', connection.id)
+    if (error) throw new Error(error.message)
+  }
+}
+
+/** Verify and apply platform or connected-account events delivered by Stripe. */
 export async function POST(request: Request) {
   const signature = request.headers.get('stripe-signature')
-  const secret = process.env.STRIPE_WEBHOOK_SECRET
-  if (!(signature && secret))
+  const secrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_CONNECT_WEBHOOK_SECRET
+  ].filter((value): value is string => Boolean(value))
+  if (!(signature && secrets.length > 0))
     return Response.json({ error: 'Webhook configuration is missing' }, { status: 400 })
   const stripe = createStripeClient()
-  let event: Stripe.Event
-  try {
-    event = stripe.webhooks.constructEvent(await request.text(), signature, secret)
-  } catch {
-    return Response.json({ error: 'Invalid webhook signature' }, { status: 400 })
-  }
+  const payload = await request.text()
+  const event = readStripeEvent(stripe, payload, signature, secrets)
+  if (!event) return Response.json({ error: 'Invalid webhook signature' }, { status: 400 })
   const db = createServiceClient()
   const { data: seen } = await db
     .from('cr_stripe_events')
@@ -79,6 +111,7 @@ export async function POST(request: Request) {
   ) {
     await syncSubscription(event.data.object)
   }
+  if (event.type === 'account.updated') await syncConnectedAccount(event.data.object)
   if (event.type === 'invoice.payment_failed') {
     const invoice = event.data.object
     const customerId =
@@ -97,4 +130,21 @@ export async function POST(request: Request) {
     .from('cr_stripe_events')
     .insert({ event_id: event.id, event_type: event.type, payload: event })
   return Response.json({ received: true })
+}
+
+/** Try each configured destination secret without weakening Stripe signature verification. */
+function readStripeEvent(
+  stripe: Stripe,
+  payload: string,
+  signature: string,
+  secrets: string[]
+): Stripe.Event | undefined {
+  for (const secret of secrets) {
+    try {
+      return stripe.webhooks.constructEvent(payload, signature, secret)
+    } catch {
+      // The signature may belong to the other production Stripe destination.
+    }
+  }
+  return undefined
 }

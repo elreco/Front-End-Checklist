@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { assertPublicHttpsUrl, fetchPublicHtml, fetchPublicText } from '../src/index'
+import { fetchPublicImage } from '../src/safe-fetch'
 
 describe('safe HTML fetch', () => {
   it('blocks private IPv4 and loopback IPv6', async () => {
@@ -197,5 +198,31 @@ describe('safe HTML fetch', () => {
       fetchImplementation: fakeFetch
     })
     assert.match(response.text, /User-agent/)
+  })
+
+  it('downloads passive raster images but rejects executable SVG files', async () => {
+    const pngFetch = async () =>
+      new Response(new Uint8Array([137, 80, 78, 71]), {
+        status: 200,
+        headers: { 'content-type': 'image/png' }
+      })
+    const image = await fetchPublicImage('https://93.184.216.34/hero', {
+      fetchImplementation: pngFetch
+    })
+    assert.equal(image.contentType, 'image/png')
+    assert.deepEqual([...image.bytes], [137, 80, 78, 71])
+
+    const svgFetch = async () =>
+      new Response('<svg><script>alert(1)</script></svg>', {
+        status: 200,
+        headers: { 'content-type': 'image/svg+xml' }
+      })
+    await assert.rejects(
+      () =>
+        fetchPublicImage('https://93.184.216.34/logo.svg', {
+          fetchImplementation: svgFetch
+        }),
+      /not a supported passive image/
+    )
   })
 })

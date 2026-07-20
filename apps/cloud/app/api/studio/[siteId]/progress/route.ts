@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sit
     supabase
       .from('cr_jobs')
       .select(
-        'id,status,attempts,progress_stage,progress_current,progress_total,progress_message,progress_updated_at,created_at'
+        'id,status,attempts,progress_stage,progress_current,progress_total,progress_message,progress_updated_at,created_at,cancelled_at'
       )
       .eq('owner_id', auth.user.id)
       .eq('builder_site_id', siteId)
@@ -65,7 +65,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sit
   const workerAvailable = heartbeat?.last_seen_at
     ? Date.now() - new Date(heartbeat.last_seen_at).getTime() < 30_000
     : false
-  const failed = job?.status === 'failed' && (job.attempts ?? 0) >= 3
+  const cancelled = Boolean(job?.cancelled_at)
+  const failed = !cancelled && job?.status === 'failed' && (job.attempts ?? 0) >= 3
   const safeEvents =
     events.length > 0 || !failed
       ? events
@@ -86,11 +87,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sit
 
   return Response.json(
     {
-      status: failed ? 'failed' : site.status,
-      message: failed
-        ? 'The first version could not be completed'
-        : (job?.progress_message ?? site.status_message),
-      stage: failed ? 'completed' : (job?.progress_stage ?? 'queued'),
+      status: cancelled ? 'cancelled' : failed ? 'failed' : site.status,
+      message: cancelled
+        ? 'Creation stopped by you'
+        : failed
+          ? 'The first version could not be completed'
+          : (job?.progress_message ?? site.status_message),
+      stage: cancelled || failed ? 'completed' : (job?.progress_stage ?? 'queued'),
       current: job?.progress_current ?? 0,
       total: job?.progress_total ?? 0,
       createdAt: job?.created_at ?? site.updated_at,

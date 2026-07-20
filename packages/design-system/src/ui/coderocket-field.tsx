@@ -1,5 +1,10 @@
 import { cn } from '@repo/utils'
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type TextareaHTMLAttributes
+} from 'react'
 
 const fieldBaseClasses =
   'mt-2 w-full border border-border bg-background text-foreground outline-none transition-colors duration-200 placeholder:text-muted focus:border-signal disabled:cursor-not-allowed disabled:opacity-50'
@@ -38,14 +43,15 @@ export function CodeRocketInput({ className, leadingContent, ...props }: CodeRoc
 }
 
 /** Renders a shared CodeRocket multiline field. */
-export function CodeRocketTextarea({
-  className,
-  ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export const CodeRocketTextarea = forwardRef<
+  HTMLTextAreaElement,
+  TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function CodeRocketTextarea({ className, ...props }, ref) {
   return (
     <textarea
       className={cn(fieldBaseClasses, 'min-h-36 resize-y px-4 py-3', className)}
+      ref={ref}
       {...props}
     />
   )
-}
+})

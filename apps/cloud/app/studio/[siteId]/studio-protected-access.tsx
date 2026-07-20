@@ -11,7 +11,7 @@ import {
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { useFormStatus } from 'react-dom'
 import type { BuilderAccessRecovery } from '@/lib/builder-access-recovery'
-import { startBuilderBrowserHandoff } from './actions'
+import { startBuilderBrowserHandoff } from './access-actions'
 import { StudioPrivateAccessForm } from './studio-private-access-form'
 
 /** Lead with one human-assisted browser action and keep automatic credentials secondary. */
@@ -147,6 +147,7 @@ export function StudioProtectedAccess({
   )
 }
 
+/** Explain why the guided browser can or cannot start and show its pending state. */
 function OpenSecureBrowserButton({
   disabled,
   unavailableReason
@@ -184,6 +185,7 @@ function OpenSecureBrowserButton({
   )
 }
 
+/** Present one plain-language recovery step for protected source websites. */
 function RecoveryStep({
   icon: Icon,
   label,

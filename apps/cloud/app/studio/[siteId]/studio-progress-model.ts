@@ -13,7 +13,7 @@ const studioImportEventSchema = z.object({
 })
 
 const studioImportProgressSchema = z.object({
-  status: z.enum(['queued', 'analyzing', 'ready', 'failed', 'published']),
+  status: z.enum(['queued', 'analyzing', 'ready', 'failed', 'published', 'cancelled']),
   message: z.string().nullable().optional(),
   stage: z.enum([
     'queued',
@@ -47,7 +47,8 @@ export function studioProgressPercent(progress: StudioImportProgress): number {
   if (
     progress.status === 'ready' ||
     progress.status === 'published' ||
-    progress.status === 'failed'
+    progress.status === 'failed' ||
+    progress.status === 'cancelled'
   )
     return 100
   const latest = progress.events.at(-1)

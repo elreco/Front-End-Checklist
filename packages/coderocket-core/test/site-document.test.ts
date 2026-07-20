@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { mergeResponsiveBlueprints } from '../src/site-blueprint-capture'
+import { applyPublicSiteConnection, removePublicSiteConnection } from '../src/site-connection'
 import {
   BUILDER_CREDIT_COSTS,
   createSiteBundleDocument,
   createSiteDocument,
   getBuilderPlanEntitlements,
-  type SiteSourceBlueprint
+  type SiteSourceBlueprint,
+  selectSiteDocumentPage
 } from '../src/site-document'
 import { applySiteEditPlan, siteEditPlanSchema, siteEditSelectionSchema } from '../src/site-edit'
 import { pageTemplate, selectRepresentativePageTargets } from '../src/site-page-selection'
@@ -268,20 +270,40 @@ describe('site document', () => {
 
   it('bundles multiple captured pages with an honest coverage receipt', () => {
     const homepage = createSiteDocument(source, 'owned', 'contact')
+    const contactDocument = createSiteDocument(
+      {
+        ...source,
+        brandName: 'Northstar Contact',
+        sections: [{ ...source.sections[0], heading: 'Contact Northstar' }],
+        sourceUrl: 'https://example.com/contact',
+        visualTheme: {
+          button: {
+            backgroundColor: '#111111',
+            borderColor: '#111111',
+            foregroundColor: '#ffffff',
+            radius: 8,
+            style: 'solid'
+          },
+          fontFamily: 'Inter, sans-serif',
+          header: {
+            backgroundColor: '#f8f8f8',
+            borderColor: '#dddddd',
+            foregroundColor: '#111111',
+            height: 72,
+            position: 'sticky'
+          },
+          headingFontFamily: 'Inter, sans-serif'
+        }
+      },
+      'owned',
+      'contact'
+    )
     const bundle = createSiteBundleDocument(
       homepage,
       [
         { document: homepage, path: '/' },
         {
-          document: createSiteDocument(
-            {
-              ...source,
-              sections: [{ ...source.sections[0], heading: 'Contact Northstar' }],
-              sourceUrl: 'https://example.com/contact'
-            },
-            'owned',
-            'contact'
-          ),
+          document: contactDocument,
           path: '/contact'
         }
       ],
@@ -297,6 +319,10 @@ describe('site document', () => {
       discoveredPages: 3,
       failedPaths: ['/private']
     })
+    const selectedContact = selectSiteDocumentPage(bundle, '/contact')
+    assert.equal(selectedContact?.identity.name, 'Northstar Contact')
+    assert.equal(selectedContact?.theme.visual?.fontFamily, 'Inter, sans-serif')
+    assert.equal(selectedContact?.sections[0]?.heading, 'Contact Northstar')
   })
 
   it('applies one bounded no-code edit without changing the captured source receipt', () => {
@@ -350,6 +376,37 @@ describe('site document', () => {
       }).success,
       false
     )
+  })
+
+  it('accepts only a real uploaded-file id as planned image context', () => {
+    const valid = siteEditPlanSchema.safeParse({
+      operations: [
+        {
+          attachmentId: '6efac071-1520-465d-a6b7-c896005162cd',
+          imageAlt: 'The new product on a white background',
+          pagePath: '/',
+          sectionId: 'hero',
+          type: 'update_section'
+        }
+      ],
+      response: 'The attached product image is ready to place.',
+      summary: 'Updated the hero image'
+    })
+    const invalid = siteEditPlanSchema.safeParse({
+      operations: [
+        {
+          attachmentId: '../../another-file',
+          pagePath: '/',
+          sectionId: 'hero',
+          type: 'update_section'
+        }
+      ],
+      response: 'Updated the image.',
+      summary: 'Updated the image'
+    })
+
+    assert.equal(valid.success, true)
+    assert.equal(invalid.success, false)
   })
 
   it('keeps selected preview context bounded and updates only the chosen collection item', () => {
@@ -426,5 +483,68 @@ describe('site document', () => {
     assert.equal(edited.sections[1]?.id, 'shop')
     assert.equal(edited.sections[1]?.items?.[0]?.title, 'New product')
     assert.equal(edited.sections[1]?.items?.[0]?.links.length, 0)
+  })
+
+  it('turns a prompt payment request into a safe setup operation without changing content', () => {
+    const document = createSiteDocument(source, 'owned')
+    const plan = siteEditPlanSchema.parse({
+      operations: [
+        {
+          capability: 'payments',
+          itemId: 'product-1',
+          pagePath: '/',
+          provider: 'stripe',
+          sectionId: 'shop',
+          type: 'request_connection'
+        }
+      ],
+      response: 'Your shop is ready. Connect Stripe to finish payments.',
+      summary: 'Prepared shop payments'
+    })
+
+    assert.deepEqual(applySiteEditPlan(document, plan), document)
+  })
+
+  it('adds a connected Stripe page to priced products without replacing unrelated links', () => {
+    const document = createSiteDocument(
+      {
+        ...source,
+        sections: [
+          {
+            ...source.sections[0],
+            heading: 'Products',
+            items: [
+              { body: 'A simple product.', links: [], price: '€29', title: 'Starter kit' },
+              {
+                body: 'Read the details.',
+                links: [{ href: 'https://example.com/details', label: 'Details' }],
+                title: 'Guide'
+              }
+            ]
+          }
+        ]
+      },
+      'owned'
+    )
+    const result = applyPublicSiteConnection(document, {
+      provider: 'stripe',
+      url: 'https://buy.stripe.com/test_123'
+    })
+
+    assert.equal(result.document.sections[0]?.items?.[0]?.links[0]?.label, 'Buy now')
+    assert.equal(
+      result.document.sections[0]?.items?.[0]?.links[0]?.href,
+      'https://buy.stripe.com/test_123'
+    )
+    assert.equal(
+      result.document.sections[0]?.items?.[1]?.links[0]?.href,
+      'https://example.com/details'
+    )
+    const removed = removePublicSiteConnection(result.document, 'https://buy.stripe.com/test_123')
+    assert.equal(removed.document.sections[0]?.items?.[0]?.links.length, 0)
+    assert.equal(
+      removed.document.sections[0]?.items?.[1]?.links[0]?.href,
+      'https://example.com/details'
+    )
   })
 })

@@ -2,13 +2,15 @@
 
 import type { SiteDocument } from '@coderocket/core'
 import type { SiteEditSelection } from '@coderocket/core/site-edit'
-import { Monitor, MousePointerClick, Smartphone, Tablet, X } from '@repo/design-system/icons'
-import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from 'react'
 import { SiteDocumentPreview } from '@/components/site-document-preview'
+import type { BuilderConnectionSummary } from '@/lib/builder-connections'
+import {
+  type PreviewViewport,
+  type StudioPageOption,
+  StudioPreviewToolbar
+} from './studio-preview-toolbar'
 import { useStudioSelection } from './studio-selection-context'
-
-type PreviewViewport = 'desktop' | 'tablet' | 'mobile'
 
 const previewWidths: Record<PreviewViewport, number | string> = {
   desktop: '100%',
@@ -17,8 +19,22 @@ const previewWidths: Record<PreviewViewport, number | string> = {
 }
 
 /** Let an owner review the recreated responsive layouts without exposing browser dimensions. */
-export function StudioPreview({ document }: { document: SiteDocument }) {
+export function StudioPreview({
+  connections,
+  document,
+  selectedPath,
+  siteId
+}: {
+  connections: BuilderConnectionSummary[]
+  document: SiteDocument
+  selectedPath: string
+  siteId: string
+}) {
   const [viewport, setViewport] = useState<PreviewViewport>('desktop')
+  const pages: StudioPageOption[] =
+    document.pages && document.pages.length > 0
+      ? document.pages
+      : [{ path: selectedPath, title: document.sections[0]?.heading ?? document.identity.name }]
   const { clearSelection, pagePath, selecting, selection, select, setSelecting } =
     useStudioSelection()
   const previewFrame = useRef<HTMLDivElement>(null)
@@ -46,6 +62,7 @@ export function StudioPreview({ document }: { document: SiteDocument }) {
     }
   }, [selecting])
 
+  /** Store a bounded semantic target from the visible preview. */
   function selectElement(element: HTMLElement) {
     const nextSelection = readPreviewSelection(element, pagePath)
     if (!nextSelection) return
@@ -55,15 +72,17 @@ export function StudioPreview({ document }: { document: SiteDocument }) {
     select(nextSelection)
   }
 
+  /** Select the closest eligible preview element without following its normal action. */
   function handlePreviewClick(event: MouseEvent<HTMLDivElement>) {
     if (!selecting) return
-    const target = (event.target as HTMLElement).closest<HTMLElement>('[data-cr-select-kind]')
+    const target = closestSelectableTarget(event.target)
     if (!target || !event.currentTarget.contains(target)) return
     event.preventDefault()
     event.stopPropagation()
     selectElement(target)
   }
 
+  /** Support selection and cancellation from the keyboard. */
   function handlePreviewKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape' && selecting) {
       event.preventDefault()
@@ -71,7 +90,7 @@ export function StudioPreview({ document }: { document: SiteDocument }) {
       return
     }
     if (!selecting || (event.key !== 'Enter' && event.key !== ' ')) return
-    const target = (event.target as HTMLElement).closest<HTMLElement>('[data-cr-select-kind]')
+    const target = closestSelectableTarget(event.target)
     if (!target || !event.currentTarget.contains(target)) return
     event.preventDefault()
     selectElement(target)
@@ -79,75 +98,18 @@ export function StudioPreview({ document }: { document: SiteDocument }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div
-        aria-label="Preview size"
-        className="hidden min-h-11 shrink-0 flex-wrap items-center gap-1 border-border border-b bg-background px-3 sm:flex"
-        role="group"
-      >
-        <CodeRocketButton
-          aria-pressed={viewport === 'desktop'}
-          onClick={() => setViewport('desktop')}
-          size="sm"
-          type="button"
-          variant={viewport === 'desktop' ? 'primary' : 'outline'}
-        >
-          <Monitor aria-hidden /> Desktop
-        </CodeRocketButton>
-        <CodeRocketButton
-          aria-pressed={viewport === 'tablet'}
-          onClick={() => setViewport('tablet')}
-          size="sm"
-          type="button"
-          variant={viewport === 'tablet' ? 'primary' : 'outline'}
-        >
-          <Tablet aria-hidden /> Tablet
-        </CodeRocketButton>
-        <CodeRocketButton
-          aria-pressed={viewport === 'mobile'}
-          onClick={() => setViewport('mobile')}
-          size="sm"
-          type="button"
-          variant={viewport === 'mobile' ? 'primary' : 'outline'}
-        >
-          <Smartphone aria-hidden /> Phone
-        </CodeRocketButton>
-      </div>
-      <div className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 border-border border-b bg-surface-raised px-3 py-2">
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-xs">
-            {selecting
-              ? 'Click the element you want to change'
-              : selection
-                ? `${selectionLabel(selection.kind)} selected`
-                : 'Select an element for a precise prompt'}
-          </p>
-          <p className="mt-0.5 hidden truncate text-muted text-xs md:block">
-            {selecting
-              ? 'Buttons, text, images, and whole sections can be selected.'
-              : selection
-                ? `“${selection.label}” is now attached to your next request.`
-                : 'CodeRocket will attach it to your next request.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {selection ? (
-            <CodeRocketButton onClick={clearSelection} size="sm" type="button" variant="ghost">
-              <X aria-hidden /> Clear
-            </CodeRocketButton>
-          ) : null}
-          <CodeRocketButton
-            aria-pressed={selecting}
-            onClick={() => setSelecting(!selecting)}
-            size="sm"
-            type="button"
-            variant={selecting ? 'primary' : 'outline'}
-          >
-            <MousePointerClick aria-hidden />
-            {selecting ? 'Cancel selection' : selection ? 'Select another' : 'Select on page'}
-          </CodeRocketButton>
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto bg-background-subtle p-2 sm:p-3">
+      <StudioPreviewToolbar
+        clearSelection={clearSelection}
+        pages={pages}
+        selectedPath={selectedPath}
+        selection={selection}
+        selecting={selecting}
+        setSelecting={setSelecting}
+        setViewport={setViewport}
+        siteId={siteId}
+        viewport={viewport}
+      />
+      <div className="relative min-h-0 flex-1 overflow-auto bg-background-subtle p-1.5 sm:p-2">
         <div
           className="mx-auto min-h-full overflow-hidden border border-border bg-background transition-[width] duration-200 motion-reduce:transition-none data-[selecting=true]:[&_[data-cr-select-kind]:focus-visible]:outline-2 data-[selecting=true]:[&_[data-cr-select-kind]:focus-visible]:outline-signal data-[selecting=true]:[&_[data-cr-select-kind]:hover]:outline-2 data-[selecting=true]:[&_[data-cr-select-kind]:hover]:outline-signal [&_[data-cr-select-kind]]:outline-offset-[-3px] data-[selecting=true]:[&_[data-cr-select-kind]]:cursor-crosshair [&_[data-cr-selected=true]]:outline-2 [&_[data-cr-selected=true]]:outline-accent"
           data-preview-frame
@@ -157,13 +119,18 @@ export function StudioPreview({ document }: { document: SiteDocument }) {
           ref={previewFrame}
           style={{ maxWidth: '100%', width: previewWidths[viewport] }}
         >
-          <SiteDocumentPreview document={document} />
+          <SiteDocumentPreview
+            connections={connections}
+            document={document}
+            pagePath={selectedPath}
+          />
         </div>
       </div>
     </div>
   )
 }
 
+/** Convert trusted preview data attributes into the small AI selection context. */
 function readPreviewSelection(
   element: HTMLElement,
   pagePath: string
@@ -181,6 +148,7 @@ function readPreviewSelection(
   }
 }
 
+/** Narrow arbitrary preview metadata to one supported selection kind. */
 function isSelectionKind(value?: string): value is SiteEditSelection['kind'] {
   return (
     value === 'brand' ||
@@ -193,8 +161,9 @@ function isSelectionKind(value?: string): value is SiteEditSelection['kind'] {
   )
 }
 
-function selectionLabel(kind: SiteEditSelection['kind']): string {
-  if (kind === 'brand') return 'Brand name'
-  if (kind === 'collection_item') return 'Card'
-  return kind.charAt(0).toUpperCase() + kind.slice(1)
+/** Find an eligible preview element from a browser event target without unsafe type coercion. */
+function closestSelectableTarget(target: EventTarget | null): HTMLElement | undefined {
+  if (!(target instanceof Element)) return undefined
+  const selectable = target.closest('[data-cr-select-kind]')
+  return selectable instanceof HTMLElement ? selectable : undefined
 }

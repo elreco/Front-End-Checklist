@@ -1,6 +1,13 @@
 'use client'
 
-import { Check, Clock3, LoaderCircle, Sparkles, TriangleAlert } from '@repo/design-system/icons'
+import {
+  Check,
+  Clock3,
+  LoaderCircle,
+  Sparkles,
+  Square,
+  TriangleAlert
+} from '@repo/design-system/icons'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -20,6 +27,7 @@ import {
   type StudioConnectionMode,
   StudioCreationSteps
 } from './studio-progress-status'
+import { StudioStopGeneration } from './studio-stop-generation'
 
 /** Show owner-friendly live recreation progress with Realtime updates and automatic polling backup. */
 export function StudioCreationProgress({
@@ -58,7 +66,10 @@ export function StudioCreationProgress({
       const next = parseStudioImportProgress(await response.json())
       if (!next) throw new Error('Progress response was incomplete')
       setProgress(next)
-      if (!terminalHandled.current && (next.status === 'ready' || next.status === 'published')) {
+      if (
+        !terminalHandled.current &&
+        (next.status === 'ready' || next.status === 'published' || next.status === 'cancelled')
+      ) {
         terminalHandled.current = true
         refreshTimer.current = window.setTimeout(() => router.refresh(), 1400)
       }
@@ -108,21 +119,26 @@ export function StudioCreationProgress({
   const queueDelayed = studioQueueIsDelayed(progress, now)
   const completed = progress.status === 'ready' || progress.status === 'published'
   const failed = progress.status === 'failed'
+  const cancelled = progress.status === 'cancelled'
   const headline = completed
     ? 'Your first version is ready'
-    : failed
-      ? 'Creation stopped safely'
-      : queueDelayed
-        ? 'Your website is in the queue'
-        : 'Building your first version'
+    : cancelled
+      ? 'Creation stopped'
+      : failed
+        ? 'Creation stopped safely'
+        : queueDelayed
+          ? 'Your website is in the queue'
+          : 'Building your first version'
   const message = completed
     ? 'Opening your private, editable preview…'
-    : failed
-      ? 'CodeRocket could not finish this website after several attempts. Nothing was published.'
-      : queueDelayed
-        ? 'CodeRocket is temporarily busy. Your request is saved and will start automatically.'
-        : (progress.message ??
-          'CodeRocket is studying the public website and rebuilding it as editable sections.')
+    : cancelled
+      ? 'Nothing was published. Your reserved creation credits were returned.'
+      : failed
+        ? 'CodeRocket could not finish this website after several attempts. Nothing was published.'
+        : queueDelayed
+          ? 'CodeRocket is temporarily busy. Your request is saved and will start automatically.'
+          : (progress.message ??
+            'CodeRocket is studying the public website and rebuilding it as editable sections.')
   const guidance = studioProgressGuidance(progress, elapsedMs)
 
   return (
@@ -130,16 +146,23 @@ export function StudioCreationProgress({
       <div className="border-border border-b p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <StudioConnectionBadge mode={connectionMode} />
-          <span className="flex items-center gap-2 font-mono text-muted text-xs">
-            <Clock3 aria-hidden className="h-3.5 w-3.5" />
-            Working for {formatStudioElapsed(elapsedMs)}
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <span className="flex items-center gap-2 font-mono text-muted text-xs">
+              <Clock3 aria-hidden className="h-3.5 w-3.5" />
+              Working for {formatStudioElapsed(elapsedMs)}
+            </span>
+            {pending ? <StudioStopGeneration mode="creation" siteId={siteId} /> : null}
+          </div>
         </div>
         <div className="mt-7 max-w-3xl">
           <div className="flex items-center gap-3">
             {completed ? (
               <span className="flex h-10 w-10 items-center justify-center border border-success text-success">
                 <Check aria-hidden className="h-5 w-5" />
+              </span>
+            ) : cancelled ? (
+              <span className="flex h-10 w-10 items-center justify-center border border-signal text-signal">
+                <Square aria-hidden className="h-5 w-5" />
               </span>
             ) : failed ? (
               <span className="flex h-10 w-10 items-center justify-center border border-danger text-danger">
@@ -176,7 +199,13 @@ export function StudioCreationProgress({
 
         <div className="mt-7">
           <div className="flex items-center justify-between gap-4 font-mono text-[10px] uppercase tracking-[.1em]">
-            <span>{failed ? 'Stopped safely' : currentStudioStepLabel(percent)}</span>
+            <span>
+              {cancelled
+                ? 'Stopped by you'
+                : failed
+                  ? 'Stopped safely'
+                  : currentStudioStepLabel(percent)}
+            </span>
             <span className="text-muted">{percent}%</span>
           </div>
           <div
@@ -196,7 +225,7 @@ export function StudioCreationProgress({
           </div>
         </div>
 
-        {failed ? null : <StudioCreationSteps percent={percent} />}
+        {failed || cancelled ? null : <StudioCreationSteps percent={percent} />}
       </div>
 
       <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,.75fr)]">
@@ -205,7 +234,9 @@ export function StudioCreationProgress({
       </div>
 
       <p className="border-border border-t px-5 py-4 text-center text-muted text-sm sm:px-6">
-        You can leave this page. Creation continues safely in the background.
+        {cancelled
+          ? 'Creation has stopped. You can start again whenever you are ready.'
+          : 'You can leave this page. Creation continues safely in the background.'}
       </p>
     </section>
   )

@@ -9,6 +9,7 @@ import { requestAuditResponse } from './safe-fetch-response'
 
 const MAX_REDIRECTS = 5
 const DEFAULT_TIMEOUT_MS = 10_000
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 export interface SafeHtmlResponse {
   url: string
@@ -26,6 +27,29 @@ export interface SafeTextResponse {
   status: number
   durationMs: number
   headers: Record<string, string>
+}
+
+export interface SafeImageResponse {
+  bytes: Uint8Array
+  contentType: 'image/avif' | 'image/gif' | 'image/jpeg' | 'image/png' | 'image/webp'
+  durationMs: number
+  fetchedAt: string
+  headers: Record<string, string>
+  status: number
+  url: string
+}
+
+/** Narrow a remote content type to passive raster formats that cannot execute scripts. */
+function readSafeImageContentType(value?: string): SafeImageResponse['contentType'] | undefined {
+  const normalized = value?.split(';')[0]?.trim().toLowerCase()
+  if (
+    normalized === 'image/avif' ||
+    normalized === 'image/gif' ||
+    normalized === 'image/jpeg' ||
+    normalized === 'image/png' ||
+    normalized === 'image/webp'
+  )
+    return normalized
 }
 
 export interface SafeFetchOptions {
@@ -175,4 +199,59 @@ export async function probePublicImage(
   options: SafeFetchOptions = {}
 ): Promise<string> {
   return (await fetchPublicResource(rawUrl, options, true)).url
+}
+
+/** Download one bounded passive image with pinned DNS and redirect-by-redirect validation. */
+export async function fetchPublicImage(
+  rawUrl: string,
+  options: SafeFetchOptions = {}
+): Promise<SafeImageResponse> {
+  const startedAt = performance.now()
+  const timeoutSignal = AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS)
+  let target = await resolvePublicTarget(rawUrl, timeoutSignal)
+  const initialOrigin = target.url.origin
+  const customHeaders = normalizeSafeRequestHeaders(options.headers)
+  for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
+    const requestHeaders = target.url.origin === initialOrigin ? customHeaders : {}
+    const response = await requestAuditResponse(
+      target,
+      timeoutSignal,
+      'image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9',
+      requestHeaders,
+      options.fetchImplementation
+    )
+    await rejectKnownAccessBarrier(response, 'resource')
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      if (redirect === MAX_REDIRECTS) {
+        await response.discard()
+        throw new Error('Too many redirects')
+      }
+      const location = response.headers.get('location')
+      await response.discard()
+      if (!location) throw new Error('Redirect is missing a Location header')
+      target = await resolvePublicTarget(new URL(location, target.url).toString(), timeoutSignal)
+      continue
+    }
+    if (response.status < 200 || response.status >= 300) {
+      await response.discard()
+      throw new Error(`HTTP ${response.status}`)
+    }
+    const contentType = readSafeImageContentType(response.headers.get('content-type') ?? undefined)
+    if (!contentType) {
+      await response.discard()
+      throw new Error('Response is not a supported passive image')
+    }
+    const bytes = await response.readBytes(MAX_IMAGE_BYTES)
+    if (bytes.byteLength === 0) throw new Error('Image response is empty')
+    return {
+      bytes,
+      contentType,
+      durationMs: Math.round(performance.now() - startedAt),
+      fetchedAt: new Date().toISOString(),
+      headers: Object.fromEntries(response.headers.entries()),
+      status: response.status,
+      url: target.url.toString()
+    }
+  }
+  throw new Error('Too many redirects')
 }

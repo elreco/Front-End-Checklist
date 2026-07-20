@@ -1,4 +1,4 @@
-import type { SiteDocument } from '@coderocket/core'
+import { selectSiteDocumentPage } from '@coderocket/core/site-document'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { SiteDocumentPreview } from '@/components/site-document-preview'
@@ -6,6 +6,7 @@ import { getPublishedBuilderSite, recordPublishedBuilderVisit } from '@/lib/buil
 
 export const dynamic = 'force-dynamic'
 
+/** Build public metadata from the exact captured page selected by the requested path. */
 export async function generateMetadata({
   params
 }: {
@@ -14,7 +15,8 @@ export async function generateMetadata({
   const { path, slug } = await params
   const site = await getPublishedBuilderSite(slug)
   if (!site) return { title: 'Website not found', robots: { index: false, follow: false } }
-  const pageDocument = selectPublishedPage(site.document, path)
+  const requestedPath = path?.length ? `/${path.join('/')}` : '/'
+  const pageDocument = selectSiteDocumentPage(site.document, requestedPath)
   if (!pageDocument) return { title: 'Page not found', robots: { index: false, follow: false } }
   const firstSection = pageDocument.sections[0]
   return {
@@ -33,7 +35,8 @@ export default async function PublishedWebsitePage({
   const { path, slug } = await params
   const site = await getPublishedBuilderSite(slug)
   if (!site) notFound()
-  const pageDocument = selectPublishedPage(site.document, path)
+  const requestedPath = path?.length ? `/${path.join('/')}` : '/'
+  const pageDocument = selectSiteDocumentPage(site.document, requestedPath)
   if (!pageDocument) notFound()
   if (!(await recordPublishedBuilderVisit(slug)))
     return (
@@ -49,13 +52,14 @@ export default async function PublishedWebsitePage({
         </div>
       </main>
     )
-  return <SiteDocumentPreview document={pageDocument} publicBasePath={`/s/${slug}`} published />
-}
-
-/** Select one captured path while keeping the shared identity, theme, and navigation. */
-function selectPublishedPage(document: SiteDocument, path?: string[]): SiteDocument | undefined {
-  const requestedPath = path?.length ? `/${path.join('/')}` : '/'
-  if (requestedPath === '/' && !document.pages) return document
-  const page = document.pages?.find(candidate => candidate.path === requestedPath)
-  return page ? { ...document, sections: page.sections } : undefined
+  return (
+    <SiteDocumentPreview
+      checkoutPath={`/s/${slug}/checkout`}
+      connections={site.connections}
+      document={pageDocument}
+      pagePath={requestedPath}
+      publicBasePath={`/s/${slug}`}
+      published
+    />
+  )
 }

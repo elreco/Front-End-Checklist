@@ -328,6 +328,18 @@ describe('CodeRocket database migration', () => {
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
+  it('stores cloned raster assets in one bounded public delivery bucket', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607200013_builder_site_assets.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /'cr-builder-assets'/)
+    assert.match(sql, /8388608/)
+    assert.match(sql, /'image\/avif'.*'image\/webp'/s)
+    assert.doesNotMatch(sql, /image\/svg\+xml/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
   it('renews long-running job leases without exposing the queue to browser roles', async () => {
     const sql = await readFile(
       new URL('../supabase/migrations/202607200005_job_lease_renewal.sql', import.meta.url),
@@ -472,6 +484,67 @@ describe('CodeRocket database migration', () => {
     assert.match(sql, /'site_edit'/)
     assert.match(sql, /'Initial guided website change'/)
     assert.match(sql, /to service_role/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('stops builder generations without allowing a late revision or keeping reserved credits', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607200014_builder_generation_cancellation.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /create or replace function public\.cr_cancel_builder_generation/)
+    assert.match(sql, /kind in \('site_import', 'site_edit'\)/)
+    assert.match(sql, /cancelled_at = now\(\)/)
+    assert.match(sql, /perform public\.cr_refund_builder_job_credits\(active_job\.id\)/)
+    assert.match(
+      sql,
+      /reserved_cost_microeur = greatest\(reserved_cost_microeur - reserved_cost, 0\)/
+    )
+    assert.match(sql, /Website generation is no longer active/)
+    assert.match(sql, /status = 'leased'[\s\S]+cancelled_at is null/)
+    assert.match(sql, /Your previous version is unchanged/)
+    assert.match(sql, /grant execute on function public\.cr_cancel_builder_generation/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('stops a guided browser as the same owner-requested creation cancellation', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607200016_fix_guided_browser_generation_cancellation.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /create or replace function public\.cr_cancel_builder_browser_handoff/)
+    assert.match(sql, /cancelled_at = now\(\)/)
+    assert.match(sql, /last_error = 'cancelled_by_owner'/)
+    assert.match(sql, /perform public\.cr_refund_builder_job_credits/)
+    assert.doesNotMatch(
+      sql,
+      /update public\.cr_jobs[\s\S]*?progress_updated_at = now\(\),\s+updated_at/
+    )
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('keeps iteration files private, message-bound, and voice requests rate-limited', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607200017_studio_prompt_attachments.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /'cr-builder-prompt-files'[\s\S]+false/)
+    assert.match(sql, /create table if not exists public\.cr_builder_message_attachments/)
+    assert.match(sql, /create index if not exists cr_builder_message_attachments_message_idx/)
+    assert.match(sql, /drop policy if exists cr_builder_message_attachments_owner_select/)
+    assert.match(sql, /create table if not exists public\.cr_builder_voice_windows/)
+    assert.match(sql, /status in \('pending', 'attached'\)/)
+    assert.match(sql, /cardinality\(attachment_ids\) > 3/)
+    assert.match(sql, /create or replace function public\.cr_request_site_edit_with_context/)
+    assert.match(sql, /cr_request_site_edit_with_selection/)
+    assert.match(sql, /create or replace function public\.cr_take_voice_transcription_slot/)
+    assert.match(sql, /request_count < 10/)
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
 
