@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@coderocket/core": "workspace:*",
     "@frontendchecklist/rules": "workspace:*",
     "openai": "^6.47.0",
     "zod": "catalog:"

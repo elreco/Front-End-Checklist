@@ -14,6 +14,19 @@ export {
   type StoredAiFindingAnalysis,
   storedAiFindingAnalysisSchema
 } from './schema'
+export {
+  buildSiteVisualInput,
+  buildSiteVisualInstructions,
+  DEFAULT_SITE_VISUAL_MODEL,
+  OpenAiSiteVisualAnalysisProvider,
+  type OpenAiSiteVisualAnalysisProviderOptions,
+  SITE_VISUAL_MAX_OUTPUT_TOKENS,
+  SITE_VISUAL_PROMPT_VERSION,
+  type SiteVisualAnalysisRequest,
+  type SiteVisualAnalysisResult,
+  type SiteVisualCaptureInput,
+  type SiteVisualTokenUsage
+} from './site-visual-analysis'
 
 export const AI_PROMPT_VERSION = 'coderocket-finding-analysis-v3'
 export const DEFAULT_AI_MODEL = 'gpt-5.6-terra'

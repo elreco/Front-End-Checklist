@@ -373,11 +373,13 @@ begin
       or jsonb_typeof(p_site_document -> 'sections') <> 'array'
       or jsonb_array_length(p_site_document -> 'sections') not between 1 and 12
       or pg_column_size(p_site_document) > 2097152
-      or case
-        when not (p_site_document ? 'pages') then false
-        when jsonb_typeof(p_site_document -> 'pages') <> 'array' then true
-        else jsonb_array_length(p_site_document -> 'pages') not between 1 and 50
-      end then
+      or (
+        case
+          when not (p_site_document ? 'pages') then false
+          when jsonb_typeof(p_site_document -> 'pages') <> 'array' then true
+          else jsonb_array_length(p_site_document -> 'pages') not between 1 and 50
+        end
+      ) then
       raise exception 'Invalid site document';
     end if;
     select coalesce(max(revision_number), 0) + 1 into next_revision
@@ -441,11 +443,13 @@ begin
     or jsonb_typeof(p_site_document -> 'sections') <> 'array'
     or jsonb_array_length(p_site_document -> 'sections') not between 1 and 12
     or pg_column_size(p_site_document) > 2097152
-    or case
-      when not (p_site_document ? 'pages') then false
-      when jsonb_typeof(p_site_document -> 'pages') <> 'array' then true
-      else jsonb_array_length(p_site_document -> 'pages') not between 1 and 50
-    end then
+    or (
+      case
+        when not (p_site_document ? 'pages') then false
+        when jsonb_typeof(p_site_document -> 'pages') <> 'array' then true
+        else jsonb_array_length(p_site_document -> 'pages') not between 1 and 50
+      end
+    ) then
     raise exception 'Invalid site document';
   end if;
   perform 1 from public.cr_builder_sites

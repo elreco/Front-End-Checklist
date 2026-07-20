@@ -14,6 +14,7 @@ import type { BuilderSiteSummary } from '@/lib/builder-data'
 
 const builderBenefits = [
   'A private first version built from the visible pages',
+  'Responsive layout checked for phone, tablet, and computer',
   'Simple fields for changing the important words and actions',
   'Managed hosting when you decide to publish'
 ]

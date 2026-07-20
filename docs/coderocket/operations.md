@@ -2,7 +2,9 @@
 
 ## Supabase cutover
 
-1. Do not migrate, query, or modify historical application tables. Only Supabase `auth.users` identities are intentionally reused.
+1. Do not modify historical application tables. Automated schema migrations only reference
+   CodeRocket `cr_*` objects. The audited legacy-premium reconciliation below is the sole exception
+   allowed to read historical billing tables.
 2. Verify `email`, GitHub, Google, and Facebook providers are still enabled.
 3. Add `https://www.coderocket.app/auth/callback` and the local callback to the Auth redirect allow-list.
 4. Apply the `packages/coderocket-db/supabase/migrations` files. The first migration disables the legacy broad welcome-email trigger before creating the new profile trigger.
@@ -10,6 +12,22 @@
 6. Run cross-owner RLS tests with two non-service sessions before accepting signups.
 
 Only the worker and server routes receive `SUPABASE_SERVICE_ROLE_KEY`. It must never use a `NEXT_PUBLIC_` prefix.
+
+### Historical premium accounts
+
+Before inviting historical users, reconcile previous paid CodeRocket subscriptions:
+
+```bash
+pnpm --filter @coderocket/cloud sync:legacy-premium
+pnpm --filter @coderocket/cloud sync:legacy-premium -- --apply
+```
+
+The first command is a dry run. The apply command reads the old `subscriptions`, `prices`, and
+`products` records, verifies every candidate against the current Stripe subscription, and updates
+only matching `cr_subscriptions` rows that are still on Free. Historical `Starter` and `Pro`
+products become Launch (`solo`); `Enterprise` becomes Studio (`agency`). Canceled, missing, and
+unrelated products are excluded. The command prints aggregate counts only, is safe to rerun, and
+never changes the historical tables.
 
 ## Stripe
 
@@ -20,6 +38,8 @@ Only the worker and server routes receive `SUPABASE_SERVICE_ROLE_KEY`. It must n
 - Put their IDs in `STRIPE_SOLO_PRICE_ID` and `STRIPE_AGENCY_PRICE_ID`.
 - Enable automatic tax and tax ID collection in Checkout.
 - Register `/api/stripe/webhook`; subscribe to subscription create/update/delete and invoice payment failure events.
+- Keep grandfathered subscription IDs in `cr_subscriptions`; webhook updates use the stored paid
+  plan when an old Stripe price does not match a current price environment variable.
 - Replay events with Stripe CLI and verify `cr_stripe_events` remains idempotent.
 
 ## Fly.io

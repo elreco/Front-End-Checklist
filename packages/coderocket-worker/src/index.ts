@@ -8,6 +8,7 @@ import { sendAlertEmail } from './email'
 import { allowsEmailAlert, readEmailAlertKind } from './email-policy'
 import { log } from './log'
 import { failSiteImportJob, processSiteImportJob } from './site-import-job'
+import { cleanupExpiredSiteImportArtifacts, reportSiteImportProgress } from './site-import-progress'
 
 const workerId = `fly-${process.env.FLY_MACHINE_ID ?? randomUUID()}`
 let stopping = false
@@ -106,6 +107,7 @@ async function tick() {
       .from('cr_idempotency_keys')
       .delete()
       .lt('created_at', new Date(Date.now() - 31 * 86_400_000).toISOString())
+    await cleanupExpiredSiteImportArtifacts()
     lastRetentionAt = Date.now()
   }
   const { data, error } = await db.rpc('cr_claim_jobs', { p_worker_id: workerId, p_limit: 1 })
@@ -143,6 +145,27 @@ async function tick() {
           })
           .eq('id', job.id)
           .eq('lease_owner', workerId)
+      if (job.kind === 'site_import' && job.attempts < 3)
+        await reportSiteImportProgress(
+          {
+            id: job.id,
+            owner_id: job.owner_id,
+            project_id: job.project_id,
+            builder_site_id: job.builder_site_id,
+            attempts: job.attempts,
+            payload: { ...job.payload, kind: job.kind }
+          },
+          {
+            eventKey: `retry-${job.attempts}`,
+            kind: 'warning',
+            message: `Trying again in ${delay} seconds`,
+            progress: 8,
+            stage: 'retrying',
+            title: 'A temporary problem interrupted creation',
+            detail:
+              'Your request is safe. CodeRocket will try again automatically without using another website allowance.'
+          }
+        )
       await db.rpc('cr_retry_job', {
         p_job_id: job.id,
         p_worker_id: workerId,

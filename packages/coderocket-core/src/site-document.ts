@@ -1,4 +1,12 @@
 import { z } from 'zod'
+import {
+  type SiteSectionVisualStyle,
+  type SiteVisualTheme,
+  sanitizeFontFamily,
+  sanitizeVisualBackground,
+  siteSectionVisualStyleSchema,
+  siteVisualThemeSchema
+} from './site-visual-style'
 
 export type SiteSourceMode = 'owned' | 'inspiration'
 export type SiteGoal = 'contact' | 'booking' | 'sell' | 'present'
@@ -10,7 +18,9 @@ export interface SourceSectionBlueprint {
   heading: string
   imageAlt?: string
   imageUrl?: string
+  layout?: 'centered' | 'split' | 'stacked'
   links: Array<{ href: string; label: string }>
+  visual?: SiteSectionVisualStyle
 }
 
 export interface SiteSourceBlueprint {
@@ -25,6 +35,8 @@ export interface SiteSourceBlueprint {
   sections: SourceSectionBlueprint[]
   sourceUrl: string
   title: string
+  visualAnalysis?: 'responsive-ai' | 'responsive-dom'
+  visualTheme?: SiteVisualTheme
 }
 
 const httpsUrlSchema = z
@@ -45,7 +57,8 @@ const siteSectionSchema = z.object({
   links: z.array(siteLinkSchema).max(4),
   backgroundColor: z.string().max(80),
   foregroundColor: z.string().max(80),
-  layout: z.enum(['centered', 'split', 'stacked'])
+  layout: z.enum(['centered', 'split', 'stacked']),
+  visual: siteSectionVisualStyleSchema.optional()
 })
 const sitePageSchema = z.object({
   path: z
@@ -71,7 +84,8 @@ export const siteDocumentSchema = z.object({
     backgroundColor: z.string().max(80),
     foregroundColor: z.string().max(80),
     accentColor: z.string().max(80),
-    fontStyle: z.enum(['sans', 'editorial', 'technical'])
+    fontStyle: z.enum(['sans', 'editorial', 'technical']),
+    visual: siteVisualThemeSchema.optional()
   }),
   navigation: z.array(siteLinkSchema).max(8),
   sections: z.array(siteSectionSchema).min(1).max(12),
@@ -81,6 +95,16 @@ export const siteDocumentSchema = z.object({
       discoveredPages: z.number().int().min(1).max(200),
       capturedPages: z.number().int().min(1).max(50),
       failedPaths: z.array(z.string().max(1024)).max(50)
+    })
+    .optional(),
+  recreation: z
+    .object({
+      capturedViewports: z
+        .array(z.enum(['mobile', 'tablet', 'desktop']))
+        .min(1)
+        .max(3),
+      visualAnalysis: z.enum(['responsive-ai', 'responsive-dom']),
+      requiresReview: z.literal(true)
     })
     .optional()
 })
@@ -132,6 +156,7 @@ export function createSiteDocument(
     const sourceHeading = cleanText(section.heading, 180)
     const sourceBody = cleanText(section.body, 1200)
     const isHero = index === 0
+    const sectionVisual = normalizeSectionVisual(section.visual)
     return {
       id: `section-${index + 1}`,
       kind: isHero ? 'hero' : inferSectionKind(section, index, sourceSections.length),
@@ -158,9 +183,11 @@ export function createSiteDocument(
             : [],
       backgroundColor: safeColor(section.backgroundColor, blueprint.backgroundColor),
       foregroundColor: safeColor(section.foregroundColor, blueprint.foregroundColor),
-      layout: isHero ? 'split' : section.imageUrl ? 'split' : 'stacked'
+      layout: section.layout ?? (isHero ? 'split' : section.imageUrl ? 'split' : 'stacked'),
+      ...(sectionVisual ? { visual: sectionVisual } : {})
     }
   })
+  const visualTheme = normalizeVisualTheme(blueprint.visualTheme)
 
   return siteDocumentSchema.parse({
     version: 1,
@@ -177,16 +204,23 @@ export function createSiteDocument(
       backgroundColor: safeColor(blueprint.backgroundColor, '#ffffff'),
       foregroundColor: safeColor(blueprint.foregroundColor, '#111827'),
       accentColor: safeColor(blueprint.accentColor, '#5b5bd6'),
-      fontStyle: 'sans'
+      fontStyle: 'sans',
+      ...(visualTheme ? { visual: visualTheme } : {})
     },
     navigation:
       mode === 'owned'
         ? normalizeLinks(blueprint.navigation, sourceOrigin).slice(0, 8)
         : [{ href: `${sourceOrigin}/#contact`, label: inspiration.cta }],
-    sections
+    sections,
+    recreation: {
+      capturedViewports: visualTheme ? ['mobile', 'tablet', 'desktop'] : ['desktop'],
+      visualAnalysis: blueprint.visualAnalysis ?? 'responsive-dom',
+      requiresReview: true
+    }
   })
 }
 
+/** Infer the most useful default visitor action from bounded visible source content. */
 function inferSiteGoal(blueprint: SiteSourceBlueprint): SiteGoal {
   const searchableContent = [
     blueprint.title,
@@ -275,6 +309,7 @@ export function getBuilderPlanEntitlements(plan: 'free' | 'solo' | 'agency') {
   }
 }
 
+/** Create one usable section when the rendered page exposes no clear section containers. */
 function fallbackSection(blueprint: SiteSourceBlueprint): SourceSectionBlueprint {
   return {
     backgroundColor: blueprint.backgroundColor,
@@ -285,6 +320,47 @@ function fallbackSection(blueprint: SiteSourceBlueprint): SourceSectionBlueprint
   }
 }
 
+/** Validate captured theme values and replace unsafe CSS fragments with stable fallbacks. */
+function normalizeVisualTheme(value?: SiteVisualTheme): SiteVisualTheme | undefined {
+  if (!value) return undefined
+  const parsed = siteVisualThemeSchema.safeParse({
+    ...value,
+    fontFamily: sanitizeFontFamily(value.fontFamily, 'system-ui, sans-serif'),
+    headingFontFamily: sanitizeFontFamily(
+      value.headingFontFamily,
+      value.fontFamily || 'system-ui, sans-serif'
+    ),
+    header: {
+      ...value.header,
+      backgroundColor: safeColor(value.header.backgroundColor, '#ffffff'),
+      foregroundColor: safeColor(value.header.foregroundColor, '#111827'),
+      borderColor: safeColor(value.header.borderColor, 'rgba(0, 0, 0, 0.12)')
+    },
+    button: {
+      ...value.button,
+      backgroundColor: safeColor(value.button.backgroundColor, '#111827'),
+      foregroundColor: safeColor(value.button.foregroundColor, '#ffffff'),
+      borderColor: safeColor(value.button.borderColor, value.button.backgroundColor)
+    }
+  })
+  return parsed.success ? parsed.data : undefined
+}
+
+/** Validate one captured section style before it enters the persisted document. */
+function normalizeSectionVisual(
+  value?: SiteSectionVisualStyle
+): SiteSectionVisualStyle | undefined {
+  if (!value) return undefined
+  const parsed = siteSectionVisualStyleSchema.safeParse({
+    ...value,
+    headingFontFamily: sanitizeFontFamily(value.headingFontFamily, 'system-ui, sans-serif'),
+    borderColor: safeColor(value.borderColor, 'rgba(0, 0, 0, 0)'),
+    backgroundImage: sanitizeVisualBackground(value.backgroundImage)
+  })
+  return parsed.success ? parsed.data : undefined
+}
+
+/** Infer a small semantic section role without exposing implementation choices to the owner. */
 function inferSectionKind(
   section: SourceSectionBlueprint,
   index: number,
@@ -295,10 +371,12 @@ function inferSectionKind(
   return 'content'
 }
 
+/** Collapse and bound untrusted visible copy. */
 function cleanText(value: string, maximumLength: number): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, maximumLength)
 }
 
+/** Keep only complete secure asset URLs. */
 function safeHttpsUrl(value?: string): string | undefined {
   if (!value) return undefined
   try {
@@ -309,6 +387,7 @@ function safeHttpsUrl(value?: string): string | undefined {
   }
 }
 
+/** Keep common computed CSS color formats and reject arbitrary declarations. */
 function safeColor(value: string, fallback: string): string {
   const normalized = value.trim().toLowerCase()
   if (
@@ -321,6 +400,7 @@ function safeColor(value: string, fallback: string): string {
   return fallback
 }
 
+/** Resolve visible links against the source origin and retain only secure destinations. */
 function normalizeLinks(
   links: Array<{ href: string; label: string }>,
   sourceOrigin: string

@@ -18,7 +18,7 @@ const steps = [
   {
     number: '01',
     title: 'Paste the website address',
-    body: 'CodeRocket studies the visible pages, words, images, colours, and structure. You never need to explain the technology behind it.'
+    body: 'CodeRocket studies the visible pages, words, images, typography, spacing, and layouts on phone, tablet, and computer. You never need to explain the technology behind it.'
   },
   {
     number: '02',
@@ -33,6 +33,11 @@ const steps = [
 ]
 
 const faqItems = [
+  {
+    question: 'How close will the recreated website be?',
+    answer:
+      'CodeRocket compares the visible computer and phone layouts, then rebuilds their design system with safe components. You review the private result before publishing. Highly interactive applications or protected content may still need a small manual adjustment.'
+  },
   {
     question: 'Does CodeRocket copy every piece of source code?',
     answer:

@@ -114,37 +114,37 @@ export function AppShellLayout({
   return (
     <div
       className={`grid min-h-screen transition-[grid-template-columns] duration-200 motion-reduce:transition-none ${
-        collapsed ? 'lg:grid-cols-[76px_minmax(0,1fr)]' : 'lg:grid-cols-[260px_minmax(0,1fr)]'
+        collapsed ? 'lg:grid-cols-[68px_minmax(0,1fr)]' : 'lg:grid-cols-[248px_minmax(0,1fr)]'
       }`}
     >
       <aside
         className={`hidden border-border border-r bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col ${
-          collapsed ? 'lg:px-3 lg:pb-3' : 'lg:px-4 lg:pb-4'
+          collapsed ? 'lg:px-2 lg:pb-2' : 'lg:px-3 lg:pb-3'
         }`}
       >
         <TooltipProvider delayDuration={250}>
-          <div className="flex h-16 items-center">
+          <div className="flex h-[60px] shrink-0 items-center">
             <Link
               aria-label="CodeRocket overview"
-              className={`flex min-w-0 items-center ${collapsed ? 'mx-auto justify-center' : 'px-1'}`}
+              className={`flex min-w-0 items-center ${collapsed ? 'mx-auto justify-center' : 'px-1.5'}`}
               href="/dashboard"
             >
               {collapsed ? (
-                <CodeRocketMark className="h-11 w-11 shrink-0 text-foreground" />
+                <CodeRocketMark className="h-9 w-9 shrink-0 text-foreground" />
               ) : (
                 <CodeRocketLogo
-                  className="h-11 w-11 shrink-0 text-foreground"
-                  lockupClassName="gap-1.5"
+                  className="h-9 w-9 shrink-0 text-foreground"
+                  lockupClassName="gap-1"
                   tagline={CODEROCKET_TAGLINE}
-                  taglineClassName="text-[8px]"
-                  wordmarkClassName="text-xl"
+                  taglineClassName="text-[7px]"
+                  wordmarkClassName="text-lg"
                 />
               )}
             </Link>
           </div>
 
           <div
-            className={`mb-2 flex h-9 items-center ${collapsed ? 'justify-center' : 'justify-between px-3'}`}
+            className={`mb-1 flex h-8 shrink-0 items-center ${collapsed ? 'justify-center' : 'justify-between px-2'}`}
           >
             {collapsed ? null : (
               <p className="font-mono text-[10px] text-muted uppercase tracking-[.18em]">
@@ -156,7 +156,7 @@ export function AppShellLayout({
                 aria-controls="product-sidebar-navigation"
                 aria-expanded={!collapsed}
                 aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                className="relative h-8 w-8 shrink-0 border-transparent bg-transparent p-0 text-muted before:absolute before:-inset-1.5 before:content-[''] hover:border-border hover:bg-surface-raised hover:text-foreground"
+                className="relative h-7 w-7 shrink-0 border-transparent bg-transparent p-0 text-muted before:absolute before:-inset-1.5 before:content-[''] hover:border-border hover:bg-surface-raised hover:text-foreground"
                 onClick={toggleSidebar}
                 size="icon"
                 type="button"
@@ -171,21 +171,26 @@ export function AppShellLayout({
             </TooltipHint>
           </div>
 
-          <div>
-            <AppNavigation collapsed={collapsed} />
-          </div>
-
-          {collapsed ? null : (
-            <PlanPrompt plan={plan} projectCount={projectCount} projectLimit={projectLimit} />
-          )}
-
           <div
-            className={`border border-border bg-background ${
-              collapsed ? 'mt-auto p-2' : 'mt-3 p-3'
+            className={`min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-color:var(--border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] ${
+              collapsed ? '' : 'pr-1'
             }`}
           >
-            <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-accent font-mono font-semibold text-accent-foreground text-xs">
+            <AppNavigation collapsed={collapsed} />
+            {collapsed ? null : (
+              <PlanPrompt plan={plan} projectCount={projectCount} projectLimit={projectLimit} />
+            )}
+          </div>
+
+          <div
+            className={`shrink-0 border border-border bg-background ${
+              collapsed ? 'mt-2 p-2' : 'mt-2 p-2.5'
+            }`}
+          >
+            <div
+              className={`flex items-center ${collapsed ? 'flex-col justify-center gap-2' : 'gap-2.5'}`}
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-accent font-mono font-semibold text-accent-foreground text-xs">
                 {initials}
               </span>
               {collapsed ? null : (
@@ -194,24 +199,20 @@ export function AppShellLayout({
                   <p className="truncate text-muted text-xs">{email || 'Signed-in workspace'}</p>
                 </div>
               )}
+              <form action={signOut} className={collapsed ? 'w-full' : 'ml-auto shrink-0'}>
+                <TooltipHint content="Sign out" side="right">
+                  <CodeRocketButton
+                    aria-label="Sign out"
+                    className={collapsed ? 'h-8 w-full px-0' : 'h-8 w-8 px-0'}
+                    size="icon"
+                    type="submit"
+                    variant="ghost"
+                  >
+                    <LogOut aria-hidden className="h-3.5 w-3.5" />
+                  </CodeRocketButton>
+                </TooltipHint>
+              </form>
             </div>
-            <form
-              action={signOut}
-              className={`border-border border-t pt-2 ${collapsed ? 'mt-2' : 'mt-3'}`}
-            >
-              <TooltipHint content="Sign out" enabled={collapsed} side="right">
-                <CodeRocketButton
-                  aria-label={collapsed ? 'Sign out' : undefined}
-                  className={collapsed ? 'h-9 w-full px-0' : 'w-full justify-start px-1'}
-                  size="sm"
-                  type="submit"
-                  variant="ghost"
-                >
-                  <LogOut aria-hidden className="h-3.5 w-3.5" />
-                  {collapsed ? <span className="sr-only">Sign out</span> : 'Sign out'}
-                </CodeRocketButton>
-              </TooltipHint>
-            </form>
           </div>
         </TooltipProvider>
       </aside>
@@ -235,7 +236,7 @@ function PlanPrompt({
   const nextPlan = getNextPlan(plan)
   const builderIncluded = projectLimit > 0
   return (
-    <div className="mt-auto border border-border bg-background p-4">
+    <div className="mt-4 border border-border bg-background p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="font-mono text-[10px] uppercase tracking-[.14em]">
           {getPlanLabel(plan)} plan
@@ -249,7 +250,7 @@ function PlanPrompt({
         aria-valuemax={Math.max(projectLimit, 1)}
         aria-valuemin={0}
         aria-valuenow={projectCount}
-        className="mt-3 h-1 bg-surface-raised"
+        className="mt-2.5 h-1 bg-surface-raised"
         role="progressbar"
       >
         <span
@@ -259,16 +260,16 @@ function PlanPrompt({
           }}
         />
       </div>
-      <p className="mt-3 text-muted text-xs leading-5">
+      <p className="mt-2.5 text-muted text-xs leading-5">
         {isAgency
-          ? 'Ten created websites are included. Optional monitoring reports remain available.'
+          ? '10 websites included. Monitoring remains optional.'
           : builderIncluded
             ? `${projectLimit - projectCount} created website${projectLimit - projectCount === 1 ? '' : 's'} remaining.`
             : 'Unlock your first hosted website with Launch. Website checks stay available separately.'}
       </p>
       {nextPlan ? (
         <UpgradeLink
-          className="mt-3 inline-flex items-center gap-1 font-mono text-accent text-xs hover:text-signal"
+          className="mt-2.5 inline-flex items-center gap-1 font-mono text-accent text-xs hover:text-signal"
           currentPlan={plan}
           source="sidebar_plan"
           targetPlan={nextPlan}

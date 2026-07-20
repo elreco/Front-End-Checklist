@@ -1,13 +1,13 @@
-import { AlertTriangle, Check, LoaderCircle, RotateCcw } from '@repo/design-system/icons'
+import { AlertTriangle, Check, RotateCcw } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ProductShell } from '@/components/product-shell'
-import { SiteDocumentPreview } from '@/components/site-document-preview'
 import { getBuilderSite } from '@/lib/builder-data'
 import { createPrivateMetadata } from '@/lib/seo'
+import { StudioCreationProgress } from './studio-creation-progress'
 import { StudioEditor } from './studio-editor'
-import { StudioRefresh } from './studio-refresh'
+import { StudioPreview } from './studio-preview'
 
 export const metadata = createPrivateMetadata('Website studio')
 
@@ -54,25 +54,12 @@ export default async function StudioPage({
         </p>
       ) : null}
       {pending ? (
-        <section className="flex min-h-[32rem] items-center justify-center border border-border bg-surface p-6 text-center">
-          <StudioRefresh />
-          <div className="max-w-lg">
-            <LoaderCircle
-              aria-hidden
-              className="mx-auto h-9 w-9 animate-spin text-signal motion-reduce:animate-none"
-            />
-            <h2 className="mt-6 font-heading font-semibold text-3xl">
-              Creating your first version
-            </h2>
-            <p className="mt-3 text-muted leading-7">
-              {site.statusMessage ??
-                'CodeRocket is studying the visible page and rebuilding it with safe sections.'}
-            </p>
-            <p className="mt-5 font-mono text-muted text-xs">
-              You can leave this page. The work continues safely in the background.
-            </p>
-          </div>
-        </section>
+        <StudioCreationProgress
+          initialMessage={site.statusMessage}
+          initialUpdatedAt={site.updatedAt}
+          siteId={site.id}
+          sourceUrl={site.sourceUrl}
+        />
       ) : site.status === 'failed' || !site.document ? (
         <section className="flex min-h-[28rem] items-center justify-center border border-danger bg-surface p-6 text-center">
           <div className="max-w-lg">
@@ -104,6 +91,11 @@ export default async function StudioPage({
                   {(site.document.pages?.length ?? 1) === 1 ? 'page' : 'pages'} recreated · links
                   are disabled
                 </p>
+                {site.document.recreation ? (
+                  <p className="mt-1 text-muted text-xs">
+                    Layout checked for phone, tablet, and computer. Review it before publishing.
+                  </p>
+                ) : null}
                 {site.document.importSummary?.failedPaths.length ? (
                   <p className="mt-1 text-warning text-xs">
                     {site.document.importSummary.failedPaths.length}{' '}
@@ -143,7 +135,7 @@ export default async function StudioPage({
                 ))}
               </nav>
             ) : null}
-            <SiteDocumentPreview document={previewDocument} />
+            <StudioPreview document={previewDocument} />
           </section>
           <StudioEditor selectedPath={selectedPath} site={site} />
         </div>

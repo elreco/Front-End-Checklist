@@ -18,18 +18,36 @@ application as **Website health**.
 CodeRocket does not deploy arbitrary source code copied from another origin.
 
 The worker opens the rendered public page in the existing hardened Playwright session. It validates
-every network origin, blocks non-HTTPS requests, refuses private-network addresses, and captures a
-bounded blueprint:
+every network origin, blocks non-HTTPS requests, refuses private-network addresses, and studies the
+layout at 1440 px, 768 px, and 390 px. It captures a bounded blueprint:
 
 - public text and headings;
 - HTTPS images and links;
 - visible sections and navigation;
 - computed foreground, background, and action colours;
+- measured type, spacing, width, image, border, and surface styles;
+- desktop, tablet, and mobile layout changes;
 - public title, description, and brand label.
 
 It stores neither raw HTML nor JavaScript. The blueprint becomes a versioned `SiteDocument` rendered
 through controlled React components. This gives the user an editable result without creating one
 untrusted application runtime per customer.
+
+When `OPENAI_API_KEY` is configured, only the homepage desktop and mobile screenshots are sent
+transiently to the OpenAI Responses API at bounded `high` detail. A strict structured-output schema
+may refine visual properties only. It cannot change copy, links, media, identity, scripts, or
+backend behaviour. Screenshots are not stored in the site document. Secondary pages reuse the
+refined design system while retaining their own measured responsive geometry.
+
+While an import is running, the same bounded desktop and mobile captures may be copied to the
+private `cr-builder-imports` Supabase Storage bucket so the owner can see what CodeRocket is
+studying. Links are short-lived, access remains owner-scoped, and the worker removes the files after
+24 hours. The durable activity history keeps only plain-language milestones after the images
+expire.
+
+CodeRocket uses the existing official OpenAI SDK directly. It does not use the Vercel AI SDK because
+the job is a single server-side, non-streaming, schema-validated analysis and the additional
+abstraction would not improve the novice-facing journey.
 
 `owned` mode may retain visible identity and content. `inspiration` mode discards source logos,
 images, and copy, and keeps only broad visual direction. This separation is enforced in
@@ -43,10 +61,15 @@ The additive `202607190001_site_builder_foundation.sql` migration creates:
 - `cr_site_revisions`: immutable, bounded site documents;
 - `cr_builder_usage_accounts`: monthly cost reservations, import counts, and hosted visits;
 - `cr_builder_cost_ledger`: auditable reserve, charge, and release entries;
+- `cr_builder_import_events`: owner-visible milestones without prompts, tokens, or raw worker logs;
 - one new `site_import` kind in the existing `cr_jobs` queue.
 
 The existing Fly.io worker claims imports with the same leases and retry policy as website checks.
 A terminal failure releases the unused reservation and preserves a plain-language recovery state.
+During active work it updates the durable job progress and inserts bounded milestones. The Studio
+subscribes to those inserts through Supabase Realtime, then refreshes its owner-scoped progress
+endpoint. A six-second poll remains as a silent fallback when the realtime connection is
+unavailable, so a disconnected browser cannot strand the interface.
 
 ## Hosting without Vercel
 
@@ -95,6 +118,12 @@ The displayed EUR prices are €29 and €149 per month. Localised price points 
 These ceilings are hard defaults:
 
 - work reserves provider cost before queueing;
+- each Launch import reserves at most €0.25 and each Studio import €0.75;
+- the OpenAI request accepts at most two compressed screenshots and 1,800 output tokens;
+- live model pricing is read from `cr_ai_model_pricing` before any screenshot is sent, then converted
+  with a conservative currency buffer;
+- if the worst permitted request no longer fits the reservation, CodeRocket uses its measured
+  responsive fallback and does not call the model;
 - settlement cannot exceed the reservation;
 - free accounts cannot trigger builder work;
 - hosting pauses at the included visitor ceiling;
@@ -108,11 +137,12 @@ without a measurable worst-case cost must not be enabled as unmetered work.
 ## July 2026 follow-up
 
 The current vertical slice discovers same-origin pages through the homepage and sitemap, recreates
-them up to the plan ceiling, records unavailable paths explicitly, and publishes every captured
-path through the same versioned site document. The next bounded additions are:
+them up to the plan ceiling, records unavailable paths explicitly, studies responsive layouts,
+optionally refines the homepage design system with bounded vision analysis, and publishes every
+captured path through the same versioned site document. The next bounded additions are:
 
 - adding, removing, renaming, and reordering pages inside the studio;
-- visual comparison screenshots at mobile and desktop widths;
+- screenshot-to-preview visual difference scoring and bounded repair passes;
 - conversational edits that produce schema-validated document patches;
 - automatic accessibility, search, security, and performance checks before publish;
 - custom domains, rollback, asset ownership, and edge caching;

@@ -5,6 +5,7 @@ import {
   type SiteSourceBlueprint,
   siteDocumentSchema
 } from '@coderocket/core'
+import type { SiteSectionVisualStyle, SiteVisualTheme } from '@coderocket/core/site-visual'
 import { createServiceClient } from '@coderocket/db'
 import { getSupabaseServerConfig } from './supabase/config'
 import { createSupabaseServerClient } from './supabase/server'
@@ -32,6 +33,57 @@ export interface PublishedBuilderSite {
   name: string
 }
 
+const demoVisualTheme: SiteVisualTheme = {
+  fontFamily: 'Arial, Helvetica, sans-serif',
+  headingFontFamily: 'Georgia, Times New Roman, serif',
+  header: {
+    backgroundColor: '#f4f1e8',
+    foregroundColor: '#181711',
+    borderColor: '#d8d3c5',
+    height: 76,
+    position: 'sticky'
+  },
+  button: {
+    backgroundColor: '#1f5947',
+    foregroundColor: '#ffffff',
+    borderColor: '#1f5947',
+    radius: 60,
+    style: 'solid'
+  }
+}
+
+const demoSectionVisual: SiteSectionVisualStyle = {
+  desktop: {
+    contentWidth: 1152,
+    paddingBlock: 104,
+    headingSize: 78,
+    bodySize: 19,
+    gap: 56,
+    textAlign: 'left'
+  },
+  mobile: {
+    contentWidth: 390,
+    paddingBlock: 56,
+    headingSize: 46,
+    bodySize: 17,
+    gap: 28,
+    textAlign: 'left'
+  },
+  headingFontFamily: 'Georgia, Times New Roman, serif',
+  headingFontWeight: 500,
+  headingLineHeight: 0.94,
+  headingLetterSpacing: -2,
+  bodyLineHeight: 1.65,
+  borderRadius: 18,
+  borderWidth: 0,
+  borderColor: 'rgba(0, 0, 0, 0)',
+  elevation: 'none',
+  imageAspectRatio: 1.25,
+  imageFit: 'cover',
+  imagePosition: 'after',
+  backgroundImage: ''
+}
+
 const demoBlueprint: SiteSourceBlueprint = {
   accentColor: '#1f5947',
   backgroundColor: '#f4f1e8',
@@ -49,25 +101,41 @@ const demoBlueprint: SiteSourceBlueprint = {
       body: 'An independent creative studio for ambitious organisations.',
       foregroundColor: '#181711',
       heading: 'Ideas that make people move.',
-      links: [{ href: 'https://example.com/work', label: 'See our work' }]
+      layout: 'split',
+      links: [{ href: 'https://example.com/work', label: 'See our work' }],
+      visual: demoSectionVisual
     },
     {
       backgroundColor: '#ffffff',
       body: 'Strategy, identity, and digital experiences brought together by one senior team.',
       foregroundColor: '#181711',
       heading: 'Useful ideas, beautifully made.',
-      links: []
+      links: [],
+      visual: {
+        ...demoSectionVisual,
+        desktop: { ...demoSectionVisual.desktop, headingSize: 58, contentWidth: 960 },
+        mobile: { ...demoSectionVisual.mobile, headingSize: 38 },
+        headingLetterSpacing: -1
+      }
     },
     {
       backgroundColor: '#1f5947',
       body: 'Tell us what you are building and we will show you the clearest next step.',
       foregroundColor: '#ffffff',
       heading: 'Start a conversation.',
-      links: [{ href: 'https://example.com/contact', label: 'Talk to us' }]
+      layout: 'centered',
+      links: [{ href: 'https://example.com/contact', label: 'Talk to us' }],
+      visual: {
+        ...demoSectionVisual,
+        desktop: { ...demoSectionVisual.desktop, headingSize: 60, textAlign: 'center' },
+        mobile: { ...demoSectionVisual.mobile, headingSize: 40, textAlign: 'center' }
+      }
     }
   ],
   sourceUrl: 'https://example.com/',
-  title: 'Northstar Studio'
+  title: 'Northstar Studio',
+  visualAnalysis: 'responsive-ai',
+  visualTheme: demoVisualTheme
 }
 const demoHomepage = createSiteDocument(demoBlueprint, 'owned', 'contact')
 const demoContactPage = createSiteDocument(
@@ -79,7 +147,12 @@ const demoContactPage = createSiteDocument(
         body: 'Tell us what you are building. We normally reply within two working days.',
         foregroundColor: '#181711',
         heading: 'Let’s make something useful.',
-        links: [{ href: 'https://example.com/contact', label: 'Email the studio' }]
+        links: [{ href: 'https://example.com/contact', label: 'Email the studio' }],
+        visual: {
+          ...demoSectionVisual,
+          desktop: { ...demoSectionVisual.desktop, contentWidth: 820, headingSize: 64 },
+          mobile: { ...demoSectionVisual.mobile, headingSize: 42 }
+        }
       }
     ],
     sourceUrl: 'https://example.com/contact',

@@ -10,6 +10,13 @@ import {
 import type { BrowserLoginCredential } from './browser-login-credentials'
 import { assertPublicHttpsUrl, type SafeHtmlResponse } from './safe-fetch'
 import { assertHtmlIsRequestedPage, isSignInRedirect } from './safe-fetch-access'
+import {
+  capturePageBlueprint,
+  mergeResponsiveBlueprints,
+  SITE_CAPTURE_VIEWPORTS,
+  type SiteCaptureStudy,
+  type SiteViewportCapture
+} from './site-blueprint-capture'
 import type { SiteSourceBlueprint } from './site-document'
 
 const MAX_BROWSER_HTML_BYTES = 2 * 1024 * 1024
@@ -69,98 +76,54 @@ export class BrowserAuditSession {
 
   /** Capture a bounded visual and content blueprint without persisting executable source code. */
   async captureSiteBlueprint(url: string): Promise<SiteSourceBlueprint> {
+    return (await this.captureSiteStudy(url, false)).blueprint
+  }
+
+  /**
+   * Inspect desktop, tablet, and mobile layouts and optionally retain two bounded screenshots only
+   * for the transient visual-analysis request.
+   */
+  async captureSiteStudy(url: string, includeScreenshots = true): Promise<SiteCaptureStudy> {
     const requestedUrl = await assertPublicHttpsUrl(url)
     if (requestedUrl.origin !== this.siteOrigin)
       throw new Error('The page is outside the source website')
     const context = await this.getPublicContext()
     const page = await context.newPage()
     try {
-      await this.readPage(page, requestedUrl)
-      return await page.evaluate(() => {
-        /** Collapse rendered copy to the bounded plain text stored in a blueprint. */
-        const compact = (value?: string | null, maximumLength = 1200) =>
-          (value ?? '').replace(/\s+/g, ' ').trim().slice(0, maximumLength)
-        /** Ignore hidden or empty layout containers during section discovery. */
-        const visible = (element: HTMLElement) => {
-          const style = window.getComputedStyle(element)
-          const bounds = element.getBoundingClientRect()
-          return style.display !== 'none' && style.visibility !== 'hidden' && bounds.height > 24
+      let desktopBlueprint: SiteSourceBlueprint | undefined
+      let tabletBlueprint: SiteSourceBlueprint | undefined
+      let mobileBlueprint: SiteSourceBlueprint | undefined
+      const captures: SiteViewportCapture[] = []
+      for (const viewport of SITE_CAPTURE_VIEWPORTS) {
+        await page.setViewportSize({ width: viewport.width, height: viewport.height })
+        if (!desktopBlueprint) await this.readPage(page, requestedUrl)
+        else {
+          await page.evaluate(() => window.scrollTo(0, 0))
+          await page.waitForTimeout(180)
         }
-        /** Keep only visible secure links with labels a non-technical owner can recognise. */
-        const linksFrom = (element: HTMLElement) =>
-          Array.from(element.querySelectorAll<HTMLAnchorElement>('a[href]'))
-            .filter(link => visible(link))
-            .flatMap(link => {
-              const label = compact(link.textContent, 80)
-              try {
-                const href = new URL(link.href, window.location.href)
-                return label && href.protocol === 'https:' ? [{ href: href.toString(), label }] : []
-              } catch {
-                return []
-              }
-            })
-            .slice(0, 8)
-        const bodyStyle = window.getComputedStyle(document.body)
-        const header = document.querySelector<HTMLElement>('header')
-        const logo = header?.querySelector<HTMLImageElement>('img[src]')
-        const brandText =
-          compact(
-            header?.querySelector<HTMLElement>(
-              '[aria-label*="home" i], [class*="logo" i], [class*="brand" i]'
-            )?.textContent,
-            120
-          ) || compact(document.title.split(/[|—–-]/)[0], 120)
-        const candidates = Array.from(
-          document.querySelectorAll<HTMLElement>(
-            'main > section, main > article, main > div, body > section'
-          )
-        ).filter(visible)
-        const containers =
-          candidates.length > 0
-            ? candidates.slice(0, 12)
-            : [document.querySelector<HTMLElement>('main') ?? document.body]
-        const action = document.querySelector<HTMLElement>(
-          'a[class*="button" i], button, [role="button"]'
-        )
-        const actionStyle = action ? window.getComputedStyle(action) : bodyStyle
-        const sections = containers.map(container => {
-          const style = window.getComputedStyle(container)
-          const image = container.querySelector<HTMLImageElement>('img[src]')
-          const paragraphs = Array.from(container.querySelectorAll<HTMLElement>('p, li'))
-            .filter(visible)
-            .map(element => compact(element.textContent, 240))
-            .filter(Boolean)
-            .slice(0, 8)
-          return {
-            backgroundColor: style.backgroundColor,
-            body: compact(paragraphs.join(' ')),
-            foregroundColor: style.color,
-            heading: compact(container.querySelector<HTMLElement>('h1, h2, h3')?.textContent, 180),
-            imageAlt: compact(image?.alt, 240),
-            imageUrl: image?.currentSrc || image?.src || undefined,
-            links: linksFrom(container).slice(0, 4)
-          }
-        })
-        const description = document.querySelector<HTMLMetaElement>(
-          'meta[name="description"], meta[property="og:description"]'
-        )
-        return {
-          accentColor:
-            actionStyle.backgroundColor === 'rgba(0, 0, 0, 0)'
-              ? actionStyle.color
-              : actionStyle.backgroundColor,
-          backgroundColor: bodyStyle.backgroundColor,
-          brandName: brandText || window.location.hostname.replace(/^www\./, ''),
-          capturedAt: new Date().toISOString(),
-          description: compact(description?.content),
-          foregroundColor: bodyStyle.color,
-          logoUrl: logo?.currentSrc || logo?.src || undefined,
-          navigation: header ? linksFrom(header) : [],
-          sections,
-          sourceUrl: window.location.href,
-          title: compact(document.querySelector('h1')?.textContent, 180) || document.title
+        const blueprint = await capturePageBlueprint(page)
+        if (viewport.name === 'desktop') desktopBlueprint = blueprint
+        if (viewport.name === 'tablet') tabletBlueprint = blueprint
+        if (viewport.name === 'mobile') mobileBlueprint = blueprint
+        if (includeScreenshots && viewport.name !== 'tablet') {
+          const screenshot = await page.screenshot({
+            animations: 'disabled',
+            caret: 'hide',
+            quality: 65,
+            type: 'jpeg'
+          })
+          captures.push({
+            ...viewport,
+            dataUrl: `data:image/jpeg;base64,${screenshot.toString('base64')}`
+          })
         }
-      })
+      }
+      if (!(desktopBlueprint && tabletBlueprint && mobileBlueprint))
+        throw new Error('The responsive website study could not be completed')
+      return {
+        blueprint: mergeResponsiveBlueprints(desktopBlueprint, tabletBlueprint, mobileBlueprint),
+        captures
+      }
     } finally {
       await page.close()
     }

@@ -637,6 +637,9 @@ importers:
 
   packages/coderocket-ai:
     dependencies:
+      '@coderocket/core':
+        specifier: workspace:*
+        version: link:../coderocket-core
       '@frontendchecklist/rules':
         specifier: workspace:*
         version: link:../rules

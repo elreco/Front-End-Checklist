@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { mergeResponsiveBlueprints } from '../src/site-blueprint-capture'
 import {
   createSiteBundleDocument,
   createSiteDocument,
   getBuilderPlanEntitlements,
   type SiteSourceBlueprint
 } from '../src/site-document'
+import {
+  applySiteVisualRefinement,
+  type SiteSectionVisualStyle,
+  type SiteVisualTheme
+} from '../src/site-visual-style'
 
 const source: SiteSourceBlueprint = {
   accentColor: 'rgb(12, 99, 245)',
@@ -30,6 +36,38 @@ const source: SiteSourceBlueprint = {
   title: 'Northstar Studio'
 }
 
+const visualStyle: SiteSectionVisualStyle = {
+  desktop: {
+    bodySize: 18,
+    contentWidth: 1120,
+    gap: 48,
+    headingSize: 72,
+    paddingBlock: 96,
+    textAlign: 'left'
+  },
+  mobile: {
+    bodySize: 16,
+    contentWidth: 390,
+    gap: 24,
+    headingSize: 42,
+    paddingBlock: 48,
+    textAlign: 'left'
+  },
+  backgroundImage: '',
+  bodyLineHeight: 1.6,
+  borderColor: 'rgba(0, 0, 0, 0)',
+  borderRadius: 16,
+  borderWidth: 0,
+  elevation: 'none',
+  headingFontFamily: 'Georgia, serif',
+  headingFontWeight: 600,
+  headingLetterSpacing: -1,
+  headingLineHeight: 0.95,
+  imageAspectRatio: 1.33,
+  imageFit: 'cover',
+  imagePosition: 'after'
+}
+
 describe('site document', () => {
   it('keeps permitted content for an owned website', () => {
     const document = createSiteDocument(source, 'owned', 'contact')
@@ -45,6 +83,74 @@ describe('site document', () => {
     assert.equal(document.identity.logoUrl, undefined)
     assert.equal(document.sections[0]?.imageUrl, undefined)
     assert.doesNotMatch(document.sections[0]?.heading ?? '', /Ideas that move people/)
+  })
+
+  it('keeps AI visual refinement inside style fields', () => {
+    const visualTheme: SiteVisualTheme = {
+      button: {
+        backgroundColor: '#0c63f5',
+        borderColor: '#0c63f5',
+        foregroundColor: '#ffffff',
+        radius: 20,
+        style: 'solid'
+      },
+      fontFamily: 'Arial, sans-serif',
+      header: {
+        backgroundColor: '#ffffff',
+        borderColor: '#dddddd',
+        foregroundColor: '#111111',
+        height: 72,
+        position: 'sticky'
+      },
+      headingFontFamily: 'Georgia, serif'
+    }
+    const styledSource: SiteSourceBlueprint = {
+      ...source,
+      sections: [{ ...source.sections[0], visual: visualStyle }],
+      visualTheme
+    }
+    const refined = applySiteVisualRefinement(styledSource, {
+      confidence: 'high',
+      limitations: [],
+      theme: visualTheme,
+      sections: [{ index: 0, layout: 'centered', style: visualStyle }]
+    })
+    const document = createSiteDocument(refined, 'owned')
+
+    assert.equal(document.sections[0]?.heading, source.sections[0]?.heading)
+    assert.equal(document.sections[0]?.layout, 'centered')
+    assert.equal(document.sections[0]?.visual?.desktop.headingSize, 72)
+    assert.equal(document.theme.visual?.button.foregroundColor, '#ffffff')
+    assert.equal(document.recreation?.visualAnalysis, 'responsive-ai')
+  })
+
+  it('merges measured mobile geometry without changing desktop content', () => {
+    const desktop: SiteSourceBlueprint = {
+      ...source,
+      sections: [{ ...source.sections[0], visual: visualStyle }]
+    }
+    const mobile: SiteSourceBlueprint = {
+      ...desktop,
+      sections: [
+        {
+          ...desktop.sections[0],
+          visual: {
+            ...visualStyle,
+            mobile: {
+              ...visualStyle.mobile,
+              headingSize: 34,
+              textAlign: 'center'
+            }
+          }
+        }
+      ]
+    }
+    const merged = mergeResponsiveBlueprints(desktop, desktop, mobile)
+
+    assert.equal(merged.sections[0]?.heading, source.sections[0]?.heading)
+    assert.equal(merged.sections[0]?.visual?.desktop.headingSize, 72)
+    assert.equal(merged.sections[0]?.visual?.mobile.headingSize, 34)
+    assert.equal(merged.sections[0]?.visual?.mobile.textAlign, 'center')
   })
 
   it('infers the initial action instead of asking a novice to configure it', () => {

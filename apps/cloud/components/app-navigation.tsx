@@ -74,9 +74,9 @@ export function AppNavigation({
     return (
       <nav
         aria-label="Product navigation"
-        className="flex gap-1 overflow-x-auto border-border border-b bg-surface px-4 py-2 lg:hidden"
+        className="flex max-w-full touch-pan-x snap-x gap-1 overflow-x-auto overscroll-x-contain border-border border-b bg-surface px-4 py-2 [scrollbar-width:thin] lg:hidden"
       >
-        <CodeRocketButton asChild size="sm">
+        <CodeRocketButton asChild className="shrink-0 snap-start" size="sm">
           <Link aria-current={creating ? 'page' : undefined} href="/create">
             <WandSparkles aria-hidden /> Clone a website
           </Link>
@@ -86,7 +86,7 @@ export function AppNavigation({
           return (
             <Link
               aria-current={current ? 'page' : undefined}
-              className={`inline-flex shrink-0 items-center gap-2 border px-3 py-2 font-mono text-xs transition-colors ${current ? 'border-border bg-surface-raised text-foreground' : 'border-transparent text-muted hover:border-border hover:bg-surface-raised hover:text-foreground'}`}
+              className={`inline-flex shrink-0 snap-start items-center gap-2 border px-3 py-2 font-mono text-xs transition-colors ${current ? 'border-border bg-surface-raised text-foreground' : 'border-transparent text-muted hover:border-border hover:bg-surface-raised hover:text-foreground'}`}
               href={href}
               key={href}
             >
@@ -98,7 +98,7 @@ export function AppNavigation({
         <span aria-hidden className="mx-2 w-px shrink-0 bg-border" />
         <Link
           aria-current={isCurrentPath(pathname, '/sites') ? 'page' : undefined}
-          className="inline-flex shrink-0 items-center gap-2 border border-transparent px-3 py-2 font-mono text-muted text-xs transition-colors hover:border-border hover:bg-surface-raised hover:text-foreground"
+          className="inline-flex shrink-0 snap-start items-center gap-2 border border-transparent px-3 py-2 font-mono text-muted text-xs transition-colors hover:border-border hover:bg-surface-raised hover:text-foreground"
           href="/sites"
         >
           <Activity aria-hidden className="h-4 w-4" /> Website health
@@ -116,7 +116,7 @@ export function AppNavigation({
         <TooltipHint content="Clone a website" enabled={collapsed} side="right">
           <CodeRocketButton
             asChild
-            className={collapsed ? 'h-10 w-full px-0' : 'w-full justify-start'}
+            className={collapsed ? 'h-9 w-full px-0' : 'h-10 w-full justify-start px-3'}
             fullWidth
             size="sm"
           >
@@ -129,11 +129,11 @@ export function AppNavigation({
 
         {navigationGroups.map((group, groupIndex) => (
           <div
-            className={`${groupIndex === 0 ? 'mt-3' : 'mt-5 border-border border-t pt-4'} space-y-1`}
+            className={`${groupIndex === 0 ? 'mt-3' : 'mt-4 border-border border-t pt-3'} space-y-0.5`}
             key={group.label}
           >
             {collapsed ? null : (
-              <p className="mb-2 px-3 font-mono text-[10px] text-muted uppercase tracking-[.16em]">
+              <p className="mb-1.5 px-2.5 font-mono text-[10px] text-muted uppercase tracking-[.16em]">
                 {group.label}
               </p>
             )}
@@ -143,8 +143,8 @@ export function AppNavigation({
                 <Link
                   aria-current={current ? 'page' : undefined}
                   aria-label={opensNewTab ? `${label} (opens in a new tab)` : undefined}
-                  className={`flex items-center border py-2.5 transition-colors ${
-                    collapsed ? 'relative justify-center px-0' : 'gap-2.5 px-3'
+                  className={`flex min-h-9 items-center border py-2 transition-colors ${
+                    collapsed ? 'relative justify-center px-0' : 'gap-2.5 px-2.5'
                   } ${
                     current
                       ? 'border-border bg-surface-raised text-foreground'

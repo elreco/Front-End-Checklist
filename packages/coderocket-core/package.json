@@ -11,6 +11,8 @@
     "./browser": "./src/browser-session.ts",
     "./browser-login": "./src/browser-login-credentials.ts",
     "./safe-fetch": "./src/safe-fetch.ts",
+    "./site-document": "./src/site-document.ts",
+    "./site-visual": "./src/site-visual-style.ts",
     "./website-level": "./src/website-level.ts"
   },
   "scripts": {

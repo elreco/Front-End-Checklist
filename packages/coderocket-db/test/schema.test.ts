@@ -297,4 +297,64 @@ describe('CodeRocket database migration', () => {
     assert.match(sql, /Never raw HTML, JavaScript, credentials, or executable source/)
     assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
   })
+
+  it('reserves bounded responsive-analysis cost inside every monthly plan ceiling', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607200001_responsive_site_recreation.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /when 'agency' then 750000 else 250000/)
+    assert.match(sql, /when 'agency' then 40000000/)
+    assert.match(sql, /else 6000000/)
+    assert.match(sql, /imports_used < maximum_imports/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('streams owner-safe recreation milestones with private expiring captures', async () => {
+    const sql = await readFile(
+      new URL('../supabase/migrations/202607200002_site_import_live_progress.sql', import.meta.url),
+      'utf8'
+    )
+    assert.match(sql, /create table public\.cr_builder_import_events/)
+    assert.match(sql, /create policy cr_builder_import_events_owner_select/)
+    assert.match(sql, /auth\.uid\(\) = owner_id/)
+    assert.match(sql, /'cr-builder-imports'/)
+    assert.match(sql, /public,\s+file_size_limit,\s+allowed_mime_types/s)
+    assert.match(sql, /alter publication supabase_realtime add table/)
+    assert.match(sql, /Never raw worker logs, prompts, source code, or secrets/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('refunds imports claimed by an incompatible worker before provider work starts', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607200003_release_unsupported_site_imports.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /Unsupported worker job kind: site_import/)
+    assert.match(sql, /perform public\.cr_settle_site_import/)
+    assert.match(sql, /greatest\(imports_used - 1, 0\)/)
+    assert.match(sql, /Nothing was published or counted against your website allowance/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
+
+  it('keeps future incompatible-worker failures automatically refundable', async () => {
+    const sql = await readFile(
+      new URL(
+        '../supabase/migrations/202607200004_refund_incompatible_site_imports.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    assert.match(sql, /create or replace function public\.cr_refund_incompatible_site_import/)
+    assert.match(sql, /after update of status, last_error on public\.cr_jobs/)
+    assert.match(sql, /new\.last_error = 'Unsupported worker job kind: site_import'/)
+    assert.match(sql, /greatest\(imports_used - 1, 0\)/)
+    assert.doesNotMatch(sql.toLowerCase(), /drop\s+table|truncate|delete\s+from/)
+  })
 })

@@ -8,6 +8,7 @@
     "dev": "next dev --port 3100",
     "lint": "biome check .",
     "start": "node .next/standalone/apps/cloud/server.js",
+    "sync:legacy-premium": "node --env-file-if-exists=.env.local --import tsx scripts/sync-legacy-premium.ts",
     "test": "node --import tsx --test test/*.test.ts",
     "test:ci": "node --import tsx --test test/*.test.ts",
     "test:coverage": "node --import tsx --test test/*.test.ts",
