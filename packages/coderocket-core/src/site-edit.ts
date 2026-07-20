@@ -72,6 +72,10 @@ const updateItemSchema = z.object({
 const addSectionSchema = z.object({
   type: z.literal('add_section'),
   pagePath: pagePathSchema,
+  sectionId: z
+    .string()
+    .regex(/^[a-z0-9-]{1,80}$/)
+    .optional(),
   afterSectionId: z
     .string()
     .regex(/^[a-z0-9-]{1,80}$/)
@@ -82,6 +86,18 @@ const addSectionSchema = z.object({
   layout: z.enum(['centered', 'split', 'stacked']),
   backgroundColor: z.string().max(80),
   foregroundColor: z.string().max(80),
+  actionLabel: z.string().trim().min(1).max(80).optional(),
+  actionUrl: httpsUrlSchema.optional()
+})
+const addItemSchema = z.object({
+  type: z.literal('add_item'),
+  pagePath: pagePathSchema,
+  sectionId: z.string().regex(/^[a-z0-9-]{1,80}$/),
+  title: z.string().trim().min(1).max(180),
+  body: z.string().trim().max(500),
+  price: z.string().trim().max(80).optional(),
+  imageUrl: httpsUrlSchema.optional(),
+  imageAlt: z.string().trim().max(240).optional(),
   actionLabel: z.string().trim().min(1).max(80).optional(),
   actionUrl: httpsUrlSchema.optional()
 })
@@ -113,6 +129,7 @@ export const siteEditPlanSchema = z.object({
         updateThemeSchema,
         updateSectionSchema,
         updateItemSchema,
+        addItemSchema,
         addSectionSchema,
         removeSectionSchema,
         addPageSchema
@@ -173,6 +190,10 @@ export function applySiteEditPlan(document: SiteDocument, plan: SiteEditPlan): S
       if (operation.type === 'update_item')
         return sections.map(section =>
           section.id === operation.sectionId ? updateSectionItem(section, operation) : section
+        )
+      if (operation.type === 'add_item')
+        return sections.map(section =>
+          section.id === operation.sectionId ? addSectionItem(section, operation) : section
         )
       if (operation.type === 'remove_section')
         return sections.length > 1
@@ -304,6 +325,42 @@ function updateSectionItem(
   }
 }
 
+/** Add one structured card so broad product prompts remain versioned with the project. */
+function addSectionItem(
+  section: SiteSection,
+  operation: z.infer<typeof addItemSchema>
+): SiteSection {
+  const items = section.items ?? []
+  if (items.length >= 12) return section
+  const baseId = operation.title
+    .toLowerCase()
+    .normalize('NFD')
+    .replaceAll(/[\u0300-\u036f]/g, '')
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-|-$/g, '')
+    .slice(0, 60)
+  const itemId = uniqueSectionId(baseId || 'item', new Set(items.map(item => item.id)))
+  return {
+    ...section,
+    kind: section.kind === 'hero' ? 'collection' : section.kind,
+    items: [
+      ...items,
+      {
+        id: itemId,
+        title: operation.title,
+        body: operation.body,
+        ...(operation.price ? { price: operation.price } : {}),
+        ...(operation.imageUrl ? { imageUrl: operation.imageUrl } : {}),
+        ...(operation.imageAlt !== undefined ? { imageAlt: operation.imageAlt } : {}),
+        links:
+          operation.actionLabel && operation.actionUrl
+            ? [{ href: operation.actionUrl, label: operation.actionLabel }]
+            : []
+      }
+    ]
+  }
+}
+
 /** Create one controlled section from a bounded assistant operation. */
 function createSection(
   document: SiteDocument,
@@ -317,7 +374,10 @@ function createSection(
     .replaceAll(/[^a-z0-9]+/g, '-')
     .replaceAll(/^-|-$/g, '')
     .slice(0, 48)
-  const id = uniqueSectionId(baseId || 'section', new Set(sections.map(section => section.id)))
+  const id = uniqueSectionId(
+    (operation.sectionId ?? baseId) || 'section',
+    new Set(sections.map(section => section.id))
+  )
   return {
     id,
     kind: operation.kind,

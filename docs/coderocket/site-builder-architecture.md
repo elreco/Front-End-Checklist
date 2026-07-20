@@ -10,22 +10,26 @@ The default journey is:
 4. Publish deliberately.
 
 The normal interface never shows source code, deployment settings, model names, tokens, queues, or
-database terminology. The Studio leads with a plain-language conversation, then offers Pages, Data,
-Connections, and free manual edits through progressive disclosure. Website health monitoring
-remains available at `/monitoring` and inside the application as **Website health**.
+database terminology. The Studio is a full-height prompt-first workspace. Pages, versions, preview
+sizes, and connections are compact contextual controls; Data and manual field editing do not appear
+as competing primary modes. Website health monitoring remains available at `/monitoring` and inside
+the application as **Website health**.
 
 ## Product model for July 2026
 
-CodeRocket is one application project, not a collection of unrelated generated pages.
+CodeRocket is one application project generated from an existing website model, not a collection of
+unrelated cloned pages.
 
-- **Build** turns a plain-language request into schema-validated operations, runs it as a durable
-  background job, and creates an immutable revision.
-- **Pages** contains representative page types. Repeated product, article, and category URLs become
-  structured collections instead of fifty hand-built pages.
-- **Data** starts with CodeRocket-managed products, contacts, bookings, and content. A novice never
-  has to create a database account, table, policy, or environment variable.
-- **Connections** starts with safe payment and scheduling links, then offers guided Stripe,
-  Supabase, Shopify, and other provider setup when the requested feature needs it.
+- **Prompt** turns a plain-language outcome into schema-validated operations, runs it as a durable
+  background job, and creates an immutable revision. It is the only default creation surface.
+- **Routes** represent useful page types. Repeated product, article, and category URLs become
+  reusable components and structured collections instead of fifty hand-built pages.
+- **Managed capabilities** create products, contacts, bookings, accounts, or other data when the
+  requested outcome needs them. A novice never has to create a database account, table, policy, or
+  environment variable.
+- **Connections** appear contextually when the requested outcome needs provider permission. Guided
+  Stripe, Supabase, Shopify, and other provider authorisation is the target; public payment or
+  scheduling links remain an explicitly labelled compatibility fallback.
 - **Publish** remains deliberate. An assistant change never silently replaces the live revision.
 
 The controlled `SiteDocument` renderer remains the safe compatibility runtime for the current

@@ -10,9 +10,10 @@ import { requestBuilderSiteEdit } from './actions'
 import { useStudioSelection } from './studio-selection-context'
 
 const suggestions = [
-  'Make the first section feel more premium',
-  'Add a section that explains our benefits',
-  'Make the main action clearer'
+  'Turn this website into a shop',
+  'Add a product',
+  'Create a pricing page',
+  'Make the design feel more premium'
 ]
 
 /** Let a novice describe one outcome while showing its maximum credit cost before submission. */
@@ -22,11 +23,14 @@ export function StudioEditForm({ disabled, siteId }: { disabled: boolean; siteId
   const visibleSuggestions = selection ? selectionSuggestions(selection.kind) : suggestions
 
   return (
-    <form action={requestBuilderSiteEdit} className="border-border border-t p-4">
+    <form
+      action={requestBuilderSiteEdit}
+      className="shrink-0 border-border border-t bg-surface p-3"
+    >
       <input name="siteId" type="hidden" value={siteId} />
       <input name="selection" type="hidden" value={selection ? JSON.stringify(selection) : ''} />
       {selection ? (
-        <div className="mb-4 border border-signal bg-surface-raised p-3">
+        <div className="mb-3 border border-signal bg-surface-raised p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="flex items-center gap-2 font-mono text-signal text-xs uppercase tracking-[.12em]">
@@ -51,37 +55,35 @@ export function StudioEditForm({ disabled, siteId }: { disabled: boolean; siteId
         </div>
       ) : (
         <button
-          className="mb-4 flex w-full items-center gap-2 border border-border border-dashed p-3 text-left text-muted text-sm hover:border-signal hover:bg-surface-raised hover:text-foreground"
+          className="mb-3 flex w-full items-center gap-2 border border-border border-dashed px-3 py-2 text-left text-muted text-xs hover:border-signal hover:bg-surface-raised hover:text-foreground"
           disabled={disabled}
           onClick={() => setSelecting(true)}
           type="button"
         >
           <MousePointerClick aria-hidden className="h-4 w-4 text-signal" />
-          Select something in the preview for a more precise change
+          Select something in the preview for a precise change
         </button>
       )}
-      <label className="font-semibold text-sm" htmlFor="studio-instruction">
+      <label className="sr-only" htmlFor="studio-instruction">
         {selection ? 'What should change here?' : 'What would you like to change?'}
       </label>
       <CodeRocketTextarea
-        className="mt-2 min-h-28"
+        className="mt-0 min-h-24 resize-none bg-background"
         disabled={disabled}
         id="studio-instruction"
         maxLength={2000}
         name="instruction"
         onChange={event => setInstruction(event.target.value)}
         placeholder={
-          selection
-            ? selectionPlaceholder(selection.kind)
-            : 'For example: make the first section warmer and add three customer benefits.'
+          selection ? selectionPlaceholder(selection.kind) : 'Describe the result you want…'
         }
         required
         value={instruction}
       />
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
         {visibleSuggestions.map(suggestion => (
           <button
-            className="border border-border px-2.5 py-1.5 text-left text-muted text-xs hover:bg-surface-raised hover:text-foreground"
+            className="shrink-0 border border-border px-2.5 py-1.5 text-left text-muted text-xs hover:bg-surface-raised hover:text-foreground"
             disabled={disabled}
             key={suggestion}
             onClick={() => setInstruction(suggestion)}
@@ -91,8 +93,8 @@ export function StudioEditForm({ disabled, siteId }: { disabled: boolean; siteId
           </button>
         ))}
       </div>
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <p className="text-muted text-xs">Up to 6 credits · shown before every larger action</p>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <p className="text-muted text-xs">Creates a new recoverable version</p>
         <SubmitChangeButton disabled={disabled || instruction.trim().length < 2} />
       </div>
     </form>
@@ -135,7 +137,7 @@ function SubmitChangeButton({ disabled }: { disabled: boolean }) {
       ) : (
         <WandSparkles aria-hidden />
       )}
-      {pending ? 'Starting…' : 'Make this change'}
+      {pending ? 'Starting…' : 'Build it'}
     </CodeRocketButton>
   )
 }

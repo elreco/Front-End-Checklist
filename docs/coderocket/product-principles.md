@@ -5,9 +5,12 @@ strategy, copy, interaction design, implementation, review, and testing.
 
 ## Product promise
 
-CodeRocket turns an existing public website into a safe, editable website that its owner can change
-and publish without handling code. Website creation is the primary product journey. Website health
-checks remain available as a complementary tool for sites that are already online.
+CodeRocket is the website-cloning counterpart to prompt-first builders such as Lovable and v0. It
+turns an existing public website, authorised private application, screenshot, or future design
+source into a coherent editable project that its owner can evolve and publish without handling
+code. The source is the starting model, not a page-by-page cage. Website creation is the primary
+product journey. Website health checks remain available as a complementary tool for sites that are
+already online.
 
 The product must be useful to:
 
@@ -25,9 +28,10 @@ The normal starting point is one website address.
 
 ```text
 Paste the website address
-→ CodeRocket studies the visible public pages
-→ The user reviews a private, editable first version
-→ The user changes what matters and publishes deliberately
+→ CodeRocket understands its design, useful routes, content patterns, and visible behaviours
+→ CodeRocket creates one private, editable project from that model
+→ The user asks for outcomes in the prompt and reviews each recoverable version
+→ The user publishes deliberately
 ```
 
 Creation surfaces must lead with this URL-to-website journey. Website health, check history, and
@@ -40,6 +44,51 @@ for every new website.
 
 Good defaults should cover the common case. Optional configuration must be reversible and remain
 available without competing with the primary action.
+
+## Prompt-first Studio
+
+The Studio behaves like a focused application workspace, not a settings page. It fills the
+available viewport and keeps the private preview and conversation visible without page margins.
+
+The prompt is the primary way to change the project. Requests may describe a precise visual edit or
+a broader product outcome, for example:
+
+- “Add a product”;
+- “Turn this website into a shop”;
+- “Add customer accounts”;
+- “Create a pricing page”;
+- “Connect payments”.
+
+CodeRocket should infer the required pages, reusable components, managed data, and connections from
+the requested outcome. It asks for a decision or provider permission only when it cannot continue
+safely by itself.
+
+Pages, project versions, preview sizes, and connections remain available as compact workspace
+controls. They do not become permanent primary panels. A separate manual field editor, database
+table builder, or pages administration screen must not compete with the prompt in the normal
+journey.
+
+Every accepted change creates a recoverable immutable version. The user can inspect and restore
+versions without understanding commits, deployments, schemas, or source control.
+
+## Generated project model
+
+CodeRocket studies representative routes and repeated content patterns rather than cloning every
+discovered URL independently. The target output is one generated application project with shared
+layouts, reusable components, routes, assets, managed data, and provider connections. Astro or an
+equivalent output is an implementation choice; the default interface describes the resulting
+capabilities, not the framework.
+
+The current controlled renderer may remain as a safe compatibility runtime while project
+generation is built. New product decisions must nevertheless move toward the coherent-project
+model and avoid making the controlled document shape visible to users.
+
+When a feature needs payments, commerce, authentication, or external data, CodeRocket should offer
+one clearly labelled account-authorisation action. It must never describe a pasted public link as a
+fully connected account. Provider details and fallback setup belong behind progressive disclosure.
+
+Future source types such as screenshots and Figma files should enter the same URL-first project
+journey. They are alternative starting models, not separate products or editors.
 
 ## Information hierarchy
 

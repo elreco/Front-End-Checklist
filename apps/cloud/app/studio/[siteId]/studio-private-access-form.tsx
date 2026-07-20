@@ -34,7 +34,7 @@ export function StudioPrivateAccessForm({
         </p>
       </div>
 
-      <div className="grid min-w-0 gap-4 p-5 sm:p-6">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 p-5 sm:p-6">
         <label className="min-w-0 font-semibold text-sm" htmlFor="private-page">
           First private screen
           <CodeRocketInput
@@ -60,7 +60,7 @@ export function StudioPrivateAccessForm({
             type="url"
           />
         </label>
-        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
           <label className="min-w-0 font-semibold text-sm" htmlFor="private-username">
             Test email or username
             <CodeRocketInput

@@ -287,6 +287,32 @@ export async function updateBuilderSite(formData: FormData) {
   redirect(studioNoticeHref(siteId, pagePath, error ? 'save-failed' : 'saved'))
 }
 
+/** Restore an owner-visible revision by copying it into a new immutable latest version. */
+export async function restoreBuilderRevision(formData: FormData) {
+  const siteId = String(formData.get('siteId') ?? '')
+  const revisionId = String(formData.get('revisionId') ?? '')
+  const requestedPagePath = String(formData.get('pagePath') ?? '/')
+  const pagePath = requestedPagePath.startsWith('/') ? requestedPagePath : '/'
+  if (!(siteId && revisionId)) redirect('/websites')
+  const supabase = await createSupabaseServerClient()
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) redirect(`/login?next=/studio/${encodeURIComponent(siteId)}`)
+  const { data: revision } = await supabase
+    .from('cr_site_revisions')
+    .select('site_document')
+    .eq('id', revisionId)
+    .eq('site_id', siteId)
+    .eq('owner_id', auth.user.id)
+    .maybeSingle()
+  const parsed = siteDocumentSchema.safeParse(revision?.site_document)
+  if (!parsed.success) redirect(studioNoticeHref(siteId, pagePath, 'restore-failed'))
+  const { error } = await supabase.rpc('cr_update_builder_site_content', {
+    p_site_id: siteId,
+    p_site_document: parsed.data
+  })
+  redirect(studioNoticeHref(siteId, pagePath, error ? 'restore-failed' : 'restored'))
+}
+
 /** Point the public slug at the latest immutable revision. */
 export async function publishBuilderSite(formData: FormData) {
   const siteId = String(formData.get('siteId') ?? '')

@@ -8,7 +8,7 @@ export function StudioPublishAction({ site }: { site: BuilderSiteDetail }) {
   return (
     <form action={publishBuilderSite}>
       <input name="siteId" type="hidden" value={site.id} />
-      <CodeRocketButton size="sm" type="submit" variant="outline">
+      <CodeRocketButton size="sm" type="submit">
         <Send aria-hidden /> {site.publishedAt ? 'Publish changes' : 'Publish'}
       </CodeRocketButton>
     </form>

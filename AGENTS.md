@@ -297,6 +297,17 @@ user-facing message.
 - Treat website cloning, editing, and publishing as CodeRocket's primary journey. Website Health
   and check history are complementary tools and must not receive equal visual weight in the landing,
   dashboard, or primary navigation.
+- Treat the source website as the starting model for one coherent generated project, not as a list
+  of pages to reproduce independently. Prefer representative routes, reusable components, managed
+  capabilities, and structured content.
+- Keep the Studio full-height and prompt-first. Pages, versions, preview controls, data, and
+  connections are contextual controls; do not expose permanent Pages, Data, Connections, or manual
+  editing panels in the default workspace.
+- Let prompts describe both precise edits and broad outcomes such as adding a product, turning the
+  project into a shop, or adding accounts. Infer the required project changes and request provider
+  permission only when it is genuinely needed.
+- Present provider connections as one clear account-authorisation action when supported. Never call
+  a pasted public payment or booking link a connected provider account.
 - Lead with the outcome, then the reason and next action. Keep implementation details behind
   clearly labelled progressive disclosure.
 - Use plain, concrete language. Do not expose internal terms such as ruleset hashes, workers,

@@ -78,16 +78,12 @@ export function StudioPreview({ document }: { document: SiteDocument }) {
   }
 
   return (
-    <div>
-      <p className="border-border border-b bg-background p-3 text-muted text-xs sm:hidden">
-        Phone preview
-      </p>
+    <div className="flex h-full min-h-0 flex-col">
       <div
         aria-label="Preview size"
-        className="hidden flex-wrap items-center gap-2 border-border border-b bg-background p-3 sm:flex"
+        className="hidden min-h-11 shrink-0 flex-wrap items-center gap-1 border-border border-b bg-background px-3 sm:flex"
         role="group"
       >
-        <span className="mr-1 text-muted text-xs">Preview:</span>
         <CodeRocketButton
           aria-pressed={viewport === 'desktop'}
           onClick={() => setViewport('desktop')}
@@ -95,7 +91,7 @@ export function StudioPreview({ document }: { document: SiteDocument }) {
           type="button"
           variant={viewport === 'desktop' ? 'primary' : 'outline'}
         >
-          <Monitor aria-hidden /> Computer
+          <Monitor aria-hidden /> Desktop
         </CodeRocketButton>
         <CodeRocketButton
           aria-pressed={viewport === 'tablet'}
@@ -116,21 +112,21 @@ export function StudioPreview({ document }: { document: SiteDocument }) {
           <Smartphone aria-hidden /> Phone
         </CodeRocketButton>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-border border-b bg-surface-raised p-3">
-        <div>
-          <p className="font-semibold text-sm">
+      <div className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 border-border border-b bg-surface-raised px-3 py-2">
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-xs">
             {selecting
               ? 'Click the element you want to change'
               : selection
                 ? `${selectionLabel(selection.kind)} selected`
-                : 'Want to change one precise element?'}
+                : 'Select an element for a precise prompt'}
           </p>
-          <p className="mt-0.5 text-muted text-xs">
+          <p className="mt-0.5 hidden truncate text-muted text-xs md:block">
             {selecting
               ? 'Buttons, text, images, and whole sections can be selected.'
               : selection
                 ? `“${selection.label}” is now attached to your next request.`
-                : 'Select it directly in the preview. CodeRocket will understand what you mean.'}
+                : 'CodeRocket will attach it to your next request.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -151,9 +147,9 @@ export function StudioPreview({ document }: { document: SiteDocument }) {
           </CodeRocketButton>
         </div>
       </div>
-      <div className="overflow-x-auto bg-background-subtle p-3 sm:p-5">
+      <div className="min-h-0 flex-1 overflow-auto bg-background-subtle p-2 sm:p-3">
         <div
-          className="mx-auto overflow-hidden border border-border bg-background transition-[width] duration-200 motion-reduce:transition-none data-[selecting=true]:[&_[data-cr-select-kind]:focus-visible]:outline-2 data-[selecting=true]:[&_[data-cr-select-kind]:focus-visible]:outline-signal data-[selecting=true]:[&_[data-cr-select-kind]:hover]:outline-2 data-[selecting=true]:[&_[data-cr-select-kind]:hover]:outline-signal [&_[data-cr-select-kind]]:outline-offset-[-3px] data-[selecting=true]:[&_[data-cr-select-kind]]:cursor-crosshair [&_[data-cr-selected=true]]:outline-2 [&_[data-cr-selected=true]]:outline-accent"
+          className="mx-auto min-h-full overflow-hidden border border-border bg-background transition-[width] duration-200 motion-reduce:transition-none data-[selecting=true]:[&_[data-cr-select-kind]:focus-visible]:outline-2 data-[selecting=true]:[&_[data-cr-select-kind]:focus-visible]:outline-signal data-[selecting=true]:[&_[data-cr-select-kind]:hover]:outline-2 data-[selecting=true]:[&_[data-cr-select-kind]:hover]:outline-signal [&_[data-cr-select-kind]]:outline-offset-[-3px] data-[selecting=true]:[&_[data-cr-select-kind]]:cursor-crosshair [&_[data-cr-selected=true]]:outline-2 [&_[data-cr-selected=true]]:outline-accent"
           data-preview-frame
           data-selecting={selecting}
           onClickCapture={handlePreviewClick}

@@ -1,16 +1,17 @@
-import { AlertTriangle, Check } from '@repo/design-system/icons'
-import Link from 'next/link'
+import { AlertTriangle } from '@repo/design-system/icons'
 import { notFound } from 'next/navigation'
 import { ProductShell } from '@/components/product-shell'
 import { getBuilderSite } from '@/lib/builder-data'
 import { createPrivateMetadata } from '@/lib/seo'
 import { RetrySiteImportForm } from './retry-site-import-form'
+import { StudioAppLayout } from './studio-app-layout'
 import { StudioCreationProgress } from './studio-creation-progress'
 import { StudioPreview } from './studio-preview'
 import { StudioPrivateAccessForm } from './studio-private-access-form'
 import { StudioPublishAction } from './studio-publish-action'
 import { StudioSelectionProvider } from './studio-selection-context'
-import { type StudioPanel, StudioWorkspacePanel } from './studio-workspace-panel'
+import { StudioToolbar } from './studio-toolbar'
+import { StudioWorkspacePanel } from './studio-workspace-panel'
 
 export const metadata = createPrivateMetadata('Website studio')
 
@@ -40,7 +41,9 @@ const notices: Record<string, string> = {
   'private-access-failed': 'The test account could not be connected. Nothing was changed.',
   'private-access-started':
     'The test account is connected for this attempt. You can leave this page.',
-  'monthly-limit': 'This recreation cannot start because the protected monthly budget was reached.'
+  'monthly-limit': 'This recreation cannot start because the protected monthly budget was reached.',
+  restored: 'This version is restored as a new private version.',
+  'restore-failed': 'That version could not be restored. Your current version is unchanged.'
 }
 const positiveNotices = new Set([
   'saved',
@@ -49,6 +52,7 @@ const positiveNotices = new Set([
   'change-started',
   'data-ready',
   'connection-ready',
+  'restored',
   'private-access-started'
 ])
 
@@ -65,8 +69,6 @@ export default async function StudioPage({
   const notice = Array.isArray(query.notice) ? query.notice[0] : query.notice
   const pending = site.status === 'queued' || site.status === 'analyzing'
   const requestedPage = Array.isArray(query.page) ? query.page[0] : query.page
-  const requestedPanel = Array.isArray(query.panel) ? query.panel[0] : query.panel
-  const panel = readStudioPanel(requestedPanel)
   const selectedPage =
     site.document?.pages?.find(page => page.path === requestedPage) ??
     site.document?.pages?.find(page => page.path === '/')
@@ -79,116 +81,65 @@ export default async function StudioPage({
   return (
     <ProductShell
       action={site.document ? <StudioPublishAction site={site} /> : undefined}
-      eyebrow="No-code website studio"
+      eyebrow="Website project"
       title={site.name}
+      workspace
     >
-      {notice && notices[notice] ? (
-        <p
-          className={`mb-5 border p-4 ${
-            positiveNotices.has(notice)
-              ? 'border-success bg-surface text-success'
-              : 'border-danger bg-surface text-danger'
-          }`}
-          role="status"
-        >
-          {notices[notice]}
-        </p>
-      ) : null}
-      {pending ? (
-        <StudioCreationProgress
-          initialMessage={site.statusMessage}
-          initialUpdatedAt={site.updatedAt}
-          siteId={site.id}
-        />
-      ) : site.status === 'failed' || !site.document ? (
-        <section className="border border-danger bg-surface p-5 sm:p-7">
-          <div className="mx-auto max-w-3xl text-center">
-            <AlertTriangle aria-hidden className="mx-auto h-8 w-8 text-danger" />
-            <h2 className="mt-5 font-heading font-semibold text-3xl">
-              This source could not be recreated
-            </h2>
-            <p className="mt-3 text-muted leading-7">
-              It may need a sign-in or block automated visitors. Nothing was published, and the
-              failed attempt did not expose an account.
-            </p>
-            <div className="mt-7">
-              <StudioPrivateAccessForm siteId={site.id} sourceUrl={site.sourceUrl} />
+      <div className="flex h-full min-h-0 flex-col">
+        {notice && notices[notice] ? (
+          <p
+            className={`shrink-0 border-b px-4 py-2 text-sm ${
+              positiveNotices.has(notice)
+                ? 'border-success bg-surface text-success'
+                : 'border-danger bg-surface text-danger'
+            }`}
+            role="status"
+          >
+            {notices[notice]}
+          </p>
+        ) : null}
+        <div className="min-h-0 flex-1">
+          {pending ? (
+            <div className="h-full overflow-y-auto p-4 sm:p-6">
+              <StudioCreationProgress
+                initialMessage={site.statusMessage}
+                initialUpdatedAt={site.updatedAt}
+                siteId={site.id}
+              />
             </div>
-            <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
-              <span className="text-muted text-sm">No sign-in is needed?</span>
-              <RetrySiteImportForm secondary siteId={site.id} />
-            </div>
-          </div>
-        </section>
-      ) : previewDocument ? (
-        <StudioSelectionProvider key={selectedPath} pagePath={selectedPath}>
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-            <section className="min-w-0 border border-border bg-surface">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-border border-b p-4">
-                <div>
-                  <p className="flex items-center gap-2 font-mono text-success text-xs uppercase tracking-[.14em]">
-                    <Check aria-hidden className="h-4 w-4" /> Version {site.revisionNumber} ready
-                  </p>
-                  <p className="mt-1 text-muted text-xs">
-                    Private preview · {site.document.pages?.length ?? 1} useful page{' '}
-                    {(site.document.pages?.length ?? 1) === 1 ? 'type' : 'types'} ready · links are
-                    disabled
-                  </p>
-                  {site.document.recreation ? (
-                    <p className="mt-1 text-muted text-xs">
-                      Layout checked for phone, tablet, and computer. Review it before publishing.
-                    </p>
-                  ) : null}
-                  {site.document.importSummary?.failedPaths.length ? (
-                    <p className="mt-1 text-warning text-xs">
-                      {site.document.importSummary.failedPaths.length}{' '}
-                      {site.document.importSummary.failedPaths.length === 1
-                        ? 'page was'
-                        : 'pages were'}{' '}
-                      unavailable and clearly skipped.
-                    </p>
-                  ) : null}
+          ) : site.status === 'failed' || !site.document ? (
+            <section className="h-full overflow-y-auto p-4 sm:p-6">
+              <div className="mx-auto max-w-3xl border border-danger bg-surface p-5 text-center sm:p-7">
+                <AlertTriangle aria-hidden className="mx-auto h-8 w-8 text-danger" />
+                <h2 className="mt-5 font-heading font-semibold text-3xl">
+                  This source could not be recreated
+                </h2>
+                <p className="mt-3 text-muted leading-7">
+                  It may need a sign-in or block automated visitors. Nothing was published, and the
+                  failed attempt did not expose an account.
+                </p>
+                <div className="mt-7">
+                  <StudioPrivateAccessForm siteId={site.id} sourceUrl={site.sourceUrl} />
                 </div>
-                <Link className="font-mono text-signal text-xs hover:underline" href="/websites">
-                  All my websites
-                </Link>
+                <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
+                  <span className="text-muted text-sm">No sign-in is needed?</span>
+                  <RetrySiteImportForm secondary siteId={site.id} />
+                </div>
               </div>
-              {site.document.pages && site.document.pages.length > 1 ? (
-                <nav
-                  aria-label="Website pages"
-                  className="flex gap-2 overflow-x-auto border-border border-b bg-background p-3"
-                >
-                  {site.document.pages.map(page => (
-                    <Link
-                      aria-current={page.path === selectedPath ? 'page' : undefined}
-                      className={`shrink-0 border px-3 py-2 font-mono text-xs ${
-                        page.path === selectedPath
-                          ? 'border-signal bg-surface-raised text-foreground'
-                          : 'border-border text-muted hover:text-foreground'
-                      }`}
-                      href={
-                        page.path === '/'
-                          ? `/studio/${site.id}`
-                          : `/studio/${site.id}?page=${encodeURIComponent(page.path)}`
-                      }
-                      key={page.path}
-                    >
-                      {page.path === '/' ? 'Home' : page.title}
-                    </Link>
-                  ))}
-                </nav>
-              ) : null}
-              <StudioPreview document={previewDocument} />
             </section>
-            <StudioWorkspacePanel panel={panel} selectedPath={selectedPath} site={site} />
-          </div>
-        </StudioSelectionProvider>
-      ) : null}
+          ) : previewDocument ? (
+            <StudioSelectionProvider key={selectedPath} pagePath={selectedPath}>
+              <div className="flex h-full min-h-0 flex-col">
+                <StudioToolbar selectedPath={selectedPath} site={site} />
+                <StudioAppLayout
+                  conversation={<StudioWorkspacePanel site={site} />}
+                  preview={<StudioPreview document={previewDocument} />}
+                />
+              </div>
+            </StudioSelectionProvider>
+          ) : null}
+        </div>
+      </div>
     </ProductShell>
   )
-}
-
-function readStudioPanel(value?: string): StudioPanel {
-  if (value === 'pages' || value === 'data' || value === 'connections') return value
-  return 'build'
 }

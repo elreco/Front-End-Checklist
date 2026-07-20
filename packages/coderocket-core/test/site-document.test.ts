@@ -394,4 +394,37 @@ describe('site document', () => {
     assert.equal(edited.sections[0]?.items?.[1]?.title, 'Runner Two — New edition')
     assert.equal(edited.sections[0]?.items?.[1]?.price, '€129')
   })
+
+  it('adds a structured product from a prompt without replacing unrelated sections', () => {
+    const document = createSiteDocument(source, 'owned')
+    const edited = applySiteEditPlan(document, {
+      operations: [
+        {
+          backgroundColor: '#ffffff',
+          body: 'Browse the latest products.',
+          foregroundColor: '#111111',
+          heading: 'Shop',
+          kind: 'collection',
+          layout: 'stacked',
+          pagePath: '/',
+          sectionId: 'shop',
+          type: 'add_section'
+        },
+        {
+          body: 'Add the description, image, and payment action when they are ready.',
+          pagePath: '/',
+          sectionId: 'shop',
+          title: 'New product',
+          type: 'add_item'
+        }
+      ],
+      response: 'A shop section and an editable first product are ready.',
+      summary: 'Added a product'
+    })
+
+    assert.equal(edited.sections[0]?.heading, document.sections[0]?.heading)
+    assert.equal(edited.sections[1]?.id, 'shop')
+    assert.equal(edited.sections[1]?.items?.[0]?.title, 'New product')
+    assert.equal(edited.sections[1]?.items?.[0]?.links.length, 0)
+  })
 })

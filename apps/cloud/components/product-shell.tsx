@@ -15,19 +15,24 @@ export async function ProductShell({
   children,
   title,
   eyebrow,
-  action
+  action,
+  workspace = false
 }: {
   children: ReactNode
   title: string
   eyebrow?: string
   action?: ReactNode
+  workspace?: boolean
 }) {
   const context = await getAppShellContext()
   const cookieStore = await cookies()
   const initialSidebarCollapsed = cookieStore.get('coderocket-sidebar-collapsed')?.value === 'true'
 
   return (
-    <main className="min-h-screen bg-background" data-app-shell>
+    <main
+      className={workspace ? 'h-dvh overflow-hidden bg-background' : 'min-h-screen bg-background'}
+      data-app-shell
+    >
       <AppShellLayout
         displayName={context.displayName}
         email={context.email}
@@ -39,31 +44,47 @@ export async function ProductShell({
         projectCount={context.builderSiteCount}
         projectLimit={context.builderLimits.sites}
       >
-        <div className="min-w-0">
-          <header className="sticky top-0 z-40 border-border border-b bg-background">
-            <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6 xl:px-10">
+        <div className={workspace ? 'flex h-dvh min-w-0 flex-col overflow-hidden' : 'min-w-0'}>
+          <header
+            className={`${workspace ? 'shrink-0' : 'sticky top-0'} z-40 border-border border-b bg-background`}
+          >
+            <div
+              className={`flex items-center justify-between gap-4 px-4 sm:px-6 ${
+                workspace ? 'min-h-14' : 'min-h-16 xl:px-10'
+              }`}
+            >
               <Link className="lg:hidden" href="/dashboard">
                 <CodeRocketLogo
                   className="h-7 w-7 shrink-0 text-foreground"
                   wordmarkClassName="hidden text-base sm:inline"
                 />
               </Link>
-              <div className="hidden min-w-0 lg:block">
+              <div className={`min-w-0 ${workspace ? 'block' : 'hidden lg:block'}`}>
                 {eyebrow ? (
-                  <p className="font-mono text-[10px] text-muted uppercase tracking-[.18em]">
+                  <p
+                    className={`font-mono text-[10px] text-muted uppercase tracking-[.18em] ${
+                      workspace ? 'hidden sm:block' : ''
+                    }`}
+                  >
                     {eyebrow}
                   </p>
                 ) : null}
-                <h1 className="truncate font-heading font-semibold text-xl tracking-tight">
+                <h1
+                  className={`truncate font-heading font-semibold tracking-tight ${
+                    workspace ? 'text-sm sm:text-base' : 'text-xl'
+                  }`}
+                >
                   {title}
                 </h1>
               </div>
               <div className="ml-auto flex items-center gap-2">
-                <CodeRocketButton asChild className="hidden sm:inline-flex" size="sm">
-                  <Link href="/create">
-                    <WandSparkles aria-hidden /> Clone a website
-                  </Link>
-                </CodeRocketButton>
+                {workspace ? null : (
+                  <CodeRocketButton asChild className="hidden sm:inline-flex" size="sm">
+                    <Link href="/create">
+                      <WandSparkles aria-hidden /> Clone a website
+                    </Link>
+                  </CodeRocketButton>
+                )}
                 {action}
                 <Link
                   aria-label={`Open account settings for ${context.displayName}`}
@@ -74,11 +95,17 @@ export async function ProductShell({
                 </Link>
               </div>
             </div>
-            <AppNavigation mobile />
+            {workspace ? null : <AppNavigation mobile />}
           </header>
 
-          <section className="cr-page-enter mx-auto max-w-[1480px] px-4 py-7 sm:px-6 sm:py-9 xl:px-10">
-            <div className="mb-7 lg:hidden">
+          <section
+            className={
+              workspace
+                ? 'min-h-0 flex-1 overflow-hidden'
+                : 'cr-page-enter mx-auto max-w-[1480px] px-4 py-7 sm:px-6 sm:py-9 xl:px-10'
+            }
+          >
+            <div className={`mb-7 lg:hidden ${workspace ? 'hidden' : ''}`}>
               {eyebrow ? (
                 <p className="font-mono text-[10px] text-muted uppercase tracking-[.18em]">
                   {eyebrow}

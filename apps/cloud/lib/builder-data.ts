@@ -31,6 +31,13 @@ export interface BuilderSiteDetail extends BuilderSiteSummary {
   error?: string
   messages: BuilderMessage[]
   revisionNumber?: number
+  revisions: BuilderRevisionSummary[]
+}
+
+export interface BuilderRevisionSummary {
+  createdAt: string
+  id: string
+  revisionNumber: number
 }
 
 export interface BuilderMessage {
@@ -210,6 +217,7 @@ const demoSite: BuilderSiteDetail = {
   statusMessage: 'Your first version is ready',
   updatedAt: '2026-07-19T10:02:00.000Z',
   revisionNumber: 1,
+  revisions: [{ createdAt: '2026-07-19T10:02:00.000Z', id: 'demo-revision-1', revisionNumber: 1 }],
   collections: [],
   connections: [],
   messages: [
@@ -269,36 +277,48 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
     .is('archived_at', null)
     .maybeSingle()
   if (!site) return undefined
-  const [{ data: revision }, { data: messages }, { data: collections }, { data: connections }] =
-    await Promise.all([
-      supabase
-        .from('cr_site_revisions')
-        .select('revision_number,site_document')
-        .eq('site_id', site.id)
-        .eq('owner_id', auth.user.id)
-        .order('revision_number', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('cr_builder_messages')
-        .select('id,role,content,status,credit_cost,selection,created_at')
-        .eq('site_id', site.id)
-        .eq('owner_id', auth.user.id)
-        .order('created_at', { ascending: true })
-        .limit(50),
-      supabase
-        .from('cr_builder_collections')
-        .select('id,name,kind')
-        .eq('site_id', site.id)
-        .eq('owner_id', auth.user.id)
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('cr_builder_connections')
-        .select('id,provider,status,display_name,public_config')
-        .eq('site_id', site.id)
-        .eq('owner_id', auth.user.id)
-        .order('created_at', { ascending: true })
-    ])
+  const [
+    { data: revision },
+    { data: revisions },
+    { data: messages },
+    { data: collections },
+    { data: connections }
+  ] = await Promise.all([
+    supabase
+      .from('cr_site_revisions')
+      .select('revision_number,site_document')
+      .eq('site_id', site.id)
+      .eq('owner_id', auth.user.id)
+      .order('revision_number', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('cr_site_revisions')
+      .select('id,revision_number,created_at')
+      .eq('site_id', site.id)
+      .eq('owner_id', auth.user.id)
+      .order('revision_number', { ascending: false })
+      .limit(20),
+    supabase
+      .from('cr_builder_messages')
+      .select('id,role,content,status,credit_cost,selection,created_at')
+      .eq('site_id', site.id)
+      .eq('owner_id', auth.user.id)
+      .order('created_at', { ascending: true })
+      .limit(50),
+    supabase
+      .from('cr_builder_collections')
+      .select('id,name,kind')
+      .eq('site_id', site.id)
+      .eq('owner_id', auth.user.id)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('cr_builder_connections')
+      .select('id,provider,status,display_name,public_config')
+      .eq('site_id', site.id)
+      .eq('owner_id', auth.user.id)
+      .order('created_at', { ascending: true })
+  ])
   const parsedDocument = siteDocumentSchema.safeParse(revision?.site_document)
   return {
     id: site.id,
@@ -312,6 +332,11 @@ export async function getBuilderSite(siteId: string): Promise<BuilderSiteDetail 
     updatedAt: site.updated_at,
     error: site.last_error ?? undefined,
     revisionNumber: revision?.revision_number,
+    revisions: (revisions ?? []).map(item => ({
+      createdAt: item.created_at,
+      id: item.id,
+      revisionNumber: item.revision_number
+    })),
     messages: (messages ?? []).flatMap(message => {
       const role = message.role === 'assistant' ? 'assistant' : 'user'
       const status = readMessageStatus(message.status)

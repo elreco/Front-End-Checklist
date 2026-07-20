@@ -1,4 +1,4 @@
-import { ArrowRight, Check, ExternalLink, ShieldCheck } from '@repo/design-system/icons'
+import { ArrowRight, Check, ExternalLink, KeyRound, ShieldCheck } from '@repo/design-system/icons'
 import { CodeRocketButton } from '@repo/design-system/ui/coderocket-button'
 import { CodeRocketInput } from '@repo/design-system/ui/coderocket-field'
 import { deriveWebsiteName } from '@/lib/website-draft'
@@ -14,9 +14,8 @@ export function SiteCreationForm({ initialUrl }: { initialUrl: string }) {
           Which website or app should we study?
         </h2>
         <p className="mt-2 max-w-2xl text-muted leading-7">
-          Paste the first screen you want to recreate. If it needs a sign-in, CodeRocket will ask
-          you for a temporary test account on the next step. It never copies the original server or
-          database.
+          Paste the first screen you want to recreate. It can be a public website or a screen that
+          normally opens after signing in.
         </p>
         <label className="mt-6 block max-w-2xl font-semibold text-sm" htmlFor="builder-url">
           Website address
@@ -45,6 +44,27 @@ export function SiteCreationForm({ initialUrl }: { initialUrl: string }) {
                 placeholder="Your business"
               />
             </label>
+          </div>
+        </details>
+        <details className="mt-4 max-w-2xl border border-border bg-background">
+          <summary className="flex cursor-pointer list-none items-center gap-3 p-4 font-semibold text-sm hover:bg-surface-raised [&::-webkit-details-marker]:hidden">
+            <KeyRound aria-hidden className="h-5 w-5 shrink-0 text-signal" />
+            Does this website require a sign-in?
+          </summary>
+          <div className="border-border border-t p-4 text-muted text-sm leading-6">
+            <p>
+              Paste the first private screen above. After this step, CodeRocket will guide you to
+              connect a demo account if it cannot open the screen.
+            </p>
+            <p className="mt-3">
+              A demo account is an account you create only for CodeRocket. Give it sample projects,
+              customers, or products, but no real personal or payment data. Do not use your personal
+              or administrator account.
+            </p>
+            <p className="mt-3 text-xs">
+              CodeRocket uses it only to study the screens you are allowed to recreate. It does not
+              copy the original server or database.
+            </p>
           </div>
         </details>
       </section>
